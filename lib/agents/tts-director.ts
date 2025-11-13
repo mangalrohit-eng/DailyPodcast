@@ -141,6 +141,8 @@ You must respond with valid JSON only.`,
   
   private getRoleForSection(sectionType: string): 'host' | 'analyst' | 'stinger' {
     switch (sectionType) {
+      case 'intro':
+      case 'outro':
       case 'cold-open':
       case 'sign-off':
         return 'host';

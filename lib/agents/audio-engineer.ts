@@ -33,12 +33,18 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
   protected async process(input: AudioEngineerInput): Promise<AudioEngineerOutput> {
     const { synthesis_plan } = input;
     
-    Logger.info('Starting audio synthesis', { segments: synthesis_plan.length });
+    Logger.info('Starting audio synthesis with music and pauses', { segments: synthesis_plan.length });
     
-    // Render all segments
+    // Render all segments with pauses between stories
     const audioSegments: Buffer[] = [];
     
-    for (const plan of synthesis_plan) {
+    // Add intro music (3 seconds of upbeat tone)
+    Logger.info('Adding intro music');
+    audioSegments.push(this.generateUpbeatMusic(3000));
+    
+    for (let i = 0; i < synthesis_plan.length; i++) {
+      const plan = synthesis_plan[i];
+      
       Logger.debug('Synthesizing segment', {
         segment_id: plan.segment_id,
         voice: plan.voice,
@@ -54,6 +60,14 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
         });
         
         audioSegments.push(audio);
+        
+        // Add pause after each segment (except the last one)
+        if (i < synthesis_plan.length - 1) {
+          // Longer pause after intro, shorter between stories
+          const pauseDuration = (i === 0) ? 800 : 1200;
+          Logger.debug('Adding pause', { duration_ms: pauseDuration });
+          audioSegments.push(AudioTool.generateSilence(pauseDuration));
+        }
       } catch (error) {
         Logger.error('TTS synthesis failed', {
           segment_id: plan.segment_id,
@@ -63,7 +77,12 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
       }
     }
     
-    Logger.info('All segments synthesized', { count: audioSegments.length });
+    // Add outro music (2 seconds of upbeat tone)
+    Logger.info('Adding outro music');
+    audioSegments.push(AudioTool.generateSilence(500)); // Brief pause before music
+    audioSegments.push(this.generateUpbeatMusic(2000));
+    
+    Logger.info('All segments synthesized with music', { count: audioSegments.length });
     
     // Concatenate all segments
     const concatenated = AudioTool.concat(audioSegments);
@@ -83,6 +102,32 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
       audio_buffer: normalized,
       actual_duration_sec: actualDuration,
     };
+  }
+  
+  /**
+   * Generate simple upbeat music (placeholder tone)
+   * In production, replace with actual music file
+   */
+  private generateUpbeatMusic(durationMs: number): Buffer {
+    // For now, generate a simple ascending tone pattern
+    // TODO: Replace with actual music file (royalty-free upbeat track)
+    
+    // Generate a pleasant multi-tone sequence
+    const tones: Buffer[] = [];
+    const toneCount = Math.floor(durationMs / 200); // 200ms per tone
+    
+    // Use a major chord pattern (C-E-G) for upbeat feel
+    const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+    
+    for (let i = 0; i < toneCount; i++) {
+      const freq = frequencies[i % frequencies.length];
+      tones.push(AudioTool.generateTone(freq, 150)); // 150ms tones with 50ms gap
+      if (i < toneCount - 1) {
+        tones.push(AudioTool.generateSilence(50));
+      }
+    }
+    
+    return AudioTool.concat(tones);
   }
 }
 

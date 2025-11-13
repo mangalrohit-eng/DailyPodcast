@@ -23,9 +23,9 @@ export class OutlineAgent extends BaseAgent<OutlineInput, OutlineOutput> {
       systemPrompt: `You are a producer creating an executive news brief outline for C-suite leaders.
 
 Structure for maximum impact:
-- Cold Open (40-60 seconds): Dive straight into top story impact - NO greetings
+- Intro (15-20 seconds): Welcome + brief topic preview list
 - Story Segments (50-90 seconds each): Dense, actionable information
-- Sign-off (20-40 seconds): Key implications summary - NO pleasantries
+- Outro (15-20 seconds): Key takeaways + upbeat closing
 
 Target: 4-5 minutes total. Maximum information density. You must respond with valid JSON only.`,
       temperature: 0.7,
@@ -65,9 +65,15 @@ Respond with JSON in this exact format:
 {
   "sections": [
     {
-      "type": "cold-open",
-      "title": "Top Story Impact",
-      "target_words": 100,
+      "type": "intro",
+      "title": "Welcome & Topics",
+      "target_words": 40,
+      "refs": []
+    },
+    {
+      "type": "story",
+      "title": "Story 1 Title",
+      "target_words": 120,
       "refs": [0]
     },
     {
@@ -83,9 +89,9 @@ Respond with JSON in this exact format:
       "refs": [2]
     },
     {
-      "type": "sign-off",
-      "title": "Key Takeaways",
-      "target_words": 60,
+      "type": "outro",
+      "title": "Closing & Takeaways",
+      "target_words": 40,
       "refs": []
     }
   ]

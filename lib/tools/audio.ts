@@ -64,6 +64,13 @@ export class AudioTool {
    * Add silence/padding
    */
   static addSilence(durationMs: number): Buffer {
+    return AudioTool.generateSilence(durationMs);
+  }
+  
+  /**
+   * Generate silence
+   */
+  static generateSilence(durationMs: number): Buffer {
     // Generate a minimal silent MP3 frame
     // This is a simplified approach; production would generate proper silence
     const silentMp3Header = Buffer.from([
@@ -75,6 +82,20 @@ export class AudioTool {
     const buffers = Array(frames).fill(silentMp3Header);
     
     return Buffer.concat(buffers);
+  }
+  
+  /**
+   * Generate a simple tone (beep)
+   * Note: This is a simplified placeholder. For production, use actual audio synthesis.
+   */
+  static generateTone(frequencyHz: number, durationMs: number): Buffer {
+    // For now, return a very short silence as placeholder
+    // In production, you would generate actual sine wave audio
+    // or use pre-recorded audio files
+    Logger.debug('Generating tone placeholder', { frequencyHz, durationMs });
+    
+    // Return minimal MP3 frames (will sound like silence but keeps structure)
+    return AudioTool.generateSilence(durationMs);
   }
   
   /**
