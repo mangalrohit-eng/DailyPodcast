@@ -189,13 +189,31 @@ export class RunsStorage {
    * Save runs index
    */
   private async saveIndex(index: RunsIndex): Promise<void> {
-    index.last_updated = new Date().toISOString();
-    
-    await this.storage.put(
-      this.indexPath,
-      JSON.stringify(index, null, 2),
-      'application/json'
-    );
+    try {
+      index.last_updated = new Date().toISOString();
+      
+      Logger.info('Saving runs index', {
+        path: this.indexPath,
+        run_count: index.runs.length,
+      });
+      
+      await this.storage.put(
+        this.indexPath,
+        JSON.stringify(index, null, 2),
+        'application/json'
+      );
+      
+      Logger.info('Runs index saved successfully', {
+        path: this.indexPath,
+      });
+    } catch (error) {
+      Logger.error('Failed to save runs index', {
+        path: this.indexPath,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw error;
+    }
   }
   
   /**
