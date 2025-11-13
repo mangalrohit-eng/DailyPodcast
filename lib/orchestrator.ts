@@ -526,17 +526,30 @@ export class Orchestrator {
       dashboardConfig = null;
     }
     
-    // Get weights from dashboard config or memory profile
+    // Get weights and topics from dashboard config or memory profile
     let weights = input.weights || Config.parseTopicWeights();
+    let topics = input.topics || ['AI', 'Verizon', 'Accenture'];
     
     if (!input.weights && dashboardConfig) {
       // Use topic weights from dashboard config
       const topicWeights: Record<string, number> = {};
+      const enabledTopics: string[] = [];
+      
       dashboardConfig.topics.forEach((t: any) => {
         topicWeights[t.label.toLowerCase()] = t.weight;
+        // Only include topics with non-zero weight
+        if (t.weight > 0) {
+          enabledTopics.push(t.label);
+        }
       });
+      
       weights = topicWeights;
-      Logger.info('✅ Using dashboard topic weights', { weights: topicWeights });
+      topics = enabledTopics.length > 0 ? enabledTopics : ['AI', 'Verizon', 'Accenture'];
+      
+      Logger.info('✅ Using dashboard configuration', { 
+        topics: topics,
+        weights: topicWeights 
+      });
     } else if (!input.weights) {
       try {
         const profile = await this.memoryAgent.getProfile();
@@ -548,7 +561,7 @@ export class Orchestrator {
     
     return {
       date,
-      topics: input.topics || ['AI', 'Verizon', 'Accenture'],
+      topics,
       window_hours: input.window_hours || dashboardConfig?.window_hours || Config.WINDOW_HOURS,
       weights,
       force_overwrite: input.force_overwrite || Config.FORCE_OVERWRITE,
