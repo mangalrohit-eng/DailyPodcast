@@ -100,13 +100,17 @@ Respond with JSON in this exact format:
     
     const outlineData = JSON.parse(response);
     
-    // Map story indices to story IDs
-    const sections: OutlineSection[] = outlineData.sections.map((section: any) => ({
-      type: section.type,
-      title: section.title,
-      target_words: section.target_words,
-      refs: section.refs.map((idx: number) => picks[idx]?.story_id).filter(Boolean),
-    }));
+    // Map story indices to story IDs with null safety
+    const sections: OutlineSection[] = outlineData.sections
+      .filter((section: any) => section && section.type) // Filter out null/invalid sections
+      .map((section: any) => ({
+        type: section.type,
+        title: section.title || 'Untitled',
+        target_words: section.target_words || 150,
+        refs: (section.refs || [])
+          .map((idx: number) => picks[idx]?.story_id)
+          .filter(Boolean),
+      }));
     
     const outline: Outline = {
       sections,

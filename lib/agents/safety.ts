@@ -61,9 +61,15 @@ You must respond with valid JSON only.`,
     for (let i = 0; i < result.sections.length; i++) {
       const sectionResult = result.sections[i];
       
+      // Skip if section result is null/undefined
+      if (!sectionResult) {
+        Logger.warn('Safety check returned null for section', { index: i });
+        continue;
+      }
+      
       if (sectionResult.revised_text) {
         script.sections[i].text = sectionResult.revised_text;
-        editsMade.push(...sectionResult.edits);
+        editsMade.push(...(sectionResult.edits || []));
       }
       
       // Update max risk level
@@ -139,13 +145,23 @@ Return one object per section in the same order.`;
 
     const parsed = JSON.parse(response);
     
-    // Ensure we have results for all sections
+    // Ensure we have results for all sections - handle null/undefined sections
+    if (!parsed.sections || !Array.isArray(parsed.sections)) {
+      Logger.error('Invalid safety check response: missing sections array');
+      return { sections: [] };
+    }
+    
     return {
-      sections: parsed.sections.map((s: any) => ({
-        revised_text: s.revised_text,
-        edits: s.edits || [],
-        risk_level: s.risk_level || 'low',
-      })),
+      sections: parsed.sections.map((s: any) => {
+        if (!s) {
+          return { revised_text: null, edits: [], risk_level: 'low' as const };
+        }
+        return {
+          revised_text: s.revised_text || null,
+          edits: s.edits || [],
+          risk_level: s.risk_level || 'low' as const,
+        };
+      }),
     };
   }
 

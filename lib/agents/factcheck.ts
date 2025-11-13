@@ -61,12 +61,18 @@ You must respond with valid JSON only.`,
     for (let i = 0; i < result.sections.length; i++) {
       const sectionResult = result.sections[i];
       
-      if (sectionResult.revised_text) {
-        script.sections[i].text = sectionResult.revised_text;
-        changesMade.push(...sectionResult.changes);
+      // Skip if section result is null/undefined
+      if (!sectionResult) {
+        Logger.warn('Fact-check returned null for section', { index: i });
+        continue;
       }
       
-      flagsRaised.push(...sectionResult.flags);
+      if (sectionResult.revised_text) {
+        script.sections[i].text = sectionResult.revised_text;
+        changesMade.push(...(sectionResult.changes || []));
+      }
+      
+      flagsRaised.push(...(sectionResult.flags || []));
     }
     
     Logger.info('Fact-check complete', {
@@ -149,13 +155,23 @@ Return one object per section in the same order. For SKIP sections, return null 
 
     const parsed = JSON.parse(response);
     
-    // Ensure we have results for all sections
+    // Ensure we have results for all sections - handle null/undefined sections
+    if (!parsed.sections || !Array.isArray(parsed.sections)) {
+      Logger.error('Invalid fact-check response: missing sections array');
+      return { sections: [] };
+    }
+    
     return {
-      sections: parsed.sections.map((s: any) => ({
-        revised_text: s.revised_text,
-        changes: s.changes || [],
-        flags: s.flags || [],
-      })),
+      sections: parsed.sections.map((s: any) => {
+        if (!s) {
+          return { revised_text: null, changes: [], flags: [] };
+        }
+        return {
+          revised_text: s.revised_text || null,
+          changes: s.changes || [],
+          flags: s.flags || [],
+        };
+      }),
     };
   }
 

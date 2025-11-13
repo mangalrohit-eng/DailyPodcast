@@ -51,17 +51,23 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     // Get topic embeddings
     await this.initializeTopicVectors();
     
-    // Score each story
-    const scoredStories = stories.map((story, idx) => {
-      const embedding = storyEmbeddings[idx];
-      const score = this.calculateScore(story, embedding, topic_weights);
+    // Score each story with null safety
+    const scoredStories = stories
+      .map((story, idx) => {
+        const embedding = storyEmbeddings[idx];
+        if (!embedding) {
+          Logger.warn('Missing embedding for story', { story_id: story.id, title: story.title });
+          return null;
+        }
+        const score = this.calculateScore(story, embedding, topic_weights);
       
-      return {
-        story,
-        embedding,
-        score,
-      };
-    });
+        return {
+          story,
+          embedding,
+          score,
+        };
+      })
+      .filter(Boolean) as Array<{ story: Story; embedding: number[]; score: number }>;
     
     // Sort by score
     scoredStories.sort((a, b) => b.score - a.score);

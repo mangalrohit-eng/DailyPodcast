@@ -199,14 +199,22 @@ Each section MUST:
 
     const parsed = JSON.parse(response);
     
-    // Map back to ScriptSection format
-    return parsed.sections.map((section: any, idx: number) => ({
-      type: section.type,
-      text: section.text,
-      duration_estimate_sec: section.duration_estimate_sec || 60,
-      word_count: section.word_count || section.text.split(/\s+/).length,
-      citations: this.extractCitations(section.text),
-    }));
+    // Validate response structure
+    if (!parsed.sections || !Array.isArray(parsed.sections)) {
+      Logger.error('Invalid scriptwriter response: missing sections array');
+      throw new Error('Scriptwriter returned invalid response format');
+    }
+    
+    // Map back to ScriptSection format with null safety
+    return parsed.sections
+      .filter((section: any) => section && section.text) // Filter out null/invalid sections
+      .map((section: any, idx: number) => ({
+        type: section.type || 'story',
+        text: section.text,
+        duration_estimate_sec: section.duration_estimate_sec || 60,
+        word_count: section.word_count || section.text.split(/\s+/).length,
+        citations: this.extractCitations(section.text),
+      }));
   }
 
   /**
