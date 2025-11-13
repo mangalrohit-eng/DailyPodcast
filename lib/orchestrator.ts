@@ -8,6 +8,7 @@ import { EpisodeManifest, RunConfig } from './types';
 import { StorageTool } from './tools/storage';
 // import { StructuredLogger } from './tools/logs-storage'; // REMOVED: Causing undefined errors
 import { RunsStorage } from './tools/runs-storage';
+import { progressTracker } from './tools/progress-tracker';
 
 // Import all agents
 import { IngestionAgent } from './agents/ingestion';
@@ -115,6 +116,14 @@ export class Orchestrator {
       
       Logger.info('Orchestrator starting', { runId });
       
+      // Start progress tracking
+      progressTracker.startRun(runId);
+      progressTracker.addUpdate(runId, {
+        phase: 'Starting',
+        status: 'running',
+        message: 'Initializing podcast generation pipeline',
+      });
+      
       // Check if episode already exists
       const episodePath = `episodes/${runConfig.date}_daily_rohit_news.mp3`;
       if (!runConfig.force_overwrite && await this.storage.exists(episodePath)) {
@@ -137,6 +146,12 @@ export class Orchestrator {
       
       // 1. INGESTION
       Logger.info('Phase 1: Ingestion');
+      progressTracker.addUpdate(runId, {
+        phase: 'Ingestion',
+        status: 'running',
+        message: 'Fetching news from RSS feeds',
+        details: { topics: Config.getTopicConfigs().map(t => t.name) },
+      });
       const ingestionStart = Date.now();
       const ingestionResult = await this.ingestionAgent.execute(runId, {
         topics: Config.getTopicConfigs(),
@@ -152,9 +167,20 @@ export class Orchestrator {
       Logger.info('Ingestion complete', {
         stories: ingestionResult.output.stories.length,
       });
+      progressTracker.addUpdate(runId, {
+        phase: 'Ingestion',
+        status: 'completed',
+        message: `Found ${ingestionResult.output.stories.length} stories`,
+        details: { story_count: ingestionResult.output.stories.length },
+      });
       
       // 2. RANKING
       Logger.info('Phase 2: Ranking');
+      progressTracker.addUpdate(runId, {
+        phase: 'Ranking',
+        status: 'running',
+        message: 'Analyzing and ranking stories by relevance',
+      });
       const rankingStart = Date.now();
       const rankingResult = await this.rankingAgent.execute(runId, {
         stories: ingestionResult.output.stories,
@@ -170,9 +196,23 @@ export class Orchestrator {
       Logger.info('Ranking complete', {
         picks: rankingResult.output.picks.length,
       });
+      progressTracker.addUpdate(runId, {
+        phase: 'Ranking',
+        status: 'completed',
+        message: `Selected top ${rankingResult.output.picks.length} stories`,
+        details: { 
+          picks: rankingResult.output.picks.length,
+          topics: rankingResult.output.picks.map(p => p.topic),
+        },
+      });
       
       // 3. OUTLINE
       Logger.info('Phase 3: Outline');
+      progressTracker.addUpdate(runId, {
+        phase: 'Outline',
+        status: 'running',
+        message: 'Creating episode outline and structure',
+      });
       const outlineStart = Date.now();
       const outlineResult = await this.outlineAgent.execute(runId, {
         picks: rankingResult.output.picks,
@@ -183,6 +223,11 @@ export class Orchestrator {
       
       // 4. SCRIPTWRITING
       Logger.info('Phase 4: Scriptwriting');
+      progressTracker.addUpdate(runId, {
+        phase: 'Scriptwriting',
+        status: 'running',
+        message: 'Writing conversational script with AI',
+      });
       const scriptStart = Date.now();
       const scriptResult = await this.scriptwriterAgent.execute(runId, {
         outline: outlineResult.output!.outline,
@@ -194,6 +239,11 @@ export class Orchestrator {
       
       // 5. FACT-CHECK
       Logger.info('Phase 5: Fact-Check');
+      progressTracker.addUpdate(runId, {
+        phase: 'Fact Checking',
+        status: 'running',
+        message: 'Verifying facts against sources',
+      });
       const factCheckStart = Date.now();
       const factCheckResult = await this.factCheckAgent.execute(runId, {
         script: scriptResult.output!.script,
@@ -207,6 +257,11 @@ export class Orchestrator {
       
       // 6. SAFETY
       Logger.info('Phase 6: Safety Check');
+      progressTracker.addUpdate(runId, {
+        phase: 'Safety Review',
+        status: 'running',
+        message: 'Screening content for safety and compliance',
+      });
       const safetyStart = Date.now();
       const safetyResult = await this.safetyAgent.execute(runId, {
         script: factCheckResult.output!.script,
@@ -224,6 +279,11 @@ export class Orchestrator {
       
       // 7. TTS DIRECTOR
       Logger.info('Phase 7: TTS Planning');
+      progressTracker.addUpdate(runId, {
+        phase: 'TTS Planning',
+        status: 'running',
+        message: 'Planning voice synthesis for natural delivery',
+      });
       const ttsDirectorStart = Date.now();
       const ttsDirectorResult = await this.ttsDirectorAgent.execute(runId, {
         script: safetyResult.output!.script,
@@ -232,6 +292,11 @@ export class Orchestrator {
       
       // 8. AUDIO ENGINEER
       Logger.info('Phase 8: Audio Synthesis');
+      progressTracker.addUpdate(runId, {
+        phase: 'Audio Generation',
+        status: 'running',
+        message: 'Generating audio with OpenAI TTS (this takes longest)',
+      });
       const audioStart = Date.now();
       const audioResult = await this.audioEngineerAgent.execute(runId, {
         synthesis_plan: ttsDirectorResult.output!.synthesis_plan,
@@ -262,6 +327,11 @@ export class Orchestrator {
       
       // 9. PUBLISHER
       Logger.info('Phase 9: Publishing');
+      progressTracker.addUpdate(runId, {
+        phase: 'Publishing',
+        status: 'running',
+        message: 'Uploading episode to S3 and updating feed',
+      });
       const publishStart = Date.now();
       const publishResult = await this.publisherAgent.execute(runId, {
         audio_buffer: audioResult.output!.audio_buffer,
@@ -293,6 +363,17 @@ export class Orchestrator {
         duration_sec: manifest.duration_sec,
       });
       
+      progressTracker.addUpdate(runId, {
+        phase: 'Complete',
+        status: 'completed',
+        message: `Episode generated successfully (${Math.floor(totalTime / 1000)}s)`,
+        details: {
+          duration_sec: manifest.duration_sec,
+          word_count: manifest.word_count,
+          episode_url: manifest.mp3_url,
+        },
+      });
+      
       // Complete the run and update index
       try {
         await runsStorage.completeRun(runId, manifest);
@@ -321,6 +402,13 @@ export class Orchestrator {
         error: (error as Error).message,
         stack: (error as Error).stack,
         total_time_ms: totalTime,
+      });
+      
+      progressTracker.addUpdate(runId, {
+        phase: 'Failed',
+        status: 'failed',
+        message: (error as Error).message,
+        details: { error: (error as Error).message },
       });
       
       // Fail the run
