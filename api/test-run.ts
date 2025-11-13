@@ -237,39 +237,64 @@ async function handleHealthCheck(req: VercelRequest, res: VercelResponse) {
 
     // Test 1: Environment Variables
     const hasOpenAI = !!Config.OPENAI_API_KEY;
-    const hasStorage = !!Config.BLOB_READ_WRITE_TOKEN;
+    const hasS3AccessKey = !!Config.S3_ACCESS_KEY;
+    const hasS3SecretKey = !!Config.S3_SECRET_KEY;
+    const hasS3Bucket = !!Config.S3_BUCKET;
+    const hasS3Region = !!Config.S3_REGION;
+    const hasAllS3Creds = hasS3AccessKey && hasS3SecretKey && hasS3Bucket && hasS3Region;
     const hasBaseUrl = !!Config.PODCAST_BASE_URL;
     
     results.tests.env_vars = {
       name: 'Environment Variables',
-      status: (hasOpenAI && hasStorage) ? 'pass' : 'fail',
+      status: (hasOpenAI && hasAllS3Creds) ? 'pass' : 'fail',
       details: {
         OPENAI_API_KEY: hasOpenAI ? 'set' : 'MISSING',
-        BLOB_READ_WRITE_TOKEN: hasStorage ? 'set' : 'MISSING',
+        S3_ACCESS_KEY: hasS3AccessKey ? 'set' : 'MISSING',
+        S3_SECRET_KEY: hasS3SecretKey ? 'set' : 'MISSING',
+        S3_BUCKET: hasS3Bucket ? Config.S3_BUCKET : 'MISSING',
+        S3_REGION: hasS3Region ? Config.S3_REGION : 'MISSING',
+        S3_ENDPOINT: Config.S3_ENDPOINT || '(using AWS S3)',
         PODCAST_BASE_URL: hasBaseUrl ? Config.PODCAST_BASE_URL : 'using default',
       },
     };
 
-    // Test 2: Storage Connection
+    // Test 2: AWS S3 Storage Connection
     try {
-      // Use episodes/ prefix since we know list() works for it
-      const testPath = `episodes/health-check-${Date.now()}.txt`;
-      const testContent = 'Health check test';
+      const testPath = `health-check/test-${Date.now()}.txt`;
+      const testContent = 'AWS S3 health check test';
+      
+      Logger.info('Testing S3 write...', { path: testPath });
       const url = await storage.put(testPath, testContent, 'text/plain');
+      
+      Logger.info('Testing S3 read...', { path: testPath });
       const readContent = await storage.get(testPath);
       const contentMatches = readContent.toString('utf-8') === testContent;
+      
+      Logger.info('Testing S3 delete...', { path: testPath });
       await storage.delete(testPath);
       
       results.tests.storage = {
-        name: 'Vercel Blob Storage',
+        name: 'AWS S3 Storage',
         status: contentMatches ? 'pass' : 'fail',
-        details: { write: 'success', read: contentMatches ? 'success' : 'mismatch', delete: 'success' },
+        details: { 
+          write: 'success', 
+          read: contentMatches ? 'success' : 'mismatch', 
+          delete: 'success',
+          bucket: Config.S3_BUCKET,
+          region: Config.S3_REGION,
+          endpoint: Config.S3_ENDPOINT || 'AWS S3 default',
+        },
       };
     } catch (error: any) {
       results.tests.storage = {
-        name: 'Vercel Blob Storage',
+        name: 'AWS S3 Storage',
         status: 'fail',
         error: error.message,
+        details: {
+          bucket: Config.S3_BUCKET || 'NOT SET',
+          region: Config.S3_REGION || 'NOT SET',
+          hint: 'Check S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, and S3_REGION environment variables',
+        },
       };
     }
 
@@ -308,18 +333,32 @@ async function handleHealthCheck(req: VercelRequest, res: VercelResponse) {
     
     // Recommendations
     results.recommendations = [];
-    if (!hasOpenAI || !hasStorage) {
+    if (!hasOpenAI || !hasAllS3Creds) {
+      const missing = [];
+      if (!hasOpenAI) missing.push('OPENAI_API_KEY');
+      if (!hasS3AccessKey) missing.push('S3_ACCESS_KEY');
+      if (!hasS3SecretKey) missing.push('S3_SECRET_KEY');
+      if (!hasS3Bucket) missing.push('S3_BUCKET');
+      if (!hasS3Region) missing.push('S3_REGION');
+      
       results.recommendations.push({
         priority: 'critical',
-        issue: 'Missing required environment variables',
-        action: 'Set OPENAI_API_KEY and BLOB_READ_WRITE_TOKEN in Vercel',
+        issue: `Missing required environment variables: ${missing.join(', ')}`,
+        action: 'Add missing variables in Vercel → Settings → Environment Variables. See AWS_S3_SETUP.md for details.',
       });
     }
     if (results.tests.storage?.status === 'fail') {
       results.recommendations.push({
         priority: 'critical',
-        issue: 'Storage is not working',
-        action: 'Verify BLOB_READ_WRITE_TOKEN is correct',
+        issue: 'AWS S3 storage is not working',
+        action: 'Verify S3 credentials are correct. Check bucket exists, IAM user has S3FullAccess, and region matches bucket location.',
+      });
+    }
+    if (results.tests.episodes?.details?.count === 0) {
+      results.recommendations.push({
+        priority: 'info',
+        issue: 'No episodes found in S3',
+        action: 'This is a fresh start. Click "Run Now" to generate your first episode.',
       });
     }
 
