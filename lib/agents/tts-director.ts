@@ -16,11 +16,11 @@ export interface TtsDirectorOutput {
 }
 
 export class TtsDirectorAgent extends BaseAgent<TtsDirectorInput, TtsDirectorOutput> {
-  // OpenAI TTS voices
+  // OpenAI TTS voices - optimized for most natural sound
   private readonly voices = {
-    host: 'nova' as const,      // Warm, professional female voice
-    analyst: 'onyx' as const,   // Authoritative male voice
-    stinger: 'alloy' as const,  // Neutral for intro/outro
+    host: 'shimmer' as const,   // Most natural-sounding female (warmer, less robotic than nova)
+    analyst: 'echo' as const,   // Calmer, more natural male (smoother than onyx)
+    stinger: 'fable' as const,  // Expressive and engaging for intro/outro
   };
   
   constructor() {

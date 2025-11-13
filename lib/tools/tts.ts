@@ -23,7 +23,7 @@ export class TtsTool {
   }
   
   async synthesize(options: TtsOptions): Promise<Buffer> {
-    const { voice, text, format = 'mp3', speed = 1.0 } = options;
+    const { voice, text, format = 'mp3', speed = 0.95 } = options; // Slightly slower for more natural conversational pace
     
     Logger.debug('TTS synthesis', {
       voice,
