@@ -3,6 +3,7 @@
  * 
  * POST /api/test-run - Run system test with OpenAI check
  * GET /api/test-run?debug=true - Debug runs index and storage
+ * GET /api/test-run?health=true - Comprehensive health check
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -21,9 +22,18 @@ export default async function handler(
   // Wrap everything to ensure we always return JSON
   try {
     return await AuthMiddleware.protect(req, res, async (req, res) => {
-      // Handle GET request for debug info
+      // Handle GET requests
       if (req.method === 'GET') {
-        return handleDebug(req, res);
+        const health = req.query.health;
+        const debug = req.query.debug;
+        
+        if (health) {
+          return handleHealthCheck(req, res);
+        } else if (debug) {
+          return handleDebug(req, res);
+        } else {
+          return res.status(400).json({ error: 'Use ?health=true or ?debug=true' });
+        }
       }
       
       if (req.method !== 'POST') {
@@ -208,6 +218,115 @@ export default async function handler(
       success: false,
       error: outerError.message || 'Internal server error',
       details: 'An unexpected error occurred during test run',
+    });
+  }
+}
+
+/**
+ * Handle health check request - comprehensive system diagnostics
+ */
+async function handleHealthCheck(req: VercelRequest, res: VercelResponse) {
+  const results: any = {
+    timestamp: new Date().toISOString(),
+    tests: {},
+    overall_status: 'unknown',
+  };
+
+  try {
+    const storage = new StorageTool();
+
+    // Test 1: Environment Variables
+    const hasOpenAI = !!Config.OPENAI_API_KEY;
+    const hasStorage = !!Config.BLOB_READ_WRITE_TOKEN;
+    const hasBaseUrl = !!Config.PODCAST_BASE_URL;
+    
+    results.tests.env_vars = {
+      name: 'Environment Variables',
+      status: (hasOpenAI && hasStorage) ? 'pass' : 'fail',
+      details: {
+        OPENAI_API_KEY: hasOpenAI ? 'set' : 'MISSING',
+        BLOB_READ_WRITE_TOKEN: hasStorage ? 'set' : 'MISSING',
+        PODCAST_BASE_URL: hasBaseUrl ? Config.PODCAST_BASE_URL : 'using default',
+      },
+    };
+
+    // Test 2: Storage Connection
+    try {
+      const testPath = `test/${Date.now()}.txt`;
+      const testContent = 'Health check test';
+      const url = await storage.put(testPath, testContent, 'text/plain');
+      const readContent = await storage.get(testPath);
+      const contentMatches = readContent.toString('utf-8') === testContent;
+      await storage.delete(testPath);
+      
+      results.tests.storage = {
+        name: 'Vercel Blob Storage',
+        status: contentMatches ? 'pass' : 'fail',
+        details: { write: 'success', read: contentMatches ? 'success' : 'mismatch', delete: 'success' },
+      };
+    } catch (error: any) {
+      results.tests.storage = {
+        name: 'Vercel Blob Storage',
+        status: 'fail',
+        error: error.message,
+      };
+    }
+
+    // Test 3: Runs Index
+    try {
+      const exists = await storage.exists('runs/index.json');
+      let indexData = null;
+      if (exists) {
+        const data = await storage.get('runs/index.json');
+        indexData = JSON.parse(data.toString('utf-8'));
+      }
+      results.tests.runs_index = {
+        name: 'Runs Index',
+        status: exists ? 'pass' : 'warn',
+        details: { exists, total_runs: indexData?.runs?.length || 0 },
+      };
+    } catch (error: any) {
+      results.tests.runs_index = { name: 'Runs Index', status: 'fail', error: error.message };
+    }
+
+    // Test 4: Episodes
+    try {
+      const episodeFiles = await storage.list('episodes/');
+      results.tests.episodes = {
+        name: 'Episode Files',
+        status: episodeFiles.length > 0 ? 'pass' : 'warn',
+        details: { count: episodeFiles.length },
+      };
+    } catch (error: any) {
+      results.tests.episodes = { name: 'Episode Files', status: 'fail', error: error.message };
+    }
+
+    // Calculate overall status
+    const statuses = Object.values(results.tests).map((t: any) => t.status);
+    results.overall_status = statuses.includes('fail') ? 'fail' : statuses.includes('warn') ? 'warn' : 'pass';
+    
+    // Recommendations
+    results.recommendations = [];
+    if (!hasOpenAI || !hasStorage) {
+      results.recommendations.push({
+        priority: 'critical',
+        issue: 'Missing required environment variables',
+        action: 'Set OPENAI_API_KEY and BLOB_READ_WRITE_TOKEN in Vercel',
+      });
+    }
+    if (results.tests.storage?.status === 'fail') {
+      results.recommendations.push({
+        priority: 'critical',
+        issue: 'Storage is not working',
+        action: 'Verify BLOB_READ_WRITE_TOKEN is correct',
+      });
+    }
+
+    return res.status(200).json(results);
+  } catch (error: any) {
+    return res.status(500).json({
+      overall_status: 'error',
+      error: error.message,
     });
   }
 }
