@@ -33,26 +33,28 @@ export class PublisherAgent extends BaseAgent<PublisherInput, PublisherOutput> {
     
     Logger.info('Publishing episode', { date: manifest.date });
     
-    // Upload episode MP3
-    const episodePath = `episodes/${manifest.date}_daily_rohit_news.mp3`;
+    // Upload episode MP3 (use run_id for unique filename)
+    const episodePath = `episodes/${manifest.run_id}_daily_rohit_news.mp3`;
     const episodeUrl = await this.storage.put(
       episodePath,
       audio_buffer,
       'audio/mpeg'
     );
     
-    Logger.info('Episode uploaded', { url: episodeUrl });
+    Logger.info('Episode uploaded', { url: episodeUrl, path: episodePath });
     
     // Update manifest with public URL
     manifest.mp3_url = episodeUrl;
     
-    // Store manifest
-    const manifestPath = `episodes/${manifest.date}_manifest.json`;
+    // Store manifest (use run_id to match what RunsStorage expects)
+    const manifestPath = `episodes/${manifest.run_id}_manifest.json`;
     await this.storage.put(
       manifestPath,
       JSON.stringify(manifest, null, 2),
       'application/json'
     );
+    
+    Logger.info('Manifest saved', { path: manifestPath });
     
     // Update feed.xml
     await this.updateFeed(manifest, podcast_config);
