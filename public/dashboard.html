@@ -961,10 +961,12 @@ Full data in console (F12).`;
             const statusDiv = document.getElementById('healthStatus');
             statusDiv.innerHTML = '<div class="spinner"></div> Running comprehensive health check...<br><small style="color: #666;">This should take 5-15 seconds</small>';
             
+            let timeoutId; // Declare outside try block so catch can access it
+            
             try {
                 // Add timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     controller.abort();
                 }, 20000); // 20 second timeout
                 
@@ -1040,9 +1042,9 @@ Full data in console (F12).`;
                 }
                 
             } catch (error) {
-                clearTimeout(timeoutId);
+                if (timeoutId) clearTimeout(timeoutId);
                 
-                let errorMsg = error.message;
+                let errorMsg = error.message || 'Unknown error';
                 if (error.name === 'AbortError') {
                     errorMsg = 'Request timed out after 20 seconds. The server may be slow or unresponsive.';
                 }
