@@ -22,6 +22,12 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
   protected client: OpenAI;
   protected storage: StorageTool;
   
+  // API call tracking
+  protected apiCallCount: number = 0;
+  
+  // Global API call counter per run
+  private static runApiCalls: Map<string, Map<string, number>> = new Map();
+  
   constructor(config: AgentConfig) {
     this.config = {
       temperature: 0.7,
@@ -43,6 +49,9 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
    */
   async execute(runId: string, input: TInput): Promise<AgentMessage<TInput, TOutput>> {
     const startTime = Date.now();
+    
+    // Reset API call counter for this agent execution
+    this.apiCallCount = 0;
     
     const message: AgentMessage<TInput, TOutput> = {
       agent: this.config.name,
@@ -73,8 +82,15 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
       message.output = output;
       message.duration_ms = Date.now() - startTime;
       
+      // Add API call count to message
+      (message as any).api_calls = this.apiCallCount;
+      
+      // Track globally
+      BaseAgent.trackApiCalls(runId, this.config.name, this.apiCallCount);
+      
       Logger.info(`${this.config.name} completed`, {
         runId,
+        api_calls: this.apiCallCount,
         duration_ms: message.duration_ms,
       });
       
@@ -141,7 +157,55 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
       }
     );
     
+    // Increment API call counter
+    this.apiCallCount++;
+    
     return response.choices[0]?.message?.content || '';
+  }
+  
+  /**
+   * Track API calls for a run
+   */
+  private static trackApiCalls(runId: string, agentName: string, count: number): void {
+    if (!this.runApiCalls.has(runId)) {
+      this.runApiCalls.set(runId, new Map());
+    }
+    this.runApiCalls.get(runId)!.set(agentName, count);
+  }
+  
+  /**
+   * Get API call counts for a run
+   */
+  static getApiCalls(runId: string): Record<string, number> {
+    const calls = this.runApiCalls.get(runId);
+    if (!calls) return {};
+    
+    const result: Record<string, number> = {};
+    calls.forEach((count, agent) => {
+      result[agent] = count;
+    });
+    return result;
+  }
+  
+  /**
+   * Get total API calls for a run
+   */
+  static getTotalApiCalls(runId: string): number {
+    const calls = this.runApiCalls.get(runId);
+    if (!calls) return 0;
+    
+    let total = 0;
+    calls.forEach(count => {
+      total += count;
+    });
+    return total;
+  }
+  
+  /**
+   * Clear API call tracking for a run
+   */
+  static clearApiCalls(runId: string): void {
+    this.runApiCalls.delete(runId);
   }
   
   /**

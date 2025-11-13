@@ -9,6 +9,7 @@ import { StorageTool } from './tools/storage';
 // import { StructuredLogger } from './tools/logs-storage'; // REMOVED: Causing undefined errors
 import { RunsStorage } from './tools/runs-storage';
 import { progressTracker } from './tools/progress-tracker';
+import { BaseAgent } from './agents/base';
 
 // Import all agents
 import { IngestionAgent } from './agents/ingestion';
@@ -405,20 +406,48 @@ export class Orchestrator {
       
       const totalTime = Date.now() - startTime;
       
+      // Get API call statistics
+      const apiCalls = BaseAgent.getApiCalls(runId);
+      const totalApiCalls = BaseAgent.getTotalApiCalls(runId);
+      
       Logger.info('Orchestrator complete', {
         runId,
         total_time_ms: totalTime,
         duration_sec: manifest.duration_sec,
+        total_api_calls: totalApiCalls,
+        api_calls_by_agent: apiCalls,
       });
+      
+      // Add API calls to manifest metrics
+      if (!manifest.metrics) {
+        manifest.metrics = {
+          ingestion_time_ms: 0,
+          ranking_time_ms: 0,
+          outline_time_ms: 0,
+          scriptwriting_time_ms: 0,
+          factcheck_time_ms: 0,
+          safety_time_ms: 0,
+          tts_director_time_ms: 0,
+          audio_engineer_time_ms: 0,
+          publisher_time_ms: 0,
+          memory_time_ms: 0,
+          total_time_ms: totalTime,
+          openai_tokens: 0,
+        };
+      }
+      (manifest.metrics as any).openai_api_calls = totalApiCalls;
+      (manifest.metrics as any).api_calls_by_agent = apiCalls;
       
       progressTracker.addUpdate(runId, {
         phase: 'Complete',
         status: 'completed',
-        message: `Episode generated successfully (${Math.floor(totalTime / 1000)}s)`,
+        message: `Episode generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls)`,
         details: {
           duration_sec: manifest.duration_sec,
           word_count: manifest.word_count,
           episode_url: manifest.mp3_url,
+          total_api_calls: totalApiCalls,
+          api_calls_by_agent: apiCalls,
         },
       });
       
@@ -434,6 +463,9 @@ export class Orchestrator {
         });
         // Don't fail the entire run if index update fails
       }
+      
+      // Clean up API call tracking
+      BaseAgent.clearApiCalls(runId);
       
       return {
         success: true,

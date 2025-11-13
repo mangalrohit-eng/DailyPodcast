@@ -1949,6 +1949,20 @@ Full data in console (F12).`;
                     return html || '<em>No details available</em>';
                 }
                 
+                // Add API call summary if available
+                if (latestUpdate && latestUpdate.details && latestUpdate.details.total_api_calls) {
+                    const apiCallsHtml = `
+                        <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                            <strong>📊 API Usage:</strong> ${latestUpdate.details.total_api_calls} OpenAI API calls<br>
+                            ${latestUpdate.details.api_calls_by_agent ? '<small style="color: #666;">By agent: ' + 
+                                Object.entries(latestUpdate.details.api_calls_by_agent)
+                                    .map(([agent, count]) => `${agent}(${count})`)
+                                    .join(', ') + '</small>' : ''}
+                        </div>
+                    `;
+                    document.getElementById('currentMessage').innerHTML += apiCallsHtml;
+                }
+                
                 // Toggle details function
                 window.toggleDetails = function(id) {
                     const elem = document.getElementById(id);
