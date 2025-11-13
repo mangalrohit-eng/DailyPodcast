@@ -499,13 +499,35 @@ export class Orchestrator {
     }
   }
   
-  private async buildRunConfig(input: OrchestratorInput): Promise<RunConfig> {
+  private async buildRunConfig(input: OrchestratorInput): Promise<RunConfig & { podcast_production?: any }> {
     const date = input.date || Clock.toDateString(Clock.nowUtc());
     
-    // Get weights from memory profile if not provided
+    // Load configuration from ConfigStorage (dashboard settings)
+    const configStorage = new ConfigStorage();
+    let dashboardConfig;
+    try {
+      dashboardConfig = await configStorage.load();
+      Logger.info('Loaded dashboard configuration', {
+        has_production_settings: !!dashboardConfig.podcast_production,
+      });
+    } catch (error) {
+      Logger.warn('Failed to load dashboard config, using defaults', {
+        error: (error as Error).message,
+      });
+      dashboardConfig = null;
+    }
+    
+    // Get weights from dashboard config or memory profile
     let weights = input.weights || Config.parseTopicWeights();
     
-    if (!input.weights) {
+    if (!input.weights && dashboardConfig) {
+      // Use topic weights from dashboard config
+      const topicWeights: Record<string, number> = {};
+      dashboardConfig.topics.forEach(t => {
+        topicWeights[t.label.toLowerCase()] = t.weight;
+      });
+      weights = topicWeights;
+    } else if (!input.weights) {
       try {
         const profile = await this.memoryAgent.getProfile();
         weights = profile.topic_weights;
@@ -517,11 +539,25 @@ export class Orchestrator {
     return {
       date,
       topics: input.topics || ['AI', 'Verizon', 'Accenture'],
-      window_hours: input.window_hours || Config.WINDOW_HOURS,
+      window_hours: input.window_hours || dashboardConfig?.window_hours || Config.WINDOW_HOURS,
       weights,
       force_overwrite: input.force_overwrite || Config.FORCE_OVERWRITE,
-      rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : Config.RUMOR_FILTER,
-      target_duration_sec: Config.TARGET_DURATION_SECONDS,
+      rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : (dashboardConfig?.rumor_filter ?? Config.RUMOR_FILTER),
+      target_duration_sec: dashboardConfig?.target_duration_sec || Config.TARGET_DURATION_SECONDS,
+      podcast_production: dashboardConfig?.podcast_production || {
+        intro_text: 'This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we\'ll cover:',
+        outro_text: 'That\'s your executive brief. Stay informed, stay ahead.',
+        enable_intro_music: true,
+        enable_outro_music: true,
+        intro_music_duration_ms: 3000,
+        outro_music_duration_ms: 2000,
+        pause_after_intro_ms: 800,
+        pause_between_stories_ms: 1200,
+        pause_before_outro_ms: 500,
+        num_stories_min: 3,
+        num_stories_max: 5,
+        style: 'executive',
+      },
     };
   }
 }
