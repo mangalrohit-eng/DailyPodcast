@@ -258,8 +258,15 @@ export class StructuredLogger {
     
     logFn(msg, { ...data, agent, runId: this.runId });
     
-    // Append to storage
-    await this.logsStorage.append(this.runId, entry);
+    // Append to storage (non-blocking, don't fail on storage errors)
+    try {
+      await this.logsStorage.append(this.runId, entry);
+    } catch (storageError) {
+      BaseLogger.warn('Failed to append log to storage', {
+        error: (storageError as Error).message,
+        runId: this.runId,
+      });
+    }
   }
   
   async info(msg: string, data?: any, agent?: string): Promise<void> {
@@ -279,7 +286,14 @@ export class StructuredLogger {
   }
   
   async flush(): Promise<void> {
-    await this.logsStorage.flush(this.runId);
+    try {
+      await this.logsStorage.flush(this.runId);
+    } catch (flushError) {
+      BaseLogger.warn('Failed to flush logs', {
+        error: (flushError as Error).message,
+        runId: this.runId,
+      });
+    }
   }
 }
 

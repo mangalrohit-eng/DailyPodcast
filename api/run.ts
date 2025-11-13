@@ -66,14 +66,25 @@ export default async function handler(
       });
     }
   } catch (error) {
+    const errorMessage = (error as Error).message || 'Unknown error';
+    const errorStack = (error as Error).stack || '';
+    
     Logger.error('API /run failed', {
-      error: (error as Error).message,
-      stack: (error as Error).stack,
+      error: errorMessage,
+      stack: errorStack,
+      name: (error as Error).name,
     });
     
+    // Return detailed error for debugging
     return res.status(500).json({
       success: false,
-      error: (error as Error).message,
+      error: errorMessage,
+      details: {
+        name: (error as Error).name,
+        message: errorMessage,
+        // Only include stack in non-production for security
+        stack: process.env.NODE_ENV === 'production' ? undefined : errorStack,
+      },
     });
   }
 }
