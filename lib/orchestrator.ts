@@ -90,7 +90,10 @@ export class Orchestrator {
       // Check concurrency - only one run at a time
       if (!runConfig.force_overwrite && RunsStorage.isRunActive()) {
         const activeRun = RunsStorage.getActiveRunId();
-        await structuredLogger.warn('Run already in progress', { activeRun });
+        if (structuredLogger) {
+          await structuredLogger.warn('Run already in progress', { activeRun });
+        }
+        Logger.warn('Run already in progress', { activeRun });
         return {
           success: false,
           error: `Another run is already in progress: ${activeRun}`,
@@ -102,9 +105,12 @@ export class Orchestrator {
       }
       
       // Start the run
-      const started = await runsStorage.startRun(runId);
+      const started = runsStorage ? await runsStorage.startRun(runId) : false;
       if (!started && !runConfig.force_overwrite) {
-        await structuredLogger.warn('Failed to start run (concurrency)', { runId });
+        if (structuredLogger) {
+          await structuredLogger.warn('Failed to start run (concurrency)', { runId });
+        }
+        Logger.warn('Failed to start run (concurrency)', { runId });
         return {
           success: false,
           error: 'Failed to start run - another run may be in progress',
@@ -115,7 +121,9 @@ export class Orchestrator {
         };
       }
       
-      await structuredLogger.info('Orchestrator starting', { runId });
+      if (structuredLogger) {
+        await structuredLogger.info('Orchestrator starting', { runId });
+      }
       Logger.info('Orchestrator starting', { runId });
       
       // Check if episode already exists
@@ -139,7 +147,9 @@ export class Orchestrator {
       }
       
       // 1. INGESTION
-      await structuredLogger.info('Phase 1: Ingestion', {}, 'orchestrator');
+      if (structuredLogger) {
+        await structuredLogger.info('Phase 1: Ingestion', {}, 'orchestrator');
+      }
       Logger.info('Phase 1: Ingestion');
       const ingestionStart = Date.now();
       const ingestionResult = await this.ingestionAgent.execute(runId, {
@@ -153,15 +163,19 @@ export class Orchestrator {
         throw new Error('No stories found during ingestion');
       }
       
-      await structuredLogger.info('Ingestion complete', {
-        stories: ingestionResult.output.stories.length,
-      }, 'ingestion');
+      if (structuredLogger) {
+        await structuredLogger.info('Ingestion complete', {
+          stories: ingestionResult.output.stories.length,
+        }, 'ingestion');
+      }
       Logger.info('Ingestion complete', {
         stories: ingestionResult.output.stories.length,
       });
       
       // 2. RANKING
-      await structuredLogger.info('Phase 2: Ranking', {}, 'orchestrator');
+      if (structuredLogger) {
+        await structuredLogger.info('Phase 2: Ranking', {}, 'orchestrator');
+      }
       Logger.info('Phase 2: Ranking');
       const rankingStart = Date.now();
       const rankingResult = await this.rankingAgent.execute(runId, {
@@ -175,9 +189,11 @@ export class Orchestrator {
         throw new Error('No stories ranked');
       }
       
-      await structuredLogger.info('Ranking complete', {
-        picks: rankingResult.output.picks.length,
-      }, 'ranking');
+      if (structuredLogger) {
+        await structuredLogger.info('Ranking complete', {
+          picks: rankingResult.output.picks.length,
+        }, 'ranking');
+      }
       Logger.info('Ranking complete', {
         picks: rankingResult.output.picks.length,
       });
@@ -298,10 +314,12 @@ export class Orchestrator {
       
       const totalTime = Date.now() - startTime;
       
-      await structuredLogger.info('Orchestrator complete', {
-        total_time_ms: totalTime,
-        duration_sec: manifest.duration_sec,
-      });
+      if (structuredLogger) {
+        await structuredLogger.info('Orchestrator complete', {
+          total_time_ms: totalTime,
+          duration_sec: manifest.duration_sec,
+        });
+      }
       
       Logger.info('Orchestrator complete', {
         runId,
