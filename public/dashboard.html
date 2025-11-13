@@ -1374,11 +1374,17 @@
                 });
                 const data = await response.json();
                 
+                console.log('Loaded runs data:', data);
+                console.log('Total runs:', data.runs?.length || 0);
+                
                 const container = document.getElementById('episodesList');
                 const episodes = data.runs.filter(r => r.episode_url);
+                
+                console.log('Filtered episodes with URLs:', episodes.length);
+                console.log('Episodes:', episodes);
 
                 if (episodes.length === 0) {
-                    container.innerHTML = '<div class="empty-state">No episodes yet</div>';
+                    container.innerHTML = '<div class="empty-state">No episodes yet. Click "Index Existing Episodes" in Settings if you have pre-dashboard episodes.</div>';
                     return;
                 }
 

@@ -6,10 +6,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { authenticate } from '../lib/middleware/auth';
 import { RunsStorage } from '../lib/tools/runs-storage';
 import { Logger } from '../lib/utils';
 
-export default async function handler(
+async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
@@ -25,6 +26,8 @@ export default async function handler(
     return handleListRuns(req, res);
   }
 }
+
+export default authenticate(handler);
 
 async function handleListRuns(req: VercelRequest, res: VercelResponse) {
   try {
