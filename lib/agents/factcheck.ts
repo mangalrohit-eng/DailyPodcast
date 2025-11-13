@@ -14,6 +14,10 @@ export interface FactCheckOutput {
   script: Script;
   changes_made: string[];
   flags_raised: string[];
+  detailed_report: {
+    changes_made: string[];
+    flags_raised: string[];
+  };
 }
 
 export class FactCheckAgent extends BaseAgent<FactCheckInput, FactCheckOutput> {
@@ -84,6 +88,10 @@ You must respond with valid JSON only.`,
       script,
       changes_made: changesMade,
       flags_raised: flagsRaised,
+      detailed_report: {
+        changes_made: changesMade,
+        flags_raised: flagsRaised,
+      },
     };
   }
   

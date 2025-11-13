@@ -17,6 +17,11 @@ export interface RankingInput {
 export interface RankingOutput {
   picks: Pick[];
   topic_distribution: Record<string, number>;
+  detailed_report: {
+    stories_ranked: number;
+    top_picks: Array<{ title: string; topic: string; score: number; why_selected: string }>;
+    rejected_stories: Array<{ title: string; score: number; reason: string }>;
+  };
 }
 
 export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
@@ -39,7 +44,15 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     const { stories, topic_weights, target_count } = input;
     
     if (stories.length === 0) {
-      return { picks: [], topic_distribution: {} };
+      return { 
+        picks: [], 
+        topic_distribution: {},
+        detailed_report: {
+          stories_ranked: 0,
+          top_picks: [],
+          rejected_stories: [],
+        },
+      };
     }
     
     Logger.info('Ranking stories', { count: stories.length, target: target_count });
@@ -72,14 +85,34 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     // Sort by score
     scoredStories.sort((a, b) => b.score - a.score);
     
-    // Diversify and select
-    const picks = this.diversifySelection(scoredStories, target_count);
+    // Diversify and select (this modifies picks with selection reasons)
+    const picks = this.diversifySelectionWithTracking(scoredStories, target_count);
     
     // Calculate topic distribution
     const topicDistribution: Record<string, number> = {};
     for (const pick of picks) {
       topicDistribution[pick.topic] = (topicDistribution[pick.topic] || 0) + 1;
     }
+    
+    // Build detailed report
+    const selectedIds = new Set(picks.map(p => p.story_id));
+    const topPicks = picks.map(p => ({
+      title: p.story.title,
+      topic: p.topic,
+      score: Math.round(p.score * 1000) / 1000,
+      why_selected: p.rationale,
+    }));
+    
+    const rejectedStories = scoredStories
+      .filter(s => !selectedIds.has(s.story.id))
+      .slice(0, 20) // Top 20 rejected
+      .map(s => ({
+        title: s.story.title,
+        score: Math.round(s.score * 1000) / 1000,
+        reason: s.score < 0.5 
+          ? 'Score below threshold (0.5)' 
+          : 'Not selected due to diversity/similarity constraints',
+      }));
     
     Logger.info('Ranking complete', {
       picks: picks.length,
@@ -89,6 +122,11 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     return {
       picks,
       topic_distribution: topicDistribution,
+      detailed_report: {
+        stories_ranked: scoredStories.length,
+        top_picks: topPicks,
+        rejected_stories: rejectedStories,
+      },
     };
   }
   
@@ -170,7 +208,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     return 0.5;
   }
   
-  private diversifySelection(
+  private diversifySelectionWithTracking(
     scoredStories: Array<{ story: Story; embedding: number[]; score: number }>,
     targetCount: number
   ): Pick[] {
@@ -185,7 +223,9 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
       const topicStories = scoredStories.filter(s => s.story.topic === topic);
       if (topicStories.length > 0) {
         const best = topicStories[0];
-        picks.push(this.createPick(best.story, best.score, picks.length));
+        const pick = this.createPick(best.story, best.score, picks.length);
+        pick.rationale = `Top ${topic} story (score: ${best.score.toFixed(3)}) - guaranteed topic coverage`;
+        picks.push(pick);
         selectedEmbeddings.push(...best.embedding);
         topicCounts.set(topic!, (topicCounts.get(topic!) || 0) + 1);
       }
@@ -215,10 +255,13 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
       }
       
       if (isDiverse) {
-        picks.push(this.createPick(candidate.story, candidate.score, picks.length));
+        const pick = this.createPick(candidate.story, candidate.score, picks.length);
+        const topicCount = topicCounts.get(candidate.story.topic!) || 0;
+        pick.rationale = `High score (${candidate.score.toFixed(3)}) + diverse content - ${candidate.story.topic} story #${topicCount + 1}`;
+        picks.push(pick);
         topicCounts.set(
           candidate.story.topic!,
-          (topicCounts.get(candidate.story.topic!) || 0) + 1
+          topicCount + 1
         );
       }
     }

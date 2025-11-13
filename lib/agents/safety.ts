@@ -14,6 +14,10 @@ export interface SafetyOutput {
   script: Script;
   edits_made: string[];
   risk_level: 'low' | 'medium' | 'high';
+  detailed_report: {
+    edits_made: string[];
+    risk_level: string;
+  };
 }
 
 export class SafetyAgent extends BaseAgent<SafetyInput, SafetyOutput> {
@@ -89,6 +93,10 @@ You must respond with valid JSON only.`,
       script,
       edits_made: editsMade,
       risk_level: maxRiskLevel,
+      detailed_report: {
+        edits_made: editsMade,
+        risk_level: maxRiskLevel,
+      },
     };
   }
   

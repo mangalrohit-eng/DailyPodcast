@@ -15,6 +15,12 @@ export interface ScriptwriterInput {
 
 export interface ScriptwriterOutput {
   script: Script;
+  detailed_report: {
+    sections_generated: number;
+    total_word_count: number;
+    full_script_text: string;
+    citations_used: number[];
+  };
 }
 
 export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, ScriptwriterOutput> {
@@ -114,13 +120,35 @@ You must respond with valid JSON only.`,
       word_count: wordCount,
     };
     
+    // Collect all citations used
+    const allCitations = new Set<number>();
+    sections.forEach(section => {
+      if (section.citations) {
+        section.citations.forEach(c => allCitations.add(c));
+      }
+    });
+    
+    // Build full script text with section labels
+    const fullScriptText = sections.map((section, idx) => {
+      return `[SECTION ${idx + 1}: ${section.type.toUpperCase()}]\n${section.text}\n`;
+    }).join('\n');
+    
     Logger.info('Script complete', {
       word_count: wordCount,
       sections: sections.length,
       sources: sources.length,
+      citations: Array.from(allCitations),
     });
     
-    return { script };
+    return { 
+      script,
+      detailed_report: {
+        sections_generated: sections.length,
+        total_word_count: wordCount,
+        full_script_text: fullScriptText,
+        citations_used: Array.from(allCitations).sort((a, b) => a - b),
+      },
+    };
   }
   
   /**
