@@ -2031,8 +2031,10 @@ Full data in console (F12).`;
             // Update tab buttons
             document.querySelectorAll('.report-tab').forEach(btn => {
                 btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(tabName)) {
+                    btn.classList.add('active');
+                }
             });
-            event.target.classList.add('active');
             
             // Update tab content
             document.querySelectorAll('.report-tab-content').forEach(content => {
