@@ -27,12 +27,14 @@ export default async function handler(
     }
   }
   
-  Logger.info('API /run triggered', {
+  Logger.info('🌐 API /run triggered', {
     method: req.method,
     query: req.query,
+    body: req.body,
     headers: {
       'x-vercel-cron': req.headers['x-vercel-cron'],
     },
+    timestamp: new Date().toISOString(),
   });
   
   try {
@@ -43,9 +45,24 @@ export default async function handler(
       window_hours: req.query.window ? parseInt(req.query.window as string, 10) : undefined,
     };
     
+    Logger.info('🎯 Parsed input', {
+      input,
+      raw_force: req.body?.force_overwrite,
+      query_force: req.query.force,
+    });
+    
     // Run orchestrator
+    Logger.info('⚙️ Creating orchestrator instance...');
     const orchestrator = new Orchestrator();
+    
+    Logger.info('▶️ Starting orchestrator.run()...');
     const result = await orchestrator.run(input);
+    
+    Logger.info('✅ Orchestrator completed', {
+      success: result.success,
+      hasManifest: !!result.manifest,
+      manifestUrl: result.manifest?.mp3_url,
+    });
     
     if (result.success) {
       return res.status(200).json({

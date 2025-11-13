@@ -83,6 +83,14 @@ export class Orchestrator {
     const timestamp = Date.now();
     const runId = `${runConfig.date}_${timestamp}`;
     
+    Logger.info('🚀 ORCHESTRATOR START', {
+      runId,
+      date: runConfig.date,
+      timestamp,
+      force_overwrite: runConfig.force_overwrite,
+      input_received: input,
+    });
+    
     // Initialize storage (StructuredLogger removed due to undefined errors)
     let runsStorage: RunsStorage | null = null;
     
@@ -130,10 +138,12 @@ export class Orchestrator {
       // Generate unique episode filename with timestamp
       // This allows multiple runs per day and avoids "already exists" issues
       const episodePath = `episodes/${runId}_daily_rohit_news.mp3`;
-      Logger.info('Generating new episode', { 
+      Logger.info('📝 UNIQUE EPISODE PATH GENERATED', { 
         runId,
         date: runConfig.date,
         path: episodePath,
+        timestamp,
+        note: 'Every run gets a NEW unique file - no conflicts possible',
       });
       
       // 1. INGESTION
