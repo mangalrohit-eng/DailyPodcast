@@ -959,12 +959,21 @@ Full data in console (F12).`;
         // Health Check
         async function runFullHealthCheck() {
             const statusDiv = document.getElementById('healthStatus');
-            statusDiv.innerHTML = '<div class="spinner"></div> Running comprehensive health check...';
+            statusDiv.innerHTML = '<div class="spinner"></div> Running comprehensive health check...<br><small style="color: #666;">This should take 5-15 seconds</small>';
             
             try {
+                // Add timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                }, 20000); // 20 second timeout
+                
                 const response = await fetch(`${API_BASE}/api/test-run?health=true`, {
                     headers: getAuthHeaders(),
+                    signal: controller.signal,
                 });
+                
+                clearTimeout(timeoutId);
                 
                 const result = await response.json();
                 
@@ -1031,12 +1040,22 @@ Full data in console (F12).`;
                 }
                 
             } catch (error) {
+                clearTimeout(timeoutId);
+                
+                let errorMsg = error.message;
+                if (error.name === 'AbortError') {
+                    errorMsg = 'Request timed out after 20 seconds. The server may be slow or unresponsive.';
+                }
+                
                 statusDiv.innerHTML = `<div style="color: #ef4444;">
-                    Failed to run health check: ${error.message}
+                    <strong>Health check failed</strong><br>
+                    ${errorMsg}
                     <br><br>
-                    <button class="btn btn-secondary" onclick="runFullHealthCheck()">Retry</button>
+                    <button class="btn btn-secondary" onclick="runFullHealthCheck()">🔄 Retry</button>
+                    <button class="btn btn-secondary" onclick="location.reload()" style="margin-left: 10px;">🔄 Reload Page</button>
                 </div>`;
                 console.error('Health check error:', error);
+                showToast('Health check failed - see details above', 'error');
             }
         }
 
