@@ -74,8 +74,9 @@ You must respond with valid JSON only.`,
     // Generate script sections
     const sections: ScriptSection[] = [];
     
-    for (const outlineSection of outline.sections) {
-      Logger.debug('Writing section', { type: outlineSection.type });
+    for (let i = 0; i < outline.sections.length; i++) {
+      const outlineSection = outline.sections[i];
+      Logger.debug('Writing section', { type: outlineSection.type, index: i + 1, total: outline.sections.length });
       
       const sectionScript = await this.writeSection(
         outlineSection,
@@ -86,6 +87,12 @@ You must respond with valid JSON only.`,
       );
       
       sections.push(sectionScript);
+      
+      // Add delay between sections to avoid rate limiting (except after last section)
+      if (i < outline.sections.length - 1) {
+        Logger.debug('Rate limit pause between script sections', { delayMs: 1000 });
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
     
     // Calculate total word count

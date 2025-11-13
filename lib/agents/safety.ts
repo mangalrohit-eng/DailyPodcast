@@ -54,6 +54,8 @@ You must respond with valid JSON only.`,
     
     for (let i = 0; i < script.sections.length; i++) {
       const section = script.sections[i];
+      Logger.debug('Screening section', { index: i + 1, total: script.sections.length, type: section.type });
+      
       const result = await this.screenSection(section);
       
       if (result.revised_text) {
@@ -66,6 +68,12 @@ You must respond with valid JSON only.`,
         maxRiskLevel = 'high';
       } else if (result.risk_level === 'medium' || maxRiskLevel === 'medium') {
         maxRiskLevel = 'medium';
+      }
+      
+      // Add delay between sections to avoid rate limiting (except after last section)
+      if (i < script.sections.length - 1) {
+        Logger.debug('Rate limit pause between safety checks', { delayMs: 800 });
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
     

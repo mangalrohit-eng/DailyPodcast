@@ -58,8 +58,11 @@ You must respond with valid JSON only.`,
       
       // Skip intro/outro sections
       if (section.type === 'cold-open' || section.type === 'sign-off') {
+        Logger.debug('Skipping fact-check for section', { type: section.type });
         continue;
       }
+      
+      Logger.debug('Fact-checking section', { index: i + 1, total: script.sections.length, type: section.type });
       
       const result = await this.checkSection(section, script.sources);
       
@@ -69,6 +72,12 @@ You must respond with valid JSON only.`,
       }
       
       flagsRaised.push(...result.flags);
+      
+      // Add delay between sections to avoid rate limiting (except after last section)
+      if (i < script.sections.length - 1) {
+        Logger.debug('Rate limit pause between fact-checks', { delayMs: 800 });
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
     }
     
     Logger.info('Fact-check complete', {
