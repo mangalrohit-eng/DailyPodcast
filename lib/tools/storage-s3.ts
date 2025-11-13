@@ -50,6 +50,7 @@ export class S3Storage {
           Key: key,
           Body: buffer,
           ContentType: contentType,
+          ACL: 'public-read', // Make objects publicly accessible
         })
       );
 
