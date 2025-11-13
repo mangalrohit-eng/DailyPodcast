@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch api/run.ts",
-    "build": "tsc",
+    "build": "echo 'API-only project, no build output needed'",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit",
