@@ -717,7 +717,10 @@
             </div>
             
             <div class="card">
-                <h2>All Episodes</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">All Episodes</h2>
+                    <button class="btn btn-secondary" onclick="loadEpisodes()">🔄 Refresh</button>
+                </div>
                 <div id="episodesList">
                     <div style="text-align: center; padding: 20px;">
                         <div class="spinner"></div> Loading episodes...
@@ -820,15 +823,24 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast(`Indexed ${result.indexed} episodes!`, 'success');
+                    showToast(`✅ Indexed ${result.indexed} episodes!`, 'success');
                     
                     if (result.episodes && result.episodes.length > 0) {
                         console.log('Indexed episodes:', result.episodes);
                     }
                     
                     // Refresh runs and episodes
+                    console.log('Refreshing runs and episodes after indexing...');
                     await loadRuns();
                     await loadEpisodes();
+                    
+                    // Switch to URLs tab to show the results
+                    if (result.indexed > 0) {
+                        setTimeout(() => {
+                            switchTab('urls');
+                            showToast('Switched to URLs tab to show indexed episodes', 'info');
+                        }, 1000);
+                    }
                 } else {
                     showToast(result.message || 'Failed to index episodes', 'error');
                 }
@@ -1434,6 +1446,18 @@ Full data in console (F12).`;
                     </div>`;
                     return;
                 }
+                
+                // Log all runs to see structure
+                console.log('All runs:', data.runs);
+                data.runs.forEach((run, idx) => {
+                    console.log(`Run ${idx}:`, {
+                        run_id: run.run_id,
+                        date: run.date,
+                        status: run.status,
+                        episode_url: run.episode_url,
+                        has_episode_url: !!run.episode_url,
+                    });
+                });
                 
                 const episodes = data.runs.filter(r => r.episode_url);
                 
