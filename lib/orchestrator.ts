@@ -149,15 +149,28 @@ export class Orchestrator {
       
       // 1. INGESTION
       Logger.info('Phase 1: Ingestion');
+      
+      // Filter topic configs to only enabled topics from dashboard
+      const allTopicConfigs = Config.getTopicConfigs();
+      const enabledTopicConfigs = allTopicConfigs.filter(tc => 
+        runConfig.topics.includes(tc.name)
+      );
+      
+      Logger.info('🎯 Ingestion will fetch from topics', { 
+        enabled_topics: enabledTopicConfigs.map(t => t.name),
+        all_available: allTopicConfigs.map(t => t.name),
+        filtered_out: allTopicConfigs.filter(tc => !runConfig.topics.includes(tc.name)).map(t => t.name)
+      });
+      
       progressTracker.addUpdate(runId, {
         phase: 'Ingestion',
         status: 'running',
         message: 'Fetching news from RSS feeds',
-        details: { topics: Config.getTopicConfigs().map(t => t.name) },
+        details: { topics: enabledTopicConfigs.map(t => t.name) },
       });
       const ingestionStart = Date.now();
       const ingestionResult = await this.ingestionAgent.execute(runId, {
-        topics: Config.getTopicConfigs(),
+        topics: enabledTopicConfigs,  // ✅ Use filtered topics!
         window_hours: runConfig.window_hours,
         cutoff_date: Clock.addHours(new Date(), -runConfig.window_hours),
       });
