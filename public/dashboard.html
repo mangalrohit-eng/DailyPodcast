@@ -1442,7 +1442,7 @@ Full data in console (F12).`;
         }
 
         async function runNow() {
-            if (!confirm('Start generating a new episode?\n\n📊 You\'ll see real-time progress as the episode is generated.')) {
+            if (!confirm('Start generating a new episode?\n\n📊 A progress window will show you:\n- Stories found\n- Stories selected\n- Script generation\n- Audio synthesis\n\nThe window will stay open until you close it.')) {
                 return;
             }
 
@@ -1454,7 +1454,10 @@ Full data in console (F12).`;
             const today = new Date().toISOString().split('T')[0];
 
             try {
-                // Start the run (will likely timeout on Hobby plan, but that's OK)
+                // Show progress modal immediately
+                showProgressModal(today);
+                
+                // Start the run (will likely timeout on Hobby plan after 10s, but episode will keep generating)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s - expect timeout
 
@@ -1471,19 +1474,22 @@ Full data in console (F12).`;
                     if (!result.success) {
                         console.error('Run failed immediately:', result);
                         showToast(result.error || 'Failed to start episode generation', 'error');
-                        hideProgressModal();
+                        document.getElementById('currentPhase').textContent = '❌ Failed to Start';
+                        document.getElementById('currentMessage').innerHTML = 
+                            `${result.error || 'Failed to start'}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
+                    } else {
+                        console.log('Run started successfully');
                     }
                 })
                 .catch(error => {
-                    // Timeout is expected - don't show error
-                    if (error.name !== 'AbortError') {
+                    // Timeout is expected on Hobby plan - episode will continue generating
+                    if (error.name === 'AbortError') {
+                        console.log('API call timed out (expected on Hobby plan) - episode is generating in background');
+                    } else {
                         console.error('Error starting run:', error);
                     }
                 });
 
-                // Show progress modal immediately (don't wait for API to complete)
-                showProgressModal(today);
-                
                 // Re-enable button after modal is shown
                 btn.disabled = false;
                 btn.innerHTML = '▶️ Run Now';
@@ -1493,6 +1499,9 @@ Full data in console (F12).`;
                 showToast('Failed to start run: ' + error.message, 'error');
                 btn.disabled = false;
                 btn.innerHTML = '▶️ Run Now';
+                document.getElementById('currentPhase').textContent = '❌ Error';
+                document.getElementById('currentMessage').innerHTML = 
+                    `Failed to start: ${error.message}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
             }
         }
 
@@ -1798,14 +1807,54 @@ Full data in console (F12).`;
                 });
 
                 if (response.status === 404) {
-                    // Run not found or completed - check runs list
-                    console.log('Progress not found, likely completed');
-                    return false;
+                    // Run not found - might not have started yet or already completed
+                    console.log('Progress not found (404) - checking if run completed');
+                    
+                    // Check if the run completed by fetching runs list
+                    const runsResponse = await fetch(`${API_BASE}/api/runs`, {
+                        headers: getAuthHeaders(),
+                    });
+                    
+                    if (runsResponse.ok) {
+                        const runsData = await runsResponse.json();
+                        const thisRun = runsData.runs?.find(r => r.run_id === runId);
+                        
+                        if (thisRun) {
+                            if (thisRun.status === 'success') {
+                                // Completed successfully!
+                                document.getElementById('progressBar').style.width = '100%';
+                                document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #10b981, #059669)';
+                                document.getElementById('progressPercentage').textContent = '100%';
+                                document.getElementById('currentPhase').textContent = '✅ Complete!';
+                                document.getElementById('currentMessage').innerHTML = 
+                                    'Episode generated successfully! <button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>';
+                                showToast('✅ Episode generated successfully!', 'success');
+                                await loadRuns();
+                                return false;
+                            } else if (thisRun.status === 'failed') {
+                                // Failed
+                                document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+                                document.getElementById('currentPhase').textContent = '❌ Failed';
+                                document.getElementById('currentMessage').innerHTML = 
+                                    `Episode generation failed: ${thisRun.error || 'Unknown error'}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
+                                showToast('❌ Episode generation failed', 'error');
+                                return false;
+                            }
+                        }
+                    }
+                    
+                    // Still running but progress not available yet - keep trying
+                    console.log('Progress not yet available, will retry');
+                    return true;
                 }
 
                 if (!response.ok) {
                     console.error('Failed to fetch progress:', response.status);
-                    return false;
+                    // Keep modal open with error message
+                    document.getElementById('currentPhase').textContent = '⚠️ Connection Issue';
+                    document.getElementById('currentMessage').textContent = 
+                        `Failed to fetch progress (HTTP ${response.status}). Retrying...`;
+                    return true; // Keep trying
                 }
 
                 const progress = await response.json();
@@ -1932,7 +1981,11 @@ Full data in console (F12).`;
                 return true; // Still running
             } catch (error) {
                 console.error('Error fetching progress:', error);
-                return false;
+                // Keep modal open with error message
+                document.getElementById('currentPhase').textContent = '⚠️ Error';
+                document.getElementById('currentMessage').innerHTML = 
+                    `Error fetching progress: ${error.message}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
+                return false; // Stop polling on error
             }
         }
     </script>
