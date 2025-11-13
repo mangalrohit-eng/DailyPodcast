@@ -49,6 +49,22 @@ export interface DashboardConfig {
   window_hours: number;
   target_duration_sec: number;
   force_overwrite: boolean;
+  
+  // Podcast Production Settings
+  podcast_production: {
+    intro_text: string; // Template for intro
+    outro_text: string; // Template for outro
+    enable_intro_music: boolean;
+    enable_outro_music: boolean;
+    intro_music_duration_ms: number;
+    outro_music_duration_ms: number;
+    pause_after_intro_ms: number;
+    pause_between_stories_ms: number;
+    pause_before_outro_ms: number;
+    num_stories_min: number;
+    num_stories_max: number;
+    style: 'executive' | 'casual' | 'technical'; // Tone/style
+  };
 }
 
 export class ConfigStorage {
@@ -247,6 +263,21 @@ export class ConfigStorage {
       window_hours: parseInt(process.env.WINDOW_HOURS || '36', 10),
       target_duration_sec: parseInt(process.env.TARGET_DURATION_SECONDS || '900', 10),
       force_overwrite: process.env.FORCE_OVERWRITE === 'true',
+      
+      podcast_production: {
+        intro_text: 'This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we\'ll cover:',
+        outro_text: 'That\'s your executive brief. Stay informed, stay ahead.',
+        enable_intro_music: true,
+        enable_outro_music: true,
+        intro_music_duration_ms: 3000,
+        outro_music_duration_ms: 2000,
+        pause_after_intro_ms: 800,
+        pause_between_stories_ms: 1200,
+        pause_before_outro_ms: 500,
+        num_stories_min: 3,
+        num_stories_max: 5,
+        style: 'executive',
+      },
     };
   }
 }
