@@ -252,7 +252,8 @@ async function handleHealthCheck(req: VercelRequest, res: VercelResponse) {
 
     // Test 2: Storage Connection
     try {
-      const testPath = `test/${Date.now()}.txt`;
+      // Use episodes/ prefix since we know list() works for it
+      const testPath = `episodes/health-check-${Date.now()}.txt`;
       const testContent = 'Health check test';
       const url = await storage.put(testPath, testContent, 'text/plain');
       const readContent = await storage.get(testPath);
