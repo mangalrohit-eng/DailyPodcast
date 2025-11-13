@@ -1,4 +1,4 @@
-go/**
+/**
  * Ingestion Agent - Fetches news from multiple sources
  */
 
