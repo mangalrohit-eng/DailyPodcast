@@ -129,19 +129,28 @@ export class Orchestrator {
       if (!runConfig.force_overwrite && await this.storage.exists(episodePath)) {
         Logger.info('Episode already exists', { date: runConfig.date });
         
-        // Load existing manifest
-        const manifestPath = `episodes/${runConfig.date}_manifest.json`;
-        const manifestData = await this.storage.get(manifestPath);
-        const manifest = JSON.parse(manifestData.toString('utf-8'));
-        
-        return {
-          success: true,
-          manifest,
-          metrics: {
-            total_time_ms: Date.now() - startTime,
-            agent_times: {},
-          },
-        };
+        // Try to load existing manifest (may not exist for manually uploaded episodes)
+        try {
+          const manifestPath = `episodes/${runConfig.date}_manifest.json`;
+          const manifestData = await this.storage.get(manifestPath);
+          const manifest = JSON.parse(manifestData.toString('utf-8'));
+          
+          return {
+            success: true,
+            manifest,
+            metrics: {
+              total_time_ms: Date.now() - startTime,
+              agent_times: {},
+            },
+          };
+        } catch (error) {
+          // Manifest doesn't exist - probably a manually uploaded episode
+          Logger.warn('Episode exists but no manifest found - will regenerate', { 
+            date: runConfig.date,
+            error: (error as Error).message,
+          });
+          // Continue with generation to create a proper episode with manifest
+        }
       }
       
       // 1. INGESTION
