@@ -1033,7 +1033,7 @@
 
         async function viewRunDetails(runId) {
             try {
-                const response = await fetch(`${API_BASE}/api/runs/${runId}`, {
+                const response = await fetch(`${API_BASE}/api/runs?runId=${runId}`, {
                     headers: getAuthHeaders(),
                 });
                 const data = await response.json();
@@ -1070,7 +1070,7 @@
 
             pollInterval = setInterval(async () => {
                 try {
-                    const response = await fetch(`${API_BASE}/api/logs/latest?cursor=${logCursor}`, {
+                    const response = await fetch(`${API_BASE}/api/logs?type=latest&cursor=${logCursor}`, {
                         headers: getAuthHeaders(),
                     });
                     const data = await response.json();
@@ -1137,7 +1137,7 @@
 
         async function downloadLogs() {
             try {
-                const latestResponse = await fetch(`${API_BASE}/api/logs/latest`, {
+                const latestResponse = await fetch(`${API_BASE}/api/logs?type=latest`, {
                     headers: getAuthHeaders(),
                 });
                 const latestData = await latestResponse.json();
@@ -1147,7 +1147,7 @@
                     return;
                 }
 
-                const response = await fetch(`${API_BASE}/api/logs/${latestData.runId}?download=true`, {
+                const response = await fetch(`${API_BASE}/api/logs?type=run&runId=${latestData.runId}&download=true`, {
                     headers: getAuthHeaders(),
                 });
                 const blob = await response.blob();

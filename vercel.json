@@ -67,19 +67,10 @@
     "api/config.ts": {
       "maxDuration": 10
     },
-    "api/runs/index.ts": {
+    "api/runs.ts": {
       "maxDuration": 10
     },
-    "api/runs/[runId].ts": {
-      "maxDuration": 10
-    },
-    "api/logs/latest.ts": {
-      "maxDuration": 10
-    },
-    "api/logs/[runId].ts": {
-      "maxDuration": 10
-    },
-    "api/logs/stream.ts": {
+    "api/logs.ts": {
       "maxDuration": 60
     }
   }
