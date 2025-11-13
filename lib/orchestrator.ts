@@ -8,6 +8,7 @@ import { EpisodeManifest, RunConfig } from './types';
 import { StorageTool } from './tools/storage';
 // import { StructuredLogger } from './tools/logs-storage'; // REMOVED: Causing undefined errors
 import { RunsStorage } from './tools/runs-storage';
+import { ConfigStorage } from './tools/config-storage';
 import { progressTracker } from './tools/progress-tracker';
 import { BaseAgent } from './agents/base';
 
@@ -523,7 +524,7 @@ export class Orchestrator {
     if (!input.weights && dashboardConfig) {
       // Use topic weights from dashboard config
       const topicWeights: Record<string, number> = {};
-      dashboardConfig.topics.forEach(t => {
+      dashboardConfig.topics.forEach((t: any) => {
         topicWeights[t.label.toLowerCase()] = t.weight;
       });
       weights = topicWeights;
