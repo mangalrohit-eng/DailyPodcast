@@ -957,7 +957,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/index-episodes`, {
+                const response = await fetch(`${API_BASE}/api/test-run?action=index`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                 });
@@ -1793,7 +1793,7 @@ Full data in console (F12).`;
 
         async function updateProgress(runId) {
             try {
-                const response = await fetch(`${API_BASE}/api/progress?runId=${runId}`, {
+                const response = await fetch(`${API_BASE}/api/test-run?action=progress&runId=${runId}`, {
                     headers: getAuthHeaders(),
                 });
 
