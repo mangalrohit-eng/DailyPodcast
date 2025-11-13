@@ -1,4 +1,4 @@
-/**
+go/**
  * Ingestion Agent - Fetches news from multiple sources
  */
 
@@ -24,6 +24,12 @@ export interface IngestionOutput {
   sources_fetched: number;
   items_found: number;
   items_filtered: number;
+  detailed_report: {
+    sources_scanned: Array<{ name: string; url: string; items_found: number; status: string }>;
+    total_items_before_filter: number;
+    filtered_out: Array<{ title: string; reason: string }>;
+    topics_breakdown: Record<string, number>;
+  };
 }
 
 export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
@@ -47,9 +53,14 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     let sourcesFetched = 0;
     let itemsFound = 0;
     
+    // Detailed tracking
+    const sourcesScanned: Array<{ name: string; url: string; items_found: number; status: string }> = [];
+    const filteredOut: Array<{ title: string; reason: string }> = [];
+    
     // Fetch from all topic sources
     for (const topic of topics) {
       Logger.info(`Fetching ${topic.name} sources`, { count: topic.sources.length });
+      let topicStoriesCount = 0;
       
       for (const sourceUrl of topic.sources) {
         try {
@@ -57,36 +68,83 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           const items = await this.feedTool.parseFeed(sourceUrl);
           itemsFound += items.length;
           
+          sourcesScanned.push({
+            name: topic.name,
+            url: sourceUrl,
+            items_found: items.length,
+            status: 'success',
+          });
+          
+          Logger.debug(`Fetched ${items.length} items from ${sourceUrl.substring(0, 50)}...`);
+          
+          let beforeFilter = 0;
           for (const item of items) {
             const story = this.normalizeItem(item, topic.name);
             
             if (!story) continue;
+            beforeFilter++;
             
-            // Apply filters
-            if (seenUrls.has(story.url)) continue;
-            if (story.published_at < cutoff_date) continue;
-            if (!this.passesQualityFilter(story)) continue;
-            if (!this.matchesTopic(story, topic.keywords)) continue;
+            // Apply filters with detailed tracking
+            if (seenUrls.has(story.url)) {
+              filteredOut.push({ title: story.title, reason: 'Duplicate URL' });
+              continue;
+            }
+            if (story.published_at < cutoff_date) {
+              filteredOut.push({ title: story.title, reason: `Too old (${Clock.formatDate(story.published_at)})` });
+              Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()})`);
+              continue;
+            }
+            if (!this.passesQualityFilter(story)) {
+              filteredOut.push({ title: story.title, reason: 'Failed quality filter (content too short)' });
+              Logger.debug(`Story failed quality filter: ${story.title.substring(0, 50)}...`);
+              continue;
+            }
+            if (!this.matchesTopic(story, topic.keywords)) {
+              filteredOut.push({ title: story.title, reason: `No keyword match for ${topic.name}` });
+              Logger.debug(`Story doesn't match topic keywords: ${story.title.substring(0, 50)}...`, {
+                keywords: topic.keywords.slice(0, 3),
+              });
+              continue;
+            }
             
             seenUrls.add(story.url);
             allStories.push(story);
+            topicStoriesCount++;
+            Logger.debug(`✓ Story accepted for ${topic.name}: ${story.title.substring(0, 60)}...`);
           }
+          
+          Logger.info(`${topic.name} - Source processed: ${beforeFilter} stories, ${topicStoriesCount} accepted so far`);
         } catch (error) {
-          Logger.warn(`Failed to fetch source`, {
+          sourcesScanned.push({
+            name: topic.name,
             url: sourceUrl,
+            items_found: 0,
+            status: `Failed: ${(error as Error).message}`,
+          });
+          Logger.warn(`Failed to fetch source`, {
+            url: sourceUrl.substring(0, 60),
             error: (error as Error).message,
           });
         }
       }
+      
+      Logger.info(`${topic.name} total: ${topicStoriesCount} stories found`);
     }
     
     // Deduplicate by content similarity (simple domain-based approach)
     const dedupedStories = this.deduplicateStories(allStories);
     
+    // Count stories by topic
+    const topicsBreakdown: Record<string, number> = {};
+    for (const story of dedupedStories) {
+      topicsBreakdown[story.topic || 'General'] = (topicsBreakdown[story.topic || 'General'] || 0) + 1;
+    }
+    
     Logger.info('Ingestion complete', {
       sources_fetched: sourcesFetched,
       items_found: itemsFound,
       stories_after_filter: dedupedStories.length,
+      topics_breakdown: topicsBreakdown,
     });
     
     return {
@@ -94,6 +152,12 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       sources_fetched: sourcesFetched,
       items_found: itemsFound,
       items_filtered: itemsFound - dedupedStories.length,
+      detailed_report: {
+        sources_scanned: sourcesScanned,
+        total_items_before_filter: itemsFound,
+        filtered_out: filteredOut,
+        topics_breakdown: topicsBreakdown,
+      },
     };
   }
   
@@ -149,8 +213,25 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   private matchesTopic(story: Story, keywords: string[]): boolean {
     const text = `${story.title} ${story.summary || ''}`.toLowerCase();
     
-    // At least one keyword must match
-    return keywords.some(keyword => text.includes(keyword.toLowerCase()));
+    // At least one keyword must match (case-insensitive)
+    return keywords.some(keyword => {
+      const normalizedKeyword = keyword.toLowerCase();
+      return text.includes(normalizedKeyword);
+    });
+  }
+  
+  /**
+   * More lenient topic matching for fallback
+   * Matches if ANY word from keywords appears
+   */
+  private matchesTopicLoose(story: Story, keywords: string[]): boolean {
+    const text = `${story.title} ${story.summary || ''}`.toLowerCase();
+    const words = text.split(/\s+/);
+    
+    return keywords.some(keyword => {
+      const keywordWords = keyword.toLowerCase().split(/\s+/);
+      return keywordWords.some(kw => words.some(w => w.includes(kw) || kw.includes(w)));
+    });
   }
   
   private deduplicateStories(stories: Story[]): Story[] {

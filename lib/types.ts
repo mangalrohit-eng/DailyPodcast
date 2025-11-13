@@ -88,6 +88,40 @@ export interface EpisodeManifest {
     total_time_ms: number;
     openai_tokens: number;
   };
+  pipeline_report?: PipelineReport;
+}
+
+export interface PipelineReport {
+  ingestion: {
+    sources_scanned: Array<{ name: string; url: string; items_found: number }>;
+    total_stories_found: number;
+    stories_after_filtering: number;
+    filtered_out: Array<{ title: string; reason: string }>;
+    topics_breakdown: Record<string, number>;
+  };
+  ranking: {
+    stories_ranked: number;
+    top_picks: Array<{ title: string; topic: string; score: number; why_selected: string }>;
+    rejected_stories: Array<{ title: string; score: number; reason: string }>;
+  };
+  outline: {
+    sections: Array<{ type: string; title: string; target_words: number; story_count: number }>;
+    total_duration_target: number;
+  };
+  scriptwriting: {
+    sections_generated: number;
+    total_word_count: number;
+    full_script_text: string;
+    citations_used: number[];
+  };
+  factcheck: {
+    changes_made: string[];
+    flags_raised: string[];
+  };
+  safety: {
+    edits_made: string[];
+    risk_level: string;
+  };
 }
 
 export interface AgentMessage<I = any, O = any> {
