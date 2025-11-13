@@ -30,7 +30,29 @@ export default async function handler(
       const feedXml = await generateFeedFromIndex(storage);
       
       if (!feedXml) {
-        return res.status(404).send('Feed not found. Please run the generator first or index existing episodes.');
+        Logger.warn('Could not generate feed from index');
+        
+        // Return a minimal valid RSS feed with helpful message
+        const emptyFeed = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Daily Rohit News</title>
+    <link>https://daily-podcast-brown.vercel.app</link>
+    <description>Your personalized daily news brief</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <item>
+      <title>No Episodes Yet</title>
+      <description>No episodes have been generated yet. Click "Index Existing Episodes" in the dashboard or wait for the daily cron job to run.</description>
+      <pubDate>${new Date().toUTCString()}</pubDate>
+      <guid isPermaLink="false">no-episodes-${Date.now()}</guid>
+    </item>
+  </channel>
+</rss>`;
+        
+        res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60');
+        return res.status(200).send(emptyFeed);
       }
       
       // Set appropriate headers
@@ -65,18 +87,35 @@ export default async function handler(
 async function generateFeedFromIndex(storage: StorageTool): Promise<string | null> {
   try {
     // Load runs index
+    Logger.info('Checking for runs/index.json');
     const indexExists = await storage.exists('runs/index.json');
     if (!indexExists) {
+      Logger.warn('runs/index.json does not exist');
       return null;
     }
     
+    Logger.info('Loading runs/index.json');
     const indexData = await storage.get('runs/index.json');
     const index = JSON.parse(indexData.toString('utf-8'));
+    
+    Logger.info('Loaded runs index', { totalRuns: index.runs?.length || 0 });
     
     // Get episodes (runs with episode URLs)
     const episodes = index.runs.filter((r: any) => r.episode_url && r.status === 'success');
     
+    Logger.info('Filtered episodes', { 
+      totalRuns: index.runs?.length || 0,
+      episodesWithUrls: episodes.length,
+      runs: index.runs?.map((r: any) => ({
+        id: r.run_id,
+        hasUrl: !!r.episode_url,
+        status: r.status,
+        url: r.episode_url?.substring(0, 50) + '...',
+      }))
+    });
+    
     if (episodes.length === 0) {
+      Logger.warn('No episodes with URLs found in index');
       return null;
     }
     
