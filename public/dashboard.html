@@ -517,6 +517,16 @@
             </div>
 
             <div class="card">
+                <h2>Maintenance</h2>
+                <p style="color: #666; margin-bottom: 15px;">Index existing episodes that were created before the dashboard was set up.</p>
+                <button class="btn btn-secondary" onclick="indexExistingEpisodes()">🔄 Index Existing Episodes</button>
+                <p style="color: #666; margin-top: 10px; font-size: 13px;">
+                    This will scan your storage for episodes and add them to the dashboard. 
+                    Only needed once if you have pre-dashboard episodes.
+                </p>
+            </div>
+
+            <div class="card">
                 <h2>Topics & Weights</h2>
                 <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
                 <div id="topicsList" class="topics-list"></div>
@@ -763,6 +773,39 @@
                 startLogStream();
             } else if (tabName === 'urls') {
                 loadEpisodes();
+            }
+        }
+
+        // Maintenance
+        async function indexExistingEpisodes() {
+            if (!confirm('Scan storage for existing episodes and add them to the dashboard?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/index-episodes`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Indexed ${result.indexed} episodes!`, 'success');
+                    
+                    if (result.episodes && result.episodes.length > 0) {
+                        console.log('Indexed episodes:', result.episodes);
+                    }
+                    
+                    // Refresh runs and episodes
+                    await loadRuns();
+                    await loadEpisodes();
+                } else {
+                    showToast(result.message || 'Failed to index episodes', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to index episodes', 'error');
+                console.error(error);
             }
         }
 

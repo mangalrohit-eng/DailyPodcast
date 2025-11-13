@@ -72,6 +72,9 @@
     },
     "api/logs.ts": {
       "maxDuration": 60
+    },
+    "api/index-episodes.ts": {
+      "maxDuration": 30
     }
   }
 }
