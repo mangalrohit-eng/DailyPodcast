@@ -7,6 +7,10 @@
   ],
   "rewrites": [
     {
+      "source": "/dashboard",
+      "destination": "/api/dashboard"
+    },
+    {
       "source": "/podcast/feed.xml",
       "destination": "/api/podcast/feed"
     },
@@ -55,6 +59,27 @@
       "maxDuration": 10
     },
     "api/podcast/episodes.ts": {
+      "maxDuration": 60
+    },
+    "api/dashboard.ts": {
+      "maxDuration": 10
+    },
+    "api/config.ts": {
+      "maxDuration": 10
+    },
+    "api/runs/index.ts": {
+      "maxDuration": 10
+    },
+    "api/runs/[runId].ts": {
+      "maxDuration": 10
+    },
+    "api/logs/latest.ts": {
+      "maxDuration": 10
+    },
+    "api/logs/[runId].ts": {
+      "maxDuration": 10
+    },
+    "api/logs/stream.ts": {
       "maxDuration": 60
     }
   }

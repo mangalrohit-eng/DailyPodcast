@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podcast Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .header-links {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .header-link {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .header-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #444;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: monospace;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102,126,234,0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .topics-list {
+            margin-bottom: 20px;
+        }
+
+        .topic-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .topic-item input {
+            flex: 1;
+        }
+
+        .topic-item button {
+            padding: 8px 12px;
+        }
+
+        .runs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .runs-table th,
+        .runs-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .runs-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .runs-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-running {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .logs-viewer {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            height: 600px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .log-entry.INFO {
+            color: #4fc3f7;
+        }
+
+        .log-entry.WARN {
+            color: #ffb74d;
+        }
+
+        .log-entry.ERROR {
+            color: #ef5350;
+        }
+
+        .log-entry.DEBUG {
+            color: #9e9e9e;
+        }
+
+        .log-timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .log-agent {
+            color: #ba68c8;
+            margin-right: 10px;
+            font-weight: 600;
+        }
+
+        .logs-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 300px;
+        }
+
+        .toast.success {
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.error {
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast.info {
+            border-left: 4px solid #17a2b8;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .health-status {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .health-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .health-item.healthy {
+            border-left: 4px solid #28a745;
+        }
+
+        .health-item.unhealthy {
+            border-left: 4px solid #dc3545;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .url-list {
+            list-style: none;
+        }
+
+        .url-item {
+            padding: 10px;
+            background: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .url-item code {
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .copy-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header {
+                padding: 20px 10px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .topic-item {
+                flex-direction: column;
+            }
+
+            .runs-table {
+                font-size: 12px;
+            }
+
+            .logs-viewer {
+                height: 400px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🎙️ Podcast Dashboard</h1>
+            <div class="header-links" id="headerLinks">
+                <a href="#" class="header-link" id="feedLink">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+                    RSS Feed
+                </a>
+                <a href="#" class="header-link" id="latestEpisodeLink">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Latest Episode
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('settings')">⚙️ Settings</button>
+            <button class="tab" onclick="switchTab('runs')">▶️ Runs</button>
+            <button class="tab" onclick="switchTab('logs')">📋 Logs</button>
+            <button class="tab" onclick="switchTab('urls')">🔗 URLs</button>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content active">
+            <div class="card">
+                <h2>System Health</h2>
+                <div class="health-status" id="healthStatus">
+                    <div class="spinner"></div> Loading...
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Topics & Weights</h2>
+                <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
+                <div id="topicsList" class="topics-list"></div>
+                <button class="btn btn-secondary" onclick="addTopic()">+ Add Topic</button>
+                <button class="btn btn-secondary" onclick="normalizeWeights()">⚖️ Auto-Balance</button>
+                <div id="weightWarning" style="color: #dc3545; margin-top: 10px; display: none;"></div>
+            </div>
+
+            <div class="card">
+                <h2>Schedule</h2>
+                <div class="form-group">
+                    <label>Timezone</label>
+                    <select id="timezone">
+                        <option value="America/New_York">America/New_York (EST/EDT)</option>
+                        <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                        <option value="Europe/London">Europe/London (GMT/BST)</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cron Schedule (Read-only)</label>
+                    <input type="text" id="cronSchedule" readonly value="0 12 * * * (Daily at 12:00 UTC)">
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Content Filters</h2>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="rumorFilter"> Enable Rumor Filter
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Banned Domains (one per line)</label>
+                    <textarea id="bannedDomains" placeholder="example.com&#10;spam-site.com"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Window Hours</label>
+                    <input type="number" id="windowHours" min="1" max="168" value="36">
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Voice & Style</h2>
+                <div class="form-group">
+                    <label>Host Voice</label>
+                    <select id="voiceHost">
+                        <option value="alloy">Alloy</option>
+                        <option value="echo">Echo</option>
+                        <option value="fable">Fable</option>
+                        <option value="onyx">Onyx</option>
+                        <option value="nova">Nova</option>
+                        <option value="shimmer">Shimmer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Analyst Voice</label>
+                    <select id="voiceAnalyst">
+                        <option value="alloy">Alloy</option>
+                        <option value="echo">Echo</option>
+                        <option value="fable">Fable</option>
+                        <option value="onyx">Onyx</option>
+                        <option value="nova">Nova</option>
+                        <option value="shimmer">Shimmer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Pronunciation Glossary (key=value per line)</label>
+                    <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;GPT=G P T&#10;ML=M L"></textarea>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+        </div>
+
+        <!-- Runs Tab -->
+        <div id="runs" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Recent Runs</h2>
+                    <button class="btn btn-success" onclick="runNow()" id="runNowBtn">
+                        ▶️ Run Now
+                    </button>
+                </div>
+                <div id="activeRunStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 20px;">
+                    <strong>Run in progress:</strong> <span id="activeRunId"></span>
+                    <div style="margin-top: 10px;">
+                        <div class="spinner" style="margin-right: 10px;"></div>
+                        <span id="activeRunPhase">Starting...</span>
+                    </div>
+                </div>
+                <table class="runs-table" id="runsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Stories</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px;">
+                                <div class="spinner"></div> Loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logs" class="tab-content">
+            <div class="card">
+                <h2>Latest Run Logs</h2>
+                <div class="logs-controls">
+                    <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Refresh</button>
+                    <button class="btn btn-secondary" onclick="toggleAutoScroll()" id="autoScrollBtn">
+                        ⏸️ Pause Auto-scroll
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadLogs()">⬇️ Download</button>
+                    <select id="logLevel" onchange="filterLogs()">
+                        <option value="all">All Levels</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARN">WARN</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="DEBUG">DEBUG</option>
+                    </select>
+                    <input type="text" id="logSearch" placeholder="Search logs..." oninput="filterLogs()" style="max-width: 200px;">
+                </div>
+                <div class="logs-viewer" id="logsViewer">
+                    <div style="color: #888;">Connecting to log stream...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- URLs Tab -->
+        <div id="urls" class="tab-content">
+            <div class="card">
+                <h2>Podcast URLs</h2>
+                <ul class="url-list">
+                    <li class="url-item">
+                        <div>
+                            <strong>RSS Feed</strong><br>
+                            <code id="urlFeed">Loading...</code>
+                        </div>
+                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlFeed')">Copy</button>
+                    </li>
+                    <li class="url-item">
+                        <div>
+                            <strong>Latest Episode</strong><br>
+                            <code id="urlLatestEpisode">Loading...</code>
+                        </div>
+                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlLatestEpisode')">Copy</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2>All Episodes</h2>
+                <div id="episodesList">
+                    <div style="text-align: center; padding: 20px;">
+                        <div class="spinner"></div> Loading episodes...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        let authToken = '';
+        let currentConfig = null;
+        let autoScroll = true;
+        let logStream = null;
+        let allLogs = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            await loadConfig();
+            await loadHealth();
+            await loadRuns();
+            updateHeaderLinks();
+        });
+
+        // Authentication
+        async function checkAuth() {
+            // Check if auth is required
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                if (response.status === 401) {
+                    const token = prompt('Enter dashboard token:');
+                    if (token) {
+                        authToken = token;
+                        localStorage.setItem('dashboardToken', token);
+                    } else {
+                        alert('Authentication required');
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+
+            // Try to use stored token
+            const stored = localStorage.getItem('dashboardToken');
+            if (stored) {
+                authToken = stored;
+            }
+        }
+
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            return headers;
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+
+            // Load data for tab
+            if (tabName === 'runs') {
+                loadRuns();
+            } else if (tabName === 'logs') {
+                startLogStream();
+            } else if (tabName === 'urls') {
+                loadEpisodes();
+            }
+        }
+
+        // Settings
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`, {
+                    headers: getAuthHeaders(),
+                });
+                currentConfig = await response.json();
+                populateSettings(currentConfig);
+            } catch (error) {
+                showToast('Failed to load configuration', 'error');
+                console.error(error);
+            }
+        }
+
+        function populateSettings(config) {
+            // Topics
+            renderTopics(config.topics);
+
+            // Schedule
+            document.getElementById('timezone').value = config.timezone || 'America/New_York';
+            document.getElementById('cronSchedule').value = config.cron_schedule || '0 12 * * *';
+
+            // Filters
+            document.getElementById('rumorFilter').checked = config.rumor_filter !== false;
+            document.getElementById('bannedDomains').value = (config.banned_domains || []).join('\n');
+            document.getElementById('windowHours').value = config.window_hours || 36;
+
+            // Voices
+            document.getElementById('voiceHost').value = config.voices?.host || 'alloy';
+            document.getElementById('voiceAnalyst').value = config.voices?.analyst || 'nova';
+
+            // Pronunciation
+            const glossary = config.pronunciation_glossary || {};
+            document.getElementById('pronunciationGlossary').value = 
+                Object.entries(glossary).map(([k, v]) => `${k}=${v}`).join('\n');
+        }
+
+        function renderTopics(topics) {
+            const container = document.getElementById('topicsList');
+            container.innerHTML = '';
+            
+            topics.forEach((topic, index) => {
+                const div = document.createElement('div');
+                div.className = 'topic-item';
+                div.innerHTML = `
+                    <input type="text" placeholder="Topic name" value="${topic.label}" 
+                           onchange="updateTopic(${index}, 'label', this.value)">
+                    <input type="number" step="0.01" min="0" max="1" placeholder="Weight" value="${topic.weight}" 
+                           onchange="updateTopic(${index}, 'weight', parseFloat(this.value))">
+                    <button class="btn btn-danger" onclick="removeTopic(${index})">✕</button>
+                `;
+                container.appendChild(div);
+            });
+
+            validateWeights();
+        }
+
+        function updateTopic(index, field, value) {
+            if (!currentConfig.topics[index]) return;
+            currentConfig.topics[index][field] = value;
+            validateWeights();
+        }
+
+        function addTopic() {
+            if (!currentConfig) return;
+            currentConfig.topics.push({ label: 'New Topic', weight: 0.1 });
+            renderTopics(currentConfig.topics);
+        }
+
+        function removeTopic(index) {
+            if (!currentConfig) return;
+            currentConfig.topics.splice(index, 1);
+            renderTopics(currentConfig.topics);
+        }
+
+        function validateWeights() {
+            const total = currentConfig.topics.reduce((sum, t) => sum + (t.weight || 0), 0);
+            const warning = document.getElementById('weightWarning');
+            
+            if (Math.abs(total - 1.0) > 0.001) {
+                warning.textContent = `⚠️ Weights sum to ${total.toFixed(3)}, must equal 1.0`;
+                warning.style.display = 'block';
+                return false;
+            } else {
+                warning.style.display = 'none';
+                return true;
+            }
+        }
+
+        function normalizeWeights() {
+            if (!currentConfig) return;
+            const total = currentConfig.topics.reduce((sum, t) => sum + (t.weight || 0), 0);
+            if (total === 0) {
+                // Equal weights
+                const equal = 1.0 / currentConfig.topics.length;
+                currentConfig.topics.forEach(t => t.weight = equal);
+            } else {
+                // Normalize
+                currentConfig.topics.forEach(t => t.weight = t.weight / total);
+            }
+            renderTopics(currentConfig.topics);
+            showToast('Weights normalized', 'success');
+        }
+
+        async function saveSettings() {
+            if (!validateWeights()) {
+                showToast('Please fix weight issues before saving', 'error');
+                return;
+            }
+
+            // Gather all settings
+            const settings = {
+                ...currentConfig,
+                topics: currentConfig.topics,
+                timezone: document.getElementById('timezone').value,
+                rumor_filter: document.getElementById('rumorFilter').checked,
+                banned_domains: document.getElementById('bannedDomains').value
+                    .split('\n')
+                    .map(d => d.trim())
+                    .filter(d => d),
+                window_hours: parseInt(document.getElementById('windowHours').value),
+                voices: {
+                    host: document.getElementById('voiceHost').value,
+                    analyst: document.getElementById('voiceAnalyst').value,
+                    stinger: 'shimmer',
+                },
+                pronunciation_glossary: Object.fromEntries(
+                    document.getElementById('pronunciationGlossary').value
+                        .split('\n')
+                        .map(line => line.split('='))
+                        .filter(([k, v]) => k && v)
+                ),
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/config`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(settings),
+                });
+
+                if (response.ok) {
+                    currentConfig = await response.json();
+                    showToast('Settings saved successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showToast(error.message || 'Failed to save settings', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to save settings', 'error');
+                console.error(error);
+            }
+        }
+
+        // Health
+        async function loadHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health-simple`);
+                const health = await response.json();
+                
+                const container = document.getElementById('healthStatus');
+                container.innerHTML = '';
+                
+                Object.entries(health.checks || {}).forEach(([key, value]) => {
+                    const div = document.createElement('div');
+                    div.className = `health-item ${value === 'configured' ? 'healthy' : 'unhealthy'}`;
+                    div.innerHTML = `
+                        <div style="font-size: 24px;">${value === 'configured' ? '✓' : '✗'}</div>
+                        <div>
+                            <strong>${key.replace('_', ' ').toUpperCase()}</strong><br>
+                            <span style="color: #666;">${value}</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                document.getElementById('healthStatus').innerHTML = 
+                    '<div style="color: #dc3545;">Failed to load health status</div>';
+                console.error(error);
+            }
+        }
+
+        // Runs
+        async function loadRuns() {
+            try {
+                const response = await fetch(`${API_BASE}/api/runs`, {
+                    headers: getAuthHeaders(),
+                });
+                const data = await response.json();
+                
+                renderRuns(data.runs);
+                
+                if (data.activeRun) {
+                    showActiveRun(data.activeRun);
+                } else {
+                    document.getElementById('activeRunStatus').style.display = 'none';
+                    document.getElementById('runNowBtn').disabled = false;
+                }
+            } catch (error) {
+                document.getElementById('runsTable').querySelector('tbody').innerHTML = 
+                    '<tr><td colspan="5" style="text-align: center; color: #dc3545;">Failed to load runs</td></tr>';
+                console.error(error);
+            }
+        }
+
+        function renderRuns(runs) {
+            const tbody = document.getElementById('runsTable').querySelector('tbody');
+            
+            if (!runs || runs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No runs yet. Click "Run Now" to generate your first episode.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = runs.map(run => `
+                <tr>
+                    <td>${new Date(run.date).toLocaleDateString()}</td>
+                    <td><span class="status-badge status-${run.status}">${run.status.toUpperCase()}</span></td>
+                    <td>${run.stories_count || '-'}</td>
+                    <td>${run.duration_ms ? Math.round(run.duration_ms / 1000) + 's' : '-'}</td>
+                    <td>
+                        ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;">▶️ Play</a>` : ''}
+                        <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')">Details</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showActiveRun(runId) {
+            document.getElementById('activeRunStatus').style.display = 'block';
+            document.getElementById('activeRunId').textContent = runId;
+            document.getElementById('runNowBtn').disabled = true;
+        }
+
+        async function runNow() {
+            if (!confirm('Start generating a new episode? This may take 2-5 minutes.')) {
+                return;
+            }
+
+            const btn = document.getElementById('runNowBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Running...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/run`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Episode generated successfully!', 'success');
+                    await loadRuns();
+                } else {
+                    showToast(result.error || 'Failed to generate episode', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to start run', 'error');
+                console.error(error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '▶️ Run Now';
+            }
+        }
+
+        async function viewRunDetails(runId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/runs/${runId}`, {
+                    headers: getAuthHeaders(),
+                });
+                const data = await response.json();
+                
+                // Show details in alert for now (could be a modal in production)
+                alert(`Run Details: ${runId}\n\nStatus: ${data.summary.status}\nStories: ${data.summary.stories_count || 'N/A'}\nDuration: ${data.summary.duration_ms ? Math.round(data.summary.duration_ms / 1000) + 's' : 'N/A'}`);
+            } catch (error) {
+                showToast('Failed to load run details', 'error');
+                console.error(error);
+            }
+        }
+
+        // Logs
+        function startLogStream() {
+            if (logStream) {
+                logStream.close();
+            }
+
+            allLogs = [];
+            const viewer = document.getElementById('logsViewer');
+            viewer.innerHTML = '<div style="color: #888;">Connecting to log stream...</div>';
+
+            // Use polling instead of SSE for better Vercel compatibility
+            pollLogs();
+        }
+
+        let logCursor = 0;
+        let pollInterval = null;
+
+        async function pollLogs() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/logs/latest?cursor=${logCursor}`, {
+                        headers: getAuthHeaders(),
+                    });
+                    const data = await response.json();
+
+                    if (data.logs && data.logs.length > 0) {
+                        allLogs.push(...data.logs);
+                        logCursor = data.nextCursor || logCursor;
+                        renderLogs();
+                    }
+                } catch (error) {
+                    console.error('Failed to poll logs:', error);
+                }
+            }, 2000);
+        }
+
+        function renderLogs() {
+            const viewer = document.getElementById('logsViewer');
+            const level = document.getElementById('logLevel').value;
+            const search = document.getElementById('logSearch').value.toLowerCase();
+
+            let filtered = allLogs;
+
+            if (level !== 'all') {
+                filtered = filtered.filter(log => log.level === level);
+            }
+
+            if (search) {
+                filtered = filtered.filter(log => 
+                    log.msg.toLowerCase().includes(search) ||
+                    (log.agent && log.agent.toLowerCase().includes(search))
+                );
+            }
+
+            viewer.innerHTML = filtered.map(log => `
+                <div class="log-entry ${log.level}">
+                    <span class="log-timestamp">${new Date(log.ts).toLocaleTimeString()}</span>
+                    ${log.agent ? `<span class="log-agent">[${log.agent}]</span>` : ''}
+                    <span class="log-level">${log.level}</span>
+                    <span>${log.msg}</span>
+                </div>
+            `).join('');
+
+            if (autoScroll) {
+                viewer.scrollTop = viewer.scrollHeight;
+            }
+        }
+
+        function refreshLogs() {
+            logCursor = 0;
+            allLogs = [];
+            startLogStream();
+            showToast('Logs refreshed', 'info');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('autoScrollBtn');
+            btn.textContent = autoScroll ? '⏸️ Pause Auto-scroll' : '▶️ Resume Auto-scroll';
+        }
+
+        function filterLogs() {
+            renderLogs();
+        }
+
+        async function downloadLogs() {
+            try {
+                const latestResponse = await fetch(`${API_BASE}/api/logs/latest`, {
+                    headers: getAuthHeaders(),
+                });
+                const latestData = await latestResponse.json();
+                
+                if (!latestData.runId) {
+                    showToast('No logs available', 'info');
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}/api/logs/${latestData.runId}?download=true`, {
+                    headers: getAuthHeaders(),
+                });
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `logs-${latestData.runId}.jsonl`;
+                a.click();
+                showToast('Logs downloaded', 'success');
+            } catch (error) {
+                showToast('Failed to download logs', 'error');
+                console.error(error);
+            }
+        }
+
+        // URLs
+        function updateHeaderLinks() {
+            const feedUrl = `${API_BASE}/podcast/feed.xml`;
+            document.getElementById('feedLink').href = feedUrl;
+            document.getElementById('urlFeed').textContent = feedUrl;
+        }
+
+        async function loadEpisodes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/runs`, {
+                    headers: getAuthHeaders(),
+                });
+                const data = await response.json();
+                
+                const container = document.getElementById('episodesList');
+                const episodes = data.runs.filter(r => r.episode_url);
+
+                if (episodes.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No episodes yet</div>';
+                    return;
+                }
+
+                // Update latest episode link
+                if (episodes[0] && episodes[0].episode_url) {
+                    const latestUrl = `${API_BASE}/podcast/episodes/${episodes[0].date}.mp3`;
+                    document.getElementById('latestEpisodeLink').href = latestUrl;
+                    document.getElementById('urlLatestEpisode').textContent = latestUrl;
+                }
+
+                container.innerHTML = '<ul class="url-list">' + episodes.map(ep => {
+                    const url = `${API_BASE}/podcast/episodes/${ep.date}.mp3`;
+                    return `
+                        <li class="url-item">
+                            <div>
+                                <strong>${ep.date}</strong><br>
+                                <code>${url}</code>
+                            </div>
+                            <div>
+                                <a href="${url}" class="btn btn-secondary copy-btn" target="_blank">Play</a>
+                                <button class="btn btn-secondary copy-btn" onclick="copyText('${url}')">Copy</button>
+                            </div>
+                        </li>
+                    `;
+                }).join('') + '</ul>';
+            } catch (error) {
+                document.getElementById('episodesList').innerHTML = 
+                    '<div style="color: #dc3545;">Failed to load episodes</div>';
+                console.error(error);
+            }
+        }
+
+        function copyUrl(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            copyText(text);
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Cleanup
+        window.addEventListener('beforeunload', () => {
+            if (logStream) {
+                logStream.close();
+            }
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        });
+    </script>
+</body>
+</html>
+

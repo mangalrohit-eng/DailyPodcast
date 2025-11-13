@@ -419,6 +419,118 @@ TARGET_DURATION_SECONDS=600  # 10 minutes
 - **Blob**: Simple, fast storage
 - **Edge**: Low latency globally
 
+## Dashboard
+
+### Overview
+
+The podcast system includes a comprehensive web dashboard for configuration, monitoring, and manual control at `/dashboard`.
+
+### Accessing the Dashboard
+
+1. **Set Authentication** (required for production):
+   ```bash
+   # Option 1: Bearer Token
+   vercel env add DASHBOARD_TOKEN
+   # Enter a secure random token
+   
+   # Option 2: Basic Auth
+   vercel env add DASHBOARD_USER
+   vercel env add DASHBOARD_PASS
+   ```
+
+2. **Open Dashboard**:
+   ```
+   https://your-project.vercel.app/dashboard
+   ```
+
+3. **Login** with your token or credentials
+
+### Dashboard Features
+
+#### ⚙️ Settings Tab
+
+Configure all aspects of your podcast:
+
+- **Topics & Weights**: Add, remove, or adjust topic priorities
+  - Weights must sum to 1.0
+  - Use "Auto-Balance" to normalize weights
+  - Inline validation shows weight errors
+
+- **Schedule**: View cron schedule and set timezone
+
+- **Content Filters**:
+  - Enable/disable rumor filter
+  - Ban specific domains
+  - Adjust story window (hours)
+
+- **Voice & Style**:
+  - Choose OpenAI voices for host and analyst
+  - Add pronunciation glossary (e.g., `AI=A I`)
+
+- **System Health**: View OpenAI and storage configuration status
+
+#### ▶️ Runs Tab
+
+Monitor and trigger podcast generation:
+
+- **Run Now**: Manually trigger episode generation
+- **Recent Runs**: View history with status, duration, story count
+- **Active Run Status**: See when a run is in progress
+- **Run Details**: Click to view picks, outline, and metrics
+
+#### 📋 Logs Tab
+
+Real-time log viewing with powerful features:
+
+- **Live Tail**: Auto-updating log stream (polling-based)
+- **Search & Filter**: Find specific messages or filter by level (INFO/WARN/ERROR/DEBUG)
+- **Auto-scroll**: Toggle automatic scrolling
+- **Download**: Export logs as JSONL file
+
+#### 🔗 URLs Tab
+
+Quick access to all podcast URLs:
+
+- RSS Feed URL (for podcast apps)
+- Latest episode URL
+- All episode URLs with play and copy buttons
+
+### Dashboard API Endpoints
+
+The dashboard uses these authenticated API endpoints:
+
+- `GET /api/config` - Load configuration
+- `PUT /api/config` - Save configuration
+- `GET /api/runs` - List recent runs
+- `GET /api/runs/:runId` - Get run details
+- `GET /api/logs/latest` - Get latest logs
+- `GET /api/logs/:runId` - Get specific run logs
+- `GET /api/logs/stream` - Stream logs (SSE)
+
+### Security
+
+- All write endpoints require authentication
+- Token stored in browser localStorage
+- 401 responses trigger re-authentication
+- No sensitive data in client-side code
+
+### Tips
+
+1. **First Time Setup**:
+   - Check System Health to verify OpenAI and Storage
+   - Review default topics and adjust weights
+   - Save settings before first run
+
+2. **Monitoring**:
+   - Check Logs tab after each run
+   - Look for WARN/ERROR messages
+   - Download logs for debugging
+
+3. **Manual Runs**:
+   - Use "Run Now" to test configuration changes
+   - Wait for active runs to complete
+   - Check run details for story selections
+
 ## Contributing
 
 1. Fork the repository
@@ -435,6 +547,7 @@ MIT License - see LICENSE file
 
 - **Issues**: GitHub Issues
 - **Discussions**: GitHub Discussions
+- **Dashboard**: `/dashboard` for configuration and monitoring
 - **Email**: podcast@example.com
 
 ---
