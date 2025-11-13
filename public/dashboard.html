@@ -992,7 +992,7 @@ Full data in console (F12).`;
                 // Tests
                 html += '<div style="margin-bottom: 20px;"><strong>Component Tests:</strong></div>';
                 for (const [key, test] of Object.entries(result.tests)) {
-                    const t = test as any;
+                    const t = test;
                     const statusColor = t.status === 'pass' ? '#10b981' : t.status === 'warn' ? '#f59e0b' : '#ef4444';
                     const statusIcon = t.status === 'pass' ? '✓' : t.status === 'warn' ? '⚠' : '✗';
                     
@@ -1021,7 +1021,7 @@ Full data in console (F12).`;
                 // Recommendations
                 if (result.recommendations && result.recommendations.length > 0) {
                     html += '<div style="margin-top: 20px;"><strong>Recommendations:</strong></div>';
-                    result.recommendations.forEach((rec: any) => {
+                    result.recommendations.forEach((rec) => {
                         const priorityColor = rec.priority === 'critical' ? '#ef4444' : rec.priority === 'high' ? '#f59e0b' : '#3b82f6';
                         html += `<div style="margin-top: 10px; padding: 12px; background: #fef3c7; border-left: 4px solid ${priorityColor}; border-radius: 4px;">
                             <div style="font-weight: bold; color: #92400e; margin-bottom: 4px;">[${rec.priority.toUpperCase()}] ${rec.issue}</div>
@@ -1321,7 +1321,7 @@ Full data in console (F12).`;
 
             // Set a longer timeout since generation takes time
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 310000); // 310s timeout
+            let timeoutId = setTimeout(() => controller.abort(), 310000); // 310s timeout
 
             try {
                 const response = await fetch(`${API_BASE}/api/run`, {
