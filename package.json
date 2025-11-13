@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@vercel/blob": "^0.23.4",
+    "@aws-sdk/client-s3": "^3.679.0",
     "openai": "^4.63.0",
     "rss-parser": "^3.13.0",
     "fast-xml-parser": "^4.5.0",
