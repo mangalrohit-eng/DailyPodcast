@@ -354,6 +354,50 @@ export class Orchestrator {
       agentTimes['audio_engineer'] = Date.now() - audioStart;
       
       // Create manifest
+      // Build pipeline report from all agent outputs
+      const pipeline_report = {
+        ingestion: ingestionResult.output!.detailed_report || {
+          sources_scanned: [],
+          total_items_before_filter: 0,
+          filtered_out: [],
+          topics_breakdown: {},
+        },
+        ranking: rankingResult.output!.detailed_report || {
+          stories_ranked: 0,
+          top_picks: [],
+          rejected_stories: [],
+        },
+        outline: {
+          sections: outlineResult.output!.outline.sections.map((s: any) => ({
+            type: s.type,
+            title: s.title,
+            target_words: s.target_words || 0,
+            story_count: (s.refs || []).length,
+          })),
+          total_duration_target: runConfig.target_duration_sec,
+        },
+        scriptwriting: scriptwriterResult.output!.detailed_report || {
+          sections_generated: 0,
+          total_word_count: 0,
+          full_script_text: '',
+          citations_used: [],
+        },
+        factcheck: factCheckResult.output!.detailed_report || {
+          changes_made: [],
+          flags_raised: [],
+        },
+        safety: safetyResult.output!.detailed_report || {
+          edits_made: [],
+          risk_level: 'none',
+        },
+      };
+      
+      Logger.info('Pipeline report compiled', {
+        ingestion_stories: pipeline_report.ingestion.topics_breakdown,
+        ranking_picks: pipeline_report.ranking.top_picks.length,
+        outline_sections: pipeline_report.outline.sections.length,
+      });
+      
       const manifest: EpisodeManifest = {
         date: runConfig.date,
         run_id: runId,
@@ -365,6 +409,7 @@ export class Orchestrator {
         duration_sec: audioResult.output!.actual_duration_sec,
         word_count: safetyResult.output!.script.word_count,
         created_at: new Date().toISOString(),
+        pipeline_report, // Add the compiled report
         metrics: {
           ingestion_time_ms: agentTimes['ingestion'],
           ranking_time_ms: agentTimes['ranking'],
