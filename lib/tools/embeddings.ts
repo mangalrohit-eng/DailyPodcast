@@ -22,22 +22,25 @@ export class EmbeddingsTool {
     
     Logger.debug('Generating embeddings', { count: texts.length });
     
-    return retry(
-      async () => {
-        const response = await this.client.embeddings.create({
-          model: 'text-embedding-3-small',
-          input: texts,
-          encoding_format: 'float',
-        });
-        
-        return response.data.map(item => item.embedding);
+    // Import retry helper with rate limiting support
+    const { createEmbedding } = await import('../utils/openai-helper');
+    
+    const response = await createEmbedding(
+      this.client,
+      {
+        model: 'text-embedding-3-small',
+        input: texts,
+        encoding_format: 'float',
       },
       {
         maxRetries: 3,
-        delayMs: 1000,
-        backoff: true,
+        initialDelayMs: 500,
+        maxDelayMs: 5000,
+        backoffMultiplier: 2,
       }
     );
+    
+    return response.data.map(item => item.embedding);
   }
   
   async embedSingle(text: string): Promise<number[]> {

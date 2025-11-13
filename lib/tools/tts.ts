@@ -32,38 +32,47 @@ export class TtsTool {
       speed,
     });
     
-    return retry(
-      async () => {
-        const response = await this.client.audio.speech.create({
-          model: 'tts-1-hd',
-          voice,
-          input: text,
-          response_format: format,
-          speed,
-        });
-        
-        const arrayBuffer = await response.arrayBuffer();
-        return Buffer.from(arrayBuffer);
+    // Import retry helper with rate limiting support
+    const { createSpeech } = await import('../utils/openai-helper');
+    
+    const response = await createSpeech(
+      this.client,
+      {
+        model: 'tts-1-hd',
+        voice,
+        input: text,
+        response_format: format,
+        speed,
       },
       {
         maxRetries: 3,
-        delayMs: 2000,
-        backoff: true,
+        initialDelayMs: 2000,
+        maxDelayMs: 15000,
+        backoffMultiplier: 2,
       }
     );
+    
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
   }
   
   async synthesizeSegments(segments: TtsOptions[]): Promise<Buffer[]> {
     const results: Buffer[] = [];
     
-    // Process in parallel with concurrency limit
-    const concurrency = 3;
+    // Reduced concurrency to avoid rate limiting (was 3, now 2)
+    // Add delay between batches to respect rate limits
+    const concurrency = 2;
     for (let i = 0; i < segments.length; i += concurrency) {
       const batch = segments.slice(i, i + concurrency);
       const batchResults = await Promise.all(
         batch.map(segment => this.synthesize(segment))
       );
       results.push(...batchResults);
+      
+      // Add 500ms delay between batches to avoid rate limiting
+      if (i + concurrency < segments.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
     
     return results;

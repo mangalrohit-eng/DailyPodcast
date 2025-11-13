@@ -104,7 +104,7 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
   protected abstract process(input: TInput): Promise<TOutput>;
   
   /**
-   * Helper: Call OpenAI chat completion
+   * Helper: Call OpenAI chat completion with automatic rate limiting and retry logic
    */
   protected async callOpenAI(
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
@@ -120,13 +120,26 @@ export abstract class BaseAgent<TInput = any, TOutput = any> {
       responseFormat = 'text',
     } = options;
     
-    const response = await this.client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      response_format: responseFormat === 'json_object' ? { type: 'json_object' } : undefined,
-    });
+    // Import retry helper
+    const { createChatCompletion } = await import('../utils/openai-helper');
+    
+    // Use retry logic with exponential backoff for rate limiting
+    const response = await createChatCompletion(
+      this.client,
+      {
+        model: 'gpt-4-turbo-preview',
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        response_format: responseFormat === 'json_object' ? { type: 'json_object' } : undefined,
+      },
+      {
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 10000,
+        backoffMultiplier: 2,
+      }
+    );
     
     return response.choices[0]?.message?.content || '';
   }

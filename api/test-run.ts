@@ -67,22 +67,31 @@ export default async function handler(
         rumor_filter: Config.RUMOR_FILTER,
       });
       
-      // Test 6: Try a small OpenAI API call (just to test quota)
-      await logger.info('✓ Testing OpenAI API access...');
+      // Test 6: Try a small OpenAI API call (just to test quota/rate limits)
+      await logger.info('✓ Testing OpenAI API access with retry logic...');
       if (!Config.OPENAI_API_KEY) {
         await logger.warn('⚠️ OpenAI API key not configured, skipping API test');
       } else {
         try {
+          const { createChatCompletion } = await import('../lib/utils/openai-helper');
+          
           const openai = new OpenAI({
             apiKey: Config.OPENAI_API_KEY,
           });
           
-          // Smallest possible API call to test quota
-          const response = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [{ role: 'user', content: 'Hi' }],
-            max_tokens: 1,
-          });
+          // Smallest possible API call to test quota with retry logic
+          const response = await createChatCompletion(
+            openai,
+            {
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Test' }],
+              max_tokens: 1,
+            },
+            {
+              maxRetries: 2,
+              initialDelayMs: 1000,
+            }
+          );
           
           await logger.info('✓ OpenAI API call successful', {
             model: response.model,
@@ -91,12 +100,24 @@ export default async function handler(
         } catch (openaiError: any) {
           const errorMsg = openaiError.message || openaiError.toString();
           const errorCode = openaiError.code || openaiError.type;
+          const errorStatus = openaiError.status;
           
-          await logger.error('✗ OpenAI API call failed', {
+          await logger.error('✗ OpenAI API call failed after retries', {
             error: errorMsg,
             code: errorCode,
+            status: errorStatus,
             type: openaiError.type,
           });
+          
+          // Check for rate limit errors
+          if (errorStatus === 429 || errorCode === 'rate_limit_exceeded' || errorMsg.includes('rate limit')) {
+            await logger.error('⏱️ RATE LIMIT: OpenAI API rate limit exceeded', {
+              solution1: 'Requests are being retried automatically with exponential backoff',
+              solution2: 'If persistent, wait 60 seconds and try again',
+              solution3: 'Check rate limits at https://platform.openai.com/account/limits',
+              note: 'This is different from quota - you have credits but are making requests too fast',
+            });
+          }
           
           // Check for quota/billing errors
           if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || 
