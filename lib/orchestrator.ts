@@ -79,7 +79,9 @@ export class Orchestrator {
     
     // Build run configuration first to get runId
     const runConfig = await this.buildRunConfig(input);
-    const runId = runConfig.date;
+    // Add timestamp to runId to make it unique per run
+    const timestamp = Date.now();
+    const runId = `${runConfig.date}_${timestamp}`;
     
     // Initialize storage (StructuredLogger removed due to undefined errors)
     let runsStorage: RunsStorage | null = null;
@@ -125,54 +127,14 @@ export class Orchestrator {
         message: 'Initializing podcast generation pipeline',
       });
       
-      // Check if episode already exists
-      const episodePath = `episodes/${runConfig.date}_daily_rohit_news.mp3`;
-      Logger.info('Checking episode existence', { 
-        date: runConfig.date, 
+      // Generate unique episode filename with timestamp
+      // This allows multiple runs per day and avoids "already exists" issues
+      const episodePath = `episodes/${runId}_daily_rohit_news.mp3`;
+      Logger.info('Generating new episode', { 
+        runId,
+        date: runConfig.date,
         path: episodePath,
-        force_overwrite: runConfig.force_overwrite,
       });
-      
-      if (!runConfig.force_overwrite && await this.storage.exists(episodePath)) {
-        Logger.info('Episode already exists - returning existing manifest', { 
-          date: runConfig.date,
-          force_overwrite: runConfig.force_overwrite,
-        });
-        
-        // Try to load existing manifest (may not exist for manually uploaded episodes)
-        try {
-          const manifestPath = `episodes/${runConfig.date}_manifest.json`;
-          const manifestData = await this.storage.get(manifestPath);
-          const manifest = JSON.parse(manifestData.toString('utf-8'));
-          
-          progressTracker.addUpdate(runId, {
-            phase: 'Complete',
-            status: 'completed',
-            message: 'Using existing episode (not regenerated)',
-            details: { cached: true },
-          });
-          
-          return {
-            success: true,
-            manifest,
-            metrics: {
-              total_time_ms: Date.now() - startTime,
-              agent_times: {},
-            },
-          };
-        } catch (error) {
-          // Manifest doesn't exist - probably a manually uploaded episode
-          Logger.warn('Episode exists but no manifest found - will regenerate', { 
-            date: runConfig.date,
-            error: (error as Error).message,
-          });
-          // Continue with generation to create a proper episode with manifest
-        }
-      } else if (runConfig.force_overwrite) {
-        Logger.info('force_overwrite=true - will regenerate episode even if it exists', {
-          date: runConfig.date,
-        });
-      }
       
       // 1. INGESTION
       Logger.info('Phase 1: Ingestion');
