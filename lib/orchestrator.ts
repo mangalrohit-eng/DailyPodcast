@@ -79,11 +79,14 @@ export class Orchestrator {
     const runConfig = await this.buildRunConfig(input);
     const runId = runConfig.date;
     
-    // Initialize structured logger
-    const structuredLogger = new StructuredLogger(runId);
-    const runsStorage = new RunsStorage();
+    // Initialize structured logger and storage
+    let structuredLogger: StructuredLogger | null = null;
+    let runsStorage: RunsStorage | null = null;
     
     try {
+      structuredLogger = new StructuredLogger(runId);
+      runsStorage = new RunsStorage();
+      
       // Check concurrency - only one run at a time
       if (!runConfig.force_overwrite && RunsStorage.isRunActive()) {
         const activeRun = RunsStorage.getActiveRunId();
@@ -320,7 +323,9 @@ export class Orchestrator {
       }
       
       // Flush logs
-      await structuredLogger.flush();
+      if (structuredLogger) {
+        await structuredLogger.flush();
+      }
       
       return {
         success: true,
@@ -333,10 +338,12 @@ export class Orchestrator {
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
-      await structuredLogger.error('Orchestrator failed', {
-        error: (error as Error).message,
-        stack: (error as Error).stack,
-      });
+      if (structuredLogger) {
+        await structuredLogger.error('Orchestrator failed', {
+          error: (error as Error).message,
+          stack: (error as Error).stack,
+        });
+      }
       
       Logger.error('Orchestrator failed', {
         error: (error as Error).message,
@@ -345,10 +352,14 @@ export class Orchestrator {
       });
       
       // Fail the run
-      await runsStorage.failRun(runId, (error as Error).message);
+      if (runsStorage) {
+        await runsStorage.failRun(runId, (error as Error).message);
+      }
       
       // Flush logs
-      await structuredLogger.flush();
+      if (structuredLogger) {
+        await structuredLogger.flush();
+      }
       
       return {
         success: false,
