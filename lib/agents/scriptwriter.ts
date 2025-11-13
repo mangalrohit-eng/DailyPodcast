@@ -210,6 +210,22 @@ Each section MUST:
   }
 
   /**
+   * Extract citation numbers from text like [1], [2], etc.
+   */
+  private extractCitations(text: string): number[] {
+    const citations: number[] = [];
+    const citationPattern = /\[(\d+)\]/g;
+    let match;
+    while ((match = citationPattern.exec(text)) !== null) {
+      const refId = parseInt(match[1], 10);
+      if (!citations.includes(refId)) {
+        citations.push(refId);
+      }
+    }
+    return citations;
+  }
+
+  /**
    * Legacy method: Write a single section (kept for backward compatibility)
    */
   private async writeSection(
