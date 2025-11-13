@@ -536,7 +536,14 @@
             </div>
 
             <div class="card">
-                <h2>Schedule</h2>
+                <h2>Schedule & Duration</h2>
+                <div class="form-group">
+                    <label>Target Episode Duration (minutes)</label>
+                    <input type="number" id="targetDuration" min="5" max="60" value="15" step="1">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Recommended: 10-20 minutes. Actual duration may vary based on content.
+                    </small>
+                </div>
                 <div class="form-group">
                     <label>Timezone</label>
                     <select id="timezone">
@@ -839,7 +846,9 @@
             // Topics
             renderTopics(config.topics);
 
-            // Schedule
+            // Schedule & Duration
+            const durationMinutes = Math.round((config.target_duration_sec || 900) / 60);
+            document.getElementById('targetDuration').value = durationMinutes;
             document.getElementById('timezone').value = config.timezone || 'America/New_York';
             document.getElementById('cronSchedule').value = config.cron_schedule || '0 12 * * *';
 
@@ -932,9 +941,13 @@
             }
 
             // Gather all settings
+            const targetDurationMinutes = parseInt(document.getElementById('targetDuration').value);
+            const targetDurationSec = targetDurationMinutes * 60;
+            
             const settings = {
                 ...currentConfig,
                 topics: currentConfig.topics,
+                target_duration_sec: targetDurationSec,
                 timezone: document.getElementById('timezone').value,
                 rumor_filter: document.getElementById('rumorFilter').checked,
                 banned_domains: document.getElementById('bannedDomains').value
