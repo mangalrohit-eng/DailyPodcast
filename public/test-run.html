@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Run Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        .primary { background: #007bff; color: white; border: none; }
+        .secondary { background: #6c757d; color: white; border: none; }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .log { margin: 10px 0; padding: 10px; background: #f0f0f0; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Episode Generator</h1>
+    <p>This page bypasses all caching and forces a fresh episode generation.</p>
+    
+    <div>
+        <button class="primary" onclick="runToday()">▶️ Generate Today's Episode (Force Overwrite)</button>
+        <button class="secondary" onclick="runTomorrow()">▶️ Generate Tomorrow's Episode</button>
+    </div>
+    
+    <div id="logs"></div>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const div = document.createElement('div');
+            div.className = 'log';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+        
+        function getAuthHeaders() {
+            const token = localStorage.getItem('dashboard_token');
+            const user = localStorage.getItem('dashboard_user');
+            const pass = localStorage.getItem('dashboard_pass');
+            
+            if (token) {
+                return { 'Authorization': `Bearer ${token}` };
+            } else if (user && pass) {
+                return { 'Authorization': `Basic ${btoa(user + ':' + pass)}` };
+            }
+            return {};
+        }
+        
+        async function runEpisode(date, forceOverwrite) {
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('logs').innerHTML = '';
+            
+            log(`Starting episode generation for ${date}`);
+            log(`Force overwrite: ${forceOverwrite}`);
+            
+            const payload = {
+                date: date,
+                force_overwrite: forceOverwrite
+            };
+            
+            log(`Payload: ${JSON.stringify(payload)}`);
+            
+            try {
+                log('Sending POST request to /api/run...');
+                
+                const response = await fetch(`${API_BASE}/api/run`, {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+                
+                log(`Response status: ${response.status} ${response.statusText}`);
+                
+                const data = await response.json();
+                
+                log('Response received!');
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Response:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                if (data.success) {
+                    log('✅ SUCCESS!');
+                    log(`Episode URL: ${data.episode?.url || 'N/A'}`);
+                    log(`Duration: ${data.episode?.duration_sec || 'N/A'}s`);
+                    log(`Word count: ${data.episode?.word_count || 'N/A'}`);
+                } else {
+                    log(`❌ FAILED: ${data.error}`);
+                }
+                
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`);
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}\n${error.stack}</pre>
+                `;
+            }
+        }
+        
+        function runToday() {
+            const today = new Date().toISOString().split('T')[0];
+            runEpisode(today, true);
+        }
+        
+        function runTomorrow() {
+            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+            runEpisode(tomorrow, true);
+        }
+        
+        // Log auth status on load
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('dashboard_token');
+            const user = localStorage.getItem('dashboard_user');
+            if (token) {
+                log('✅ Auth: Using bearer token');
+            } else if (user) {
+                log('✅ Auth: Using basic auth');
+            } else {
+                log('⚠️ No auth credentials found - requests may fail');
+                log('Go to /dashboard first to authenticate, then come back here');
+            }
+        });
+    </script>
+</body>
+</html>
+
