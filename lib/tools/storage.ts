@@ -15,6 +15,8 @@ export interface StorageObject {
 
 export class StorageTool {
   private backend: 'vercel-blob' | 's3';
+  // Cache of recently created blob URLs to avoid list() lookup delays
+  private urlCache: Map<string, { url: string; createdAt: number }> = new Map();
   
   constructor() {
     this.backend = Config.STORAGE_BACKEND as 'vercel-blob' | 's3';
@@ -127,20 +129,49 @@ export class StorageTool {
       size: blob.size,
     });
     
+    // Cache the URL for immediate retrieval (list() has eventual consistency)
+    this.urlCache.set(path, {
+      url: blob.url,
+      createdAt: Date.now(),
+    });
+    
+    // Clean up cache entries older than 5 minutes
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    for (const [key, value] of this.urlCache.entries()) {
+      if (value.createdAt < fiveMinutesAgo) {
+        this.urlCache.delete(key);
+      }
+    }
+    
     return blob.url;
   }
   
   private async getVercelBlob(path: string): Promise<Buffer> {
-    // Find the blob by pathname with retry logic
-    // (Vercel Blob list() may have a slight indexing delay after put())
+    Logger.debug('Looking up blob', { path, cacheHit: this.urlCache.has(path) });
+    
+    // Check cache first (for recently created blobs)
+    const cached = this.urlCache.get(path);
+    if (cached) {
+      Logger.debug('Using cached URL', { path, url: cached.url });
+      
+      const response = await fetch(cached.url);
+      if (!response.ok) {
+        // Cache might be stale, remove and fall through to list()
+        Logger.warn('Cached URL failed, falling back to list()', { path });
+        this.urlCache.delete(path);
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      }
+    }
+    
+    // Fall back to list() for older blobs
     let blobs: any[] = [];
     let attempts = 0;
     const maxAttempts = 3;
     
-    Logger.debug('Looking up blob', { path });
-    
     while (attempts < maxAttempts) {
-      const result = await list({ prefix: path, limit: 10 }); // Increased limit to see more results
+      const result = await list({ prefix: path, limit: 10 });
       blobs = result.blobs;
       
       Logger.debug('Blob list result', {
@@ -153,7 +184,7 @@ export class StorageTool {
       // Find exact match
       const exactMatch = blobs.find(b => b.pathname === path);
       if (exactMatch) {
-        Logger.debug('Exact match found', { pathname: exactMatch.pathname });
+        Logger.debug('Exact match found via list()', { pathname: exactMatch.pathname });
         
         // Fetch using the blob's URL
         const response = await fetch(exactMatch.url);
