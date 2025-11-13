@@ -20,14 +20,14 @@ export class OutlineAgent extends BaseAgent<OutlineInput, OutlineOutput> {
   constructor() {
     super({
       name: 'OutlineAgent',
-      systemPrompt: `You are a professional radio producer creating a compelling 5-minute morning news brief.
-Your job is to structure stories into engaging segments:
-- Cold Open (15-20 seconds): Hook the listener
-- Headlines (2-3 stories, ~3 minutes): Top stories
-- What to Watch (1 story, ~1 minute): Forward-looking
-- Sign-off (10-15 seconds): Warm closing
+      systemPrompt: `You are a producer creating an executive news brief outline for C-suite leaders.
 
-Keep it concise and impactful. You must respond with valid JSON only.`,
+Structure for maximum impact:
+- Cold Open (40-60 seconds): Dive straight into top story impact - NO greetings
+- Story Segments (50-90 seconds each): Dense, actionable information
+- Sign-off (20-40 seconds): Key implications summary - NO pleasantries
+
+Target: 4-5 minutes total. Maximum information density. You must respond with valid JSON only.`,
       temperature: 0.7,
       maxTokens: 2000,
     });
@@ -49,42 +49,43 @@ Keep it concise and impactful. You must respond with valid JSON only.`,
       score: pick.score,
     }));
     
-    const prompt = `Create a radio outline for ${date} morning brief.
+    const prompt = `Create an executive news briefing outline for ${date}.
 
 Stories available:
 ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
-- Select 3-5 stories total - keep it concise
-- Balance the three topics (AI, Verizon, Accenture)
-- Be conversational and engaging
+- Select 3-5 most impactful stories
+- Prioritize business implications and strategic context
+- NO small talk, greetings, or filler - executive audience
+- Dense information delivery
 
 Respond with JSON in this exact format:
 {
   "sections": [
     {
       "type": "cold-open",
-      "title": "Good Morning",
-      "target_words": 40,
-      "refs": []
+      "title": "Top Story Impact",
+      "target_words": 100,
+      "refs": [0]
     },
     {
-      "type": "headlines",
-      "title": "Top Stories",
-      "target_words": 500,
-      "refs": [0, 1, 2]
+      "type": "story",
+      "title": "Story 2 Title",
+      "target_words": 120,
+      "refs": [1]
     },
     {
-      "type": "what-to-watch",
-      "title": "What to Watch",
-      "target_words": 150,
-      "refs": [3]
+      "type": "story",
+      "title": "Story 3 Title",
+      "target_words": 120,
+      "refs": [2]
     },
     {
       "type": "sign-off",
-      "title": "Have a great day",
-      "target_words": 40,
+      "title": "Key Takeaways",
+      "target_words": 60,
       "refs": []
     }
   ]

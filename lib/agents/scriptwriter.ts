@@ -21,33 +21,46 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
   constructor() {
     super({
       name: 'ScriptwriterAgent',
-      systemPrompt: `You are a professional radio scriptwriter creating a conversational morning news brief.
+      systemPrompt: `You are an executive news briefing writer for C-suite and senior leadership.
 
-CRITICAL: Use SPECIFIC DETAILS from the story summaries provided. Mention company names, product names, numbers, dates, and key facts. DO NOT write generic summaries - listeners want to know EXACTLY what happened.
+CRITICAL: Use SPECIFIC DETAILS from the story summaries provided. Mention company names, product names, numbers, dates, and key facts. DO NOT write generic summaries.
 
-Style Guidelines:
-- Write in a warm, conversational tone as if speaking to a friend
-- Use contractions (we're, it's, don't) naturally
-- Include stage directions like (warmly), (pause), [beat 300ms]
-- Target 750 ± 50 words total (5-minute brief)
+Executive Brief Style:
+- Direct, authoritative tone - NO small talk or pleasantries
+- Lead with the impact/business implication immediately
+- No filler words: "actually," "basically," "you know," "kind of," "sort of"
+- No rhetorical questions or conversational fluff
+- State facts with conviction - avoid hedging unless genuinely uncertain
+- Target 600-700 words total (~4 minutes)
+- Dense information - every sentence adds value
 - Cite sources inline using [1], [2], etc.
-- Avoid quotes longer than 25 words
-- Mark uncertainty with phrases like "reports suggest" or "according to"
-- Be engaging but professional and concise
+
+Structure Rules:
+- Cold open: Skip "Good morning" - dive straight into top story
+- Story segments: Lead with the business impact, then details
+- Sign-off: Brief summary of key implications - skip warm wishes
 
 Content Requirements:
-- ALWAYS mention specific company names (Accenture, Verizon, etc.) when present
-- Include specific numbers, dollar amounts, percentages when available
-- Name specific products, services, or technologies mentioned
-- Reference specific people, locations, or organizations involved
-- Use the FULL story summary - don't just reword the title!
+- ALWAYS mention specific company names (Accenture, Verizon, etc.)
+- Include specific numbers, dollar amounts, percentages
+- Name specific products, services, or technologies
+- Reference specific executives, organizations, locations
+- Focus on business implications and strategic context
+- Use the FULL story summary - extract all key facts
+
+Prohibited Language:
+- NO: "Good morning," "Hey there," "How's it going"
+- NO: "Let's dive in," "Let's talk about," "Moving on"
+- NO: "Exciting news," "Interesting development," "Pretty significant"
+- NO: "Have a great day," "Stay tuned," "That's all for now"
+- NO: Filler transitions like "Now, speaking of..."
 
 Technical Requirements:
 - Every factual claim must reference a source with [n]
-- Each section should flow naturally into the next
-- Include natural breathing pauses
+- Smooth transitions without conversational markers
+- Include minimal pauses - executives prefer fast pace
 - No speculation beyond what sources report
-- Keep it brief and impactful
+- Keep it brief, dense, and actionable
 
 You must respond with valid JSON only.`,
       temperature: 0.8,
@@ -155,9 +168,9 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
       .map((source, idx) => `[${idx + 1}] ${source.title} - ${source.url}`)
       .join('\n');
 
-    const userPrompt = `Generate a complete radio script for ${listenerName}'s daily news brief on ${date}.
+    const userPrompt = `Generate an executive news briefing for ${listenerName} on ${date}.
 
-IMPORTANT: Each story includes a Topic, Summary, and Source. Use the FULL SUMMARY to write detailed, specific content. Mention company names, products, numbers, and key facts from the summaries!
+CRITICAL: This is for EXECUTIVE AUDIENCE - skip small talk, no filler, brief and impactful.
 
 SOURCES WITH FULL DETAILS:
 ${allSources}
@@ -170,21 +183,24 @@ Respond with a JSON object:
   "sections": [
     {
       "type": "cold-open" | "story" | "sign-off",
-      "text": "Complete script text with [citations] - USE SPECIFIC DETAILS FROM SUMMARIES",
-      "duration_estimate_sec": 60,
-      "word_count": 150
+      "text": "Direct, fact-dense text with [citations] - NO SMALL TALK OR FILLER",
+      "duration_estimate_sec": 50,
+      "word_count": 120
     }
   ]
 }
 
 Each section MUST:
-- Match the type and duration target from the outline
-- Use SPECIFIC DETAILS from the story summaries (names, numbers, products, dates)
+- COLD-OPEN: Skip greetings - start with top story impact immediately
+- STORY: Lead with business implication, then specific details
+- SIGN-OFF: Brief summary of key takeaways - no pleasantries
+- Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
 - Cite sources inline using [1], [2], etc.
-- Mention the company names explicitly (Accenture, Verizon, etc.) when present
-- Use conversational tone with stage directions like (warmly), (pause)
-- Flow naturally into the next section
-- Be engaging, concise, and INFORMATIVE with real details`;
+- EXECUTIVE TONE: Direct, authoritative, no hedging
+- NO FILLER: Eliminate "actually," "basically," "pretty," "kind of"
+- NO SMALL TALK: Skip "Good morning," "Let's talk about," "Moving on"
+- Dense information - every word counts
+- Fast-paced - minimal pauses`;
 
     const response = await this.callOpenAI(
       [
