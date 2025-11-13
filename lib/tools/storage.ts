@@ -15,8 +15,9 @@ export interface StorageObject {
 
 export class StorageTool {
   private backend: 'vercel-blob' | 's3';
-  // Cache of recently created blob URLs to avoid list() lookup delays
-  private urlCache: Map<string, { url: string; createdAt: number }> = new Map();
+  
+  // Static cache shared across all instances to handle eventual consistency
+  private static urlCache: Map<string, { url: string; createdAt: number }> = new Map();
   
   constructor() {
     this.backend = Config.STORAGE_BACKEND as 'vercel-blob' | 's3';
@@ -49,6 +50,11 @@ export class StorageTool {
   async exists(path: string): Promise<boolean> {
     try {
       if (this.backend === 'vercel-blob') {
+        // Check cache first
+        if (StorageTool.urlCache.has(path)) {
+          return true;
+        }
+        
         // List with the exact path - Vercel Blob matches on pathname
         // Add retry for recently created blobs
         let attempts = 0;
@@ -130,16 +136,16 @@ export class StorageTool {
     });
     
     // Cache the URL for immediate retrieval (list() has eventual consistency)
-    this.urlCache.set(path, {
+    StorageTool.urlCache.set(path, {
       url: blob.url,
       createdAt: Date.now(),
     });
     
     // Clean up cache entries older than 5 minutes
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-    for (const [key, value] of this.urlCache.entries()) {
+    for (const [key, value] of StorageTool.urlCache.entries()) {
       if (value.createdAt < fiveMinutesAgo) {
-        this.urlCache.delete(key);
+        StorageTool.urlCache.delete(key);
       }
     }
     
@@ -147,10 +153,10 @@ export class StorageTool {
   }
   
   private async getVercelBlob(path: string): Promise<Buffer> {
-    Logger.debug('Looking up blob', { path, cacheHit: this.urlCache.has(path) });
+    Logger.debug('Looking up blob', { path, cacheHit: StorageTool.urlCache.has(path) });
     
     // Check cache first (for recently created blobs)
-    const cached = this.urlCache.get(path);
+    const cached = StorageTool.urlCache.get(path);
     if (cached) {
       Logger.debug('Using cached URL', { path, url: cached.url });
       
@@ -158,7 +164,7 @@ export class StorageTool {
       if (!response.ok) {
         // Cache might be stale, remove and fall through to list()
         Logger.warn('Cached URL failed, falling back to list()', { path });
-        this.urlCache.delete(path);
+        StorageTool.urlCache.delete(path);
       } else {
         const arrayBuffer = await response.arrayBuffer();
         return Buffer.from(arrayBuffer);
