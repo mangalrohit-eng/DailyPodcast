@@ -1,7 +1,8 @@
 /**
- * Test Run API - Quick diagnostic endpoint
+ * Admin Tools API - Diagnostics and testing
  * 
- * POST /api/test-run - Test episode generation with detailed logging
+ * POST /api/test-run - Run system test with OpenAI check
+ * GET /api/test-run?debug=true - Debug runs index and storage
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -10,6 +11,7 @@ import { StructuredLogger } from '../lib/tools/logs-storage';
 import { RunsStorage } from '../lib/tools/runs-storage';
 import { Config } from '../lib/config';
 import { Logger } from '../lib/utils';
+import { StorageTool } from '../lib/tools/storage';
 import OpenAI from 'openai';
 
 export default async function handler(
@@ -19,6 +21,11 @@ export default async function handler(
   // Wrap everything to ensure we always return JSON
   try {
     return await AuthMiddleware.protect(req, res, async (req, res) => {
+      // Handle GET request for debug info
+      if (req.method === 'GET') {
+        return handleDebug(req, res);
+      }
+      
       if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
       }
@@ -201,6 +208,58 @@ export default async function handler(
       success: false,
       error: outerError.message || 'Internal server error',
       details: 'An unexpected error occurred during test run',
+    });
+  }
+}
+
+/**
+ * Handle debug request - inspect runs index and storage
+ */
+async function handleDebug(req: VercelRequest, res: VercelResponse) {
+  try {
+    const storage = new StorageTool();
+    
+    // Check what exists in storage
+    const indexExists = await storage.exists('runs/index.json');
+    const feedExists = await storage.exists('feed.xml');
+    
+    let indexData = null;
+    let episodeCount = 0;
+    
+    if (indexExists) {
+      const data = await storage.get('runs/index.json');
+      indexData = JSON.parse(data.toString('utf-8'));
+      episodeCount = indexData.runs?.filter((r: any) => r.episode_url)?.length || 0;
+    }
+    
+    // List all files in episodes directory
+    const episodeFiles = await storage.list('episodes/');
+    
+    return res.status(200).json({
+      storage: {
+        runs_index_exists: indexExists,
+        feed_xml_exists: feedExists,
+      },
+      runs_index: indexData,
+      episode_files: episodeFiles.map(f => ({
+        path: f.path,
+        url: f.url,
+        uploadedAt: f.uploadedAt,
+      })),
+      summary: {
+        total_runs: indexData?.runs?.length || 0,
+        runs_with_episodes: episodeCount,
+        episode_files_count: episodeFiles.length,
+      },
+    });
+  } catch (error) {
+    Logger.error('Debug request failed', {
+      error: (error as Error).message,
+    });
+    
+    return res.status(500).json({
+      error: (error as Error).message,
+      stack: (error as Error).stack,
     });
   }
 }

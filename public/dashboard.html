@@ -530,8 +530,9 @@
                 <h2>Diagnostics</h2>
                 <p style="color: #666; margin-bottom: 15px;">Run a quick test to verify system configuration and logging.</p>
                 <button class="btn btn-secondary" onclick="runDiagnostic()">🧪 Run System Test</button>
+                <button class="btn btn-secondary" onclick="viewDebugInfo()" style="margin-left: 10px;">🔍 Debug Storage</button>
                 <p style="color: #666; margin-top: 10px; font-size: 13px;">
-                    This runs in &lt;5 seconds and writes test logs. Use this to verify logging works.
+                    System test runs in &lt;5 seconds and writes test logs. Debug shows storage state.
                 </p>
             </div>
 
@@ -838,6 +839,38 @@
         }
 
         // Diagnostics
+        async function viewDebugInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/test-run?debug=true`, {
+                    headers: getAuthHeaders(),
+                });
+
+                const result = await response.json();
+                
+                console.log('Debug info:', result);
+                
+                const message = `Storage Debug Info:
+
+✓ Runs Index Exists: ${result.storage.runs_index_exists}
+✓ Feed XML Exists: ${result.storage.feed_xml_exists}
+
+Summary:
+• Total Runs: ${result.summary.total_runs}
+• Runs with Episodes: ${result.summary.runs_with_episodes}
+• Episode Files: ${result.summary.episode_files_count}
+
+Episode Files in Storage:
+${result.episode_files.map(f => `• ${f.path}\n  ${f.url}\n  Uploaded: ${new Date(f.uploadedAt).toLocaleString()}`).join('\n\n')}
+
+Full data in console (F12).`;
+                
+                alert(message);
+            } catch (error) {
+                showToast('Failed to fetch debug info', 'error');
+                console.error(error);
+            }
+        }
+
         async function runDiagnostic() {
             showToast('Running system test...', 'info');
 
