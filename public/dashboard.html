@@ -1368,16 +1368,40 @@
         }
 
         async function loadEpisodes() {
+            const container = document.getElementById('episodesList');
+            
             try {
                 const response = await fetch(`${API_BASE}/api/runs`, {
                     headers: getAuthHeaders(),
                 });
+                
+                console.log('Episodes API response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Episodes API error:', response.status, errorText);
+                    container.innerHTML = `<div class="empty-state" style="color: #dc3545;">
+                        Failed to load episodes (HTTP ${response.status})<br>
+                        <small>${errorText.substring(0, 200)}</small><br><br>
+                        <button class="btn btn-secondary" onclick="loadEpisodes()">Retry</button>
+                    </div>`;
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 console.log('Loaded runs data:', data);
                 console.log('Total runs:', data.runs?.length || 0);
                 
-                const container = document.getElementById('episodesList');
+                if (!data.runs || !Array.isArray(data.runs)) {
+                    console.error('Invalid data structure:', data);
+                    container.innerHTML = `<div class="empty-state" style="color: #dc3545;">
+                        Invalid data received from API<br>
+                        <button class="btn btn-secondary" onclick="loadEpisodes()">Retry</button>
+                    </div>`;
+                    return;
+                }
+                
                 const episodes = data.runs.filter(r => r.episode_url);
                 
                 console.log('Filtered episodes with URLs:', episodes.length);
