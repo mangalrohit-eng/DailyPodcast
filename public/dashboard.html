@@ -605,11 +605,23 @@
 
         <!-- Runs Tab -->
         <div id="runs" class="tab-content">
+            <div class="card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                <h3 style="color: #856404; margin-bottom: 10px;">⚠️ Vercel Hobby Plan Limitation</h3>
+                <p style="color: #856404; margin: 0; font-size: 14px;">
+                    <strong>Manual runs will timeout after 10 seconds on Hobby plan.</strong><br>
+                    Episode generation takes 2-5 minutes, which exceeds this limit.<br><br>
+                    <strong>✅ Recommended options:</strong><br>
+                    • Use automatic Vercel Cron (runs daily at 12:00 UTC - works on Hobby!)<br>
+                    • Upgrade to Vercel Pro ($20/month) for 300-second timeout<br>
+                    • Check Runs history below to see automatically generated episodes
+                </p>
+            </div>
+            
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Recent Runs</h2>
                     <button class="btn btn-success" onclick="runNow()" id="runNowBtn">
-                        ▶️ Run Now
+                        ▶️ Run Now (May Timeout)
                     </button>
                 </div>
                 <div id="activeRunStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 20px;">
@@ -1043,7 +1055,17 @@
         }
 
         async function runNow() {
-            if (!confirm('Start generating a new episode? This may take 2-5 minutes.')) {
+            // Check for Hobby plan limitation
+            const warningMsg = 'Start generating a new episode?\n\n' +
+                '⚠️ IMPORTANT: Vercel Hobby plan has a 10-second timeout.\n' +
+                'Episode generation takes 2-5 minutes and will likely timeout.\n\n' +
+                '✅ Options:\n' +
+                '1. Upgrade to Vercel Pro ($20/month) for 300s timeout\n' +
+                '2. Use Vercel Cron (automatic daily at 12:00 UTC)\n' +
+                '3. Deploy to a different platform with longer timeouts\n\n' +
+                'Continue anyway? (It may timeout but the episode might still generate)';
+            
+            if (!confirm(warningMsg)) {
                 return;
             }
 
@@ -1051,23 +1073,60 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Running...';
 
+            // Set a longer timeout since generation takes time
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 310000); // 310s timeout
+
             try {
                 const response = await fetch(`${API_BASE}/api/run`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
+                    signal: controller.signal,
                 });
+
+                clearTimeout(timeoutId);
+
+                if (response.status === 504 || response.status === 524) {
+                    // Gateway timeout - common on Hobby plan
+                    showToast(
+                        '⏱️ Function timed out (Hobby plan limit). Check logs and wait 5 minutes, then refresh to see if episode generated.',
+                        'info'
+                    );
+                    
+                    // Still try to refresh after a delay
+                    setTimeout(() => {
+                        loadRuns();
+                        showToast('Checking if episode was generated...', 'info');
+                    }, 5000);
+                    
+                    btn.disabled = false;
+                    btn.innerHTML = '▶️ Run Now';
+                    return;
+                }
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast('Episode generated successfully!', 'success');
+                    showToast('✅ Episode generated successfully!', 'success');
                     await loadRuns();
                 } else {
                     showToast(result.error || 'Failed to generate episode', 'error');
+                    
+                    // Show detailed error in console
+                    console.error('Run failed:', result);
                 }
             } catch (error) {
-                showToast('Failed to start run', 'error');
-                console.error(error);
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    showToast(
+                        '⏱️ Request timed out after 5 minutes. Episode might still be generating. Check back in a few minutes.',
+                        'info'
+                    );
+                } else {
+                    showToast('Failed to start run: ' + error.message, 'error');
+                    console.error('Run error:', error);
+                }
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '▶️ Run Now';
