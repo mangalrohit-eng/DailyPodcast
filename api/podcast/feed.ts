@@ -24,8 +24,20 @@ export default async function handler(
     const exists = await storage.exists('feed.xml');
     
     if (!exists) {
-      Logger.warn('Feed not found');
-      return res.status(404).send('Feed not found. Please run the generator first.');
+      Logger.warn('Feed not found, generating from runs index');
+      
+      // Try to generate feed from runs index
+      const feedXml = await generateFeedFromIndex(storage);
+      
+      if (!feedXml) {
+        return res.status(404).send('Feed not found. Please run the generator first or index existing episodes.');
+      }
+      
+      // Set appropriate headers
+      res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300'); // Shorter cache for generated feeds
+      
+      return res.status(200).send(feedXml);
     }
     
     // Fetch feed from storage
@@ -44,6 +56,66 @@ export default async function handler(
     return res.status(500).json({
       error: 'Failed to load feed',
     });
+  }
+}
+
+/**
+ * Generate RSS feed from runs index (fallback for when feed.xml doesn't exist)
+ */
+async function generateFeedFromIndex(storage: StorageTool): Promise<string | null> {
+  try {
+    // Load runs index
+    const indexExists = await storage.exists('runs/index.json');
+    if (!indexExists) {
+      return null;
+    }
+    
+    const indexData = await storage.get('runs/index.json');
+    const index = JSON.parse(indexData.toString('utf-8'));
+    
+    // Get episodes (runs with episode URLs)
+    const episodes = index.runs.filter((r: any) => r.episode_url && r.status === 'success');
+    
+    if (episodes.length === 0) {
+      return null;
+    }
+    
+    const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
+    const now = new Date().toUTCString();
+    
+    // Generate RSS feed XML
+    const feedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Daily Rohit News</title>
+    <link>${baseUrl}</link>
+    <description>Your personalized daily news brief covering AI, Verizon, and Accenture</description>
+    <language>en-us</language>
+    <lastBuildDate>${now}</lastBuildDate>
+    <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
+    <itunes:author>Daily Rohit News</itunes:author>
+    <itunes:summary>Your personalized daily news brief</itunes:summary>
+    <itunes:category text="News"/>
+    <itunes:explicit>no</itunes:explicit>
+${episodes.map((ep: any) => `    <item>
+      <title>Daily News - ${ep.date}</title>
+      <description>Your daily news brief for ${ep.date}</description>
+      <pubDate>${new Date(ep.completed_at).toUTCString()}</pubDate>
+      <enclosure url="${ep.episode_url}" type="audio/mpeg"/>
+      <guid isPermaLink="false">${ep.run_id}</guid>
+      <itunes:duration>${ep.duration_ms ? Math.round(ep.duration_ms / 1000) : 900}</itunes:duration>
+    </item>`).join('\n')}
+  </channel>
+</rss>`;
+    
+    Logger.info('Generated RSS feed from index', { episodeCount: episodes.length });
+    
+    return feedXml;
+  } catch (error) {
+    Logger.error('Failed to generate feed from index', {
+      error: (error as Error).message,
+    });
+    return null;
   }
 }
 
