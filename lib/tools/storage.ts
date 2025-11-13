@@ -48,8 +48,23 @@ export class StorageTool {
     try {
       if (this.backend === 'vercel-blob') {
         // List with the exact path - Vercel Blob matches on pathname
-        const { blobs } = await list({ prefix: path, limit: 1 });
-        return blobs.length > 0 && blobs[0].pathname === path;
+        // Add retry for recently created blobs
+        let attempts = 0;
+        const maxAttempts = 2;
+        
+        while (attempts < maxAttempts) {
+          const { blobs } = await list({ prefix: path, limit: 1 });
+          if (blobs.length > 0 && blobs[0].pathname === path) {
+            return true;
+          }
+          
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+        
+        return false;
       } else {
         // For S3, try HEAD request
         const url = this.getS3Url(path);
@@ -109,8 +124,27 @@ export class StorageTool {
   }
   
   private async getVercelBlob(path: string): Promise<Buffer> {
-    // Find the blob by pathname
-    const { blobs } = await list({ prefix: path, limit: 1 });
+    // Find the blob by pathname with retry logic
+    // (Vercel Blob list() may have a slight indexing delay after put())
+    let blobs: any[] = [];
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      const result = await list({ prefix: path, limit: 1 });
+      blobs = result.blobs;
+      
+      if (blobs.length > 0 && blobs[0].pathname === path) {
+        break;
+      }
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        // Wait with exponential backoff: 100ms, 200ms
+        await new Promise(resolve => setTimeout(resolve, 100 * attempts));
+        Logger.debug('Retrying blob lookup', { path, attempt: attempts });
+      }
+    }
     
     if (blobs.length === 0 || blobs[0].pathname !== path) {
       throw new Error(`Blob not found: ${path}`);
