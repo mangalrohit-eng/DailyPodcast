@@ -318,10 +318,31 @@ async function handleHealthCheck(req: VercelRequest, res: VercelResponse) {
     // Test 4: Episodes
     try {
       const episodeFiles = await storage.list('episodes/');
+      
+      // Filter out folder markers (0-byte objects ending with /)
+      const actualFiles = episodeFiles.filter(file => 
+        !file.path.endsWith('/') && file.size > 0
+      );
+      
+      // Log for debugging
+      Logger.info('Episode files listed', {
+        total_objects: episodeFiles.length,
+        actual_files: actualFiles.length,
+        all_paths: episodeFiles.map(f => ({ path: f.path, size: f.size })),
+      });
+      
       results.tests.episodes = {
         name: 'Episode Files',
-        status: episodeFiles.length > 0 ? 'pass' : 'warn',
-        details: { count: episodeFiles.length },
+        status: actualFiles.length > 0 ? 'pass' : 'warn',
+        details: { 
+          count: actualFiles.length,
+          total_objects: episodeFiles.length,
+          files: actualFiles.map(f => ({
+            name: f.path.split('/').pop(),
+            size: f.size,
+            url: f.url,
+          })),
+        },
       };
     } catch (error: any) {
       results.tests.episodes = { name: 'Episode Files', status: 'fail', error: error.message };

@@ -26,13 +26,26 @@ export default async function handler(
       // List all objects in episodes directory
       const objects = await storage.list('episodes/');
       
-      // Find MP3 files
-      const mp3Objects = objects.filter(obj => obj.path.endsWith('.mp3'));
+      Logger.info('All objects in episodes/', {
+        total: objects.length,
+        objects: objects.map(o => ({ path: o.path, size: o.size })),
+      });
       
-      Logger.info(`Found ${mp3Objects.length} episode files`);
+      // Filter out folder markers (0-byte objects ending with /)
+      const actualFiles = objects.filter(obj => 
+        !obj.path.endsWith('/') && obj.size > 0
+      );
+      
+      // Find MP3 files
+      const mp3Objects = actualFiles.filter(obj => obj.path.endsWith('.mp3'));
+      
+      // Find non-MP3 files for reporting
+      const nonMp3Files = actualFiles.filter(obj => !obj.path.endsWith('.mp3'));
+      
+      Logger.info(`Found ${actualFiles.length} files (${mp3Objects.length} MP3s, ${nonMp3Files.length} non-MP3)`);
       
       const indexed: any[] = [];
-      const skipped: string[] = [];
+      const skipped: any[] = [];
       
       // Load or create runs index
       let runsIndex: any = { runs: [], last_updated: new Date().toISOString() };
@@ -45,12 +58,30 @@ export default async function handler(
         Logger.info('Creating new runs index');
       }
       
+      // Report non-MP3 files
+      for (const file of nonMp3Files) {
+        const filename = file.path.split('/').pop() || '';
+        skipped.push({ 
+          filename, 
+          reason: 'Wrong file extension (expected .mp3)',
+          hint: filename.endsWith('.mp4') ? 
+            'Rename to .mp3 if this is an audio file' : 
+            'Only .mp3 files are indexed',
+        });
+        Logger.warn(`Skipping non-MP3 file: ${filename}`);
+      }
+      
       for (const mp3Obj of mp3Objects) {
         const filename = mp3Obj.path.split('/').pop() || '';
-        const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})_/);
+        const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})_daily_rohit_news\.mp3$/);
         
         if (!dateMatch) {
-          skipped.push(filename);
+          skipped.push({ 
+            filename, 
+            reason: 'Filename does not match expected pattern',
+            expected: 'YYYY-MM-DD_daily_rohit_news.mp3',
+          });
+          Logger.warn(`Skipping ${filename} - doesn't match pattern`);
           continue;
         }
         
@@ -60,7 +91,10 @@ export default async function handler(
         const existing = runsIndex.runs.find((r: any) => r.run_id === date);
         
         if (existing) {
-          skipped.push(`${date} (already indexed)`);
+          skipped.push({ 
+            filename, 
+            reason: `Already indexed (${date})`,
+          });
           continue;
         }
         
@@ -99,11 +133,15 @@ export default async function handler(
         success: true,
         indexed: indexed.length,
         skipped: skipped.length,
+        skipped_files: skipped,
+        total_files_found: actualFiles.length,
         episodes: indexed.map(e => ({
           date: e.date,
           url: e.episode_url,
         })),
-        message: `Indexed ${indexed.length} episodes. Refresh the dashboard to see them.`,
+        message: indexed.length > 0 
+          ? `Indexed ${indexed.length} episode(s). Refresh to see them.`
+          : `No episodes indexed. ${skipped.length} file(s) skipped. See skipped_files for details.`,
       });
       
     } catch (error) {
