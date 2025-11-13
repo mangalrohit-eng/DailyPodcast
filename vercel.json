@@ -1,0 +1,62 @@
+{
+  "crons": [
+    {
+      "path": "/api/run",
+      "schedule": "0 12 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/podcast/feed.xml",
+      "destination": "/api/podcast/feed"
+    },
+    {
+      "source": "/podcast/episodes/:date.mp3",
+      "destination": "/api/podcast/episodes"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/podcast/feed.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/rss+xml; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=3600"
+        }
+      ]
+    },
+    {
+      "source": "/podcast/episodes/:date.mp3",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "audio/mpeg"
+        },
+        {
+          "key": "Accept-Ranges",
+          "value": "bytes"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/run.ts": {
+      "maxDuration": 300
+    },
+    "api/podcast/feed.ts": {
+      "maxDuration": 10
+    },
+    "api/podcast/episodes.ts": {
+      "maxDuration": 60
+    }
+  }
+}
+
