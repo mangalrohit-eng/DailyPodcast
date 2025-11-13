@@ -127,14 +127,30 @@ export class Orchestrator {
       
       // Check if episode already exists
       const episodePath = `episodes/${runConfig.date}_daily_rohit_news.mp3`;
+      Logger.info('Checking episode existence', { 
+        date: runConfig.date, 
+        path: episodePath,
+        force_overwrite: runConfig.force_overwrite,
+      });
+      
       if (!runConfig.force_overwrite && await this.storage.exists(episodePath)) {
-        Logger.info('Episode already exists', { date: runConfig.date });
+        Logger.info('Episode already exists - returning existing manifest', { 
+          date: runConfig.date,
+          force_overwrite: runConfig.force_overwrite,
+        });
         
         // Try to load existing manifest (may not exist for manually uploaded episodes)
         try {
           const manifestPath = `episodes/${runConfig.date}_manifest.json`;
           const manifestData = await this.storage.get(manifestPath);
           const manifest = JSON.parse(manifestData.toString('utf-8'));
+          
+          progressTracker.addUpdate(runId, {
+            phase: 'Complete',
+            status: 'completed',
+            message: 'Using existing episode (not regenerated)',
+            details: { cached: true },
+          });
           
           return {
             success: true,
@@ -152,6 +168,10 @@ export class Orchestrator {
           });
           // Continue with generation to create a proper episode with manifest
         }
+      } else if (runConfig.force_overwrite) {
+        Logger.info('force_overwrite=true - will regenerate episode even if it exists', {
+          date: runConfig.date,
+        });
       }
       
       // 1. INGESTION
