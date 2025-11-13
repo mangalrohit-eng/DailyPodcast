@@ -527,6 +527,15 @@
             </div>
 
             <div class="card">
+                <h2>Diagnostics</h2>
+                <p style="color: #666; margin-bottom: 15px;">Run a quick test to verify system configuration and logging.</p>
+                <button class="btn btn-secondary" onclick="runDiagnostic()">🧪 Run System Test</button>
+                <p style="color: #666; margin-top: 10px; font-size: 13px;">
+                    This runs in &lt;5 seconds and writes test logs. Use this to verify logging works.
+                </p>
+            </div>
+
+            <div class="card">
                 <h2>Topics & Weights</h2>
                 <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
                 <div id="topicsList" class="topics-list"></div>
@@ -824,6 +833,37 @@
                 }
             } catch (error) {
                 showToast('Failed to index episodes', 'error');
+                console.error(error);
+            }
+        }
+
+        // Diagnostics
+        async function runDiagnostic() {
+            showToast('Running system test...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/test-run`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('✅ System test passed! Check Logs tab for details.', 'success');
+                    console.log('Test results:', result.checks);
+                    
+                    // Switch to logs tab
+                    setTimeout(() => {
+                        switchTab('logs');
+                        refreshLogs();
+                    }, 1000);
+                } else {
+                    showToast('Test failed: ' + result.error, 'error');
+                    console.error('Test failed:', result);
+                }
+            } catch (error) {
+                showToast('Test failed: ' + error.message, 'error');
                 console.error(error);
             }
         }
