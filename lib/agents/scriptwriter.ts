@@ -27,17 +27,18 @@ Style Guidelines:
 - Write in a warm, conversational tone as if speaking to a friend
 - Use contractions (we're, it's, don't) naturally
 - Include stage directions like (warmly), (pause), [beat 300ms]
-- Target 2,300 ± 200 words total
+- Target 750 ± 50 words total (5-minute brief)
 - Cite sources inline using [1], [2], etc.
 - Avoid quotes longer than 25 words
 - Mark uncertainty with phrases like "reports suggest" or "according to"
-- Be engaging but professional
+- Be engaging but professional and concise
 
 Technical Requirements:
 - Every factual claim must reference a source with [n]
 - Each section should flow naturally into the next
 - Include natural breathing pauses
 - No speculation beyond what sources report
+- Keep it brief and impactful
 
 You must respond with valid JSON only.`,
       temperature: 0.8,

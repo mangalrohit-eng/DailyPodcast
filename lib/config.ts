@@ -37,8 +37,8 @@ export class Config {
   
   // Operational
   static FORCE_OVERWRITE = process.env.FORCE_OVERWRITE === 'true';
-  static WINDOW_HOURS = parseInt(process.env.WINDOW_HOURS || '36', 10);
-  static TARGET_DURATION_SECONDS = parseInt(process.env.TARGET_DURATION_SECONDS || '900', 10);
+  static WINDOW_HOURS = parseInt(process.env.WINDOW_HOURS || '24', 10);
+  static TARGET_DURATION_SECONDS = parseInt(process.env.TARGET_DURATION_SECONDS || '300', 10);
   
   static parseTopicWeights(): Record<string, number> {
     const weightsStr = process.env.TOPIC_WEIGHTS || 'ai:0.5,vz:0.3,acn:0.2';

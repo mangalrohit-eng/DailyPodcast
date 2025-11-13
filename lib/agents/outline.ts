@@ -20,16 +20,14 @@ export class OutlineAgent extends BaseAgent<OutlineInput, OutlineOutput> {
   constructor() {
     super({
       name: 'OutlineAgent',
-      systemPrompt: `You are a professional radio producer creating a compelling 15-minute morning news brief.
+      systemPrompt: `You are a professional radio producer creating a compelling 5-minute morning news brief.
 Your job is to structure stories into engaging segments:
-- Cold Open (30-45 seconds): Hook the listener
-- Headlines (3-4 stories, ~3 minutes): Quick hits on top stories
-- Deep Dive (1 story, ~5 minutes): Detailed analysis
-- Quick Hits (3-5 stories, ~4 minutes): Rapid-fire updates
-- What to Watch (1-2 stories, ~2 minutes): Forward-looking
-- Sign-off (15-30 seconds): Warm closing
+- Cold Open (15-20 seconds): Hook the listener
+- Headlines (2-3 stories, ~3 minutes): Top stories
+- What to Watch (1 story, ~1 minute): Forward-looking
+- Sign-off (10-15 seconds): Warm closing
 
-You must respond with valid JSON only.`,
+Keep it concise and impactful. You must respond with valid JSON only.`,
       temperature: 0.7,
       maxTokens: 2000,
     });
@@ -58,9 +56,8 @@ ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
-- Select 8-12 stories total across all segments
+- Select 3-5 stories total - keep it concise
 - Balance the three topics (AI, Verizon, Accenture)
-- Make the Deep Dive the most important/interesting story
 - Be conversational and engaging
 
 Respond with JSON in this exact format:
@@ -68,38 +65,26 @@ Respond with JSON in this exact format:
   "sections": [
     {
       "type": "cold-open",
-      "title": "Hook title",
-      "target_words": 80,
+      "title": "Good Morning",
+      "target_words": 40,
       "refs": []
     },
     {
       "type": "headlines",
-      "title": "Top Headlines",
-      "target_words": 450,
+      "title": "Top Stories",
+      "target_words": 500,
       "refs": [0, 1, 2]
-    },
-    {
-      "type": "deep-dive",
-      "title": "Deep Dive Title",
-      "target_words": 750,
-      "refs": [3]
-    },
-    {
-      "type": "quick-hits",
-      "title": "Quick Updates",
-      "target_words": 600,
-      "refs": [4, 5, 6, 7]
     },
     {
       "type": "what-to-watch",
       "title": "What to Watch",
-      "target_words": 300,
-      "refs": [8]
+      "target_words": 150,
+      "refs": [3]
     },
     {
       "type": "sign-off",
-      "title": "Closing",
-      "target_words": 60,
+      "title": "Have a great day",
+      "target_words": 40,
       "refs": []
     }
   ]

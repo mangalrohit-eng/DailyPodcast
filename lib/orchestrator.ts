@@ -124,7 +124,7 @@ export class Orchestrator {
       const rankingResult = await this.rankingAgent.execute(runId, {
         stories: ingestionResult.output.stories,
         topic_weights: runConfig.weights,
-        target_count: 12,
+        target_count: 5,
       });
       agentTimes['ranking'] = Date.now() - rankingStart;
       
