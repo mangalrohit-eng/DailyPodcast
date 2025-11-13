@@ -58,7 +58,7 @@ export interface Script {
 export interface SynthesisPlan {
   segment_id: string;
   role: 'host' | 'analyst' | 'stinger';
-  voice: string;
+  voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
   text_with_cues: string;
   expected_sec: number;
 }
