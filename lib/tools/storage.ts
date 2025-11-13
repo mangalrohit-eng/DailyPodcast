@@ -120,6 +120,13 @@ export class StorageTool {
       access: 'public',
       contentType,
     });
+    
+    Logger.debug('Blob created', {
+      pathname: blob.pathname,
+      url: blob.url,
+      size: blob.size,
+    });
+    
     return blob.url;
   }
   
@@ -130,12 +137,32 @@ export class StorageTool {
     let attempts = 0;
     const maxAttempts = 3;
     
+    Logger.debug('Looking up blob', { path });
+    
     while (attempts < maxAttempts) {
-      const result = await list({ prefix: path, limit: 1 });
+      const result = await list({ prefix: path, limit: 10 }); // Increased limit to see more results
       blobs = result.blobs;
       
-      if (blobs.length > 0 && blobs[0].pathname === path) {
-        break;
+      Logger.debug('Blob list result', {
+        path,
+        attempt: attempts + 1,
+        found: blobs.length,
+        pathnames: blobs.map(b => b.pathname),
+      });
+      
+      // Find exact match
+      const exactMatch = blobs.find(b => b.pathname === path);
+      if (exactMatch) {
+        Logger.debug('Exact match found', { pathname: exactMatch.pathname });
+        
+        // Fetch using the blob's URL
+        const response = await fetch(exactMatch.url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch blob: ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
       }
       
       attempts++;
@@ -146,18 +173,7 @@ export class StorageTool {
       }
     }
     
-    if (blobs.length === 0 || blobs[0].pathname !== path) {
-      throw new Error(`Blob not found: ${path}`);
-    }
-    
-    // Fetch using the blob's URL
-    const response = await fetch(blobs[0].url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch blob: ${response.statusText}`);
-    }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    throw new Error(`Blob not found: ${path} (tried ${maxAttempts} times, found ${blobs.length} blobs with prefix)`);
   }
   
   // S3 implementation (basic)
