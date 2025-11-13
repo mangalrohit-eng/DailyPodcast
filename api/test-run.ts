@@ -64,9 +64,49 @@ export default async function handler(
         rumor_filter: Config.RUMOR_FILTER,
       });
       
+      // Test 6: Try a small OpenAI API call (just to test quota)
+      await logger.info('✓ Testing OpenAI API access...');
+      try {
+        const OpenAI = require('openai');
+        const openai = new OpenAI({
+          apiKey: Config.OPENAI_API_KEY,
+        });
+        
+        // Smallest possible API call to test quota
+        const response = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: 'Hi' }],
+          max_tokens: 1,
+        });
+        
+        await logger.info('✓ OpenAI API call successful', {
+          model: response.model,
+          usage: response.usage,
+        });
+      } catch (openaiError: any) {
+        const errorMsg = openaiError.message || openaiError.toString();
+        const errorCode = openaiError.code || openaiError.type;
+        
+        await logger.error('✗ OpenAI API call failed', {
+          error: errorMsg,
+          code: errorCode,
+          type: openaiError.type,
+        });
+        
+        // Check for quota/billing errors
+        if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || 
+            errorMsg.includes('billing') || errorCode === 'insufficient_quota') {
+          await logger.error('💳 QUOTA ERROR: OpenAI API quota exceeded or billing issue detected', {
+            solution1: 'Add payment method at https://platform.openai.com/account/billing',
+            solution2: 'Check usage at https://platform.openai.com/usage',
+            solution3: 'Verify API key has credits',
+          });
+        }
+      }
+      
       // Flush logs
       await logger.flush();
-      await logger.info('✓ Test run completed successfully');
+      await logger.info('✓ Test run completed');
       await logger.flush();
       
       Logger.info('Test run completed', { testRunId });
@@ -87,22 +127,39 @@ export default async function handler(
         },
       });
       
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = (error as Error).message;
+      const errorCode = error.code || error.type;
+      
       await logger.error('✗ Test run failed', {
-        error: (error as Error).message,
+        error: errorMsg,
+        code: errorCode,
         stack: (error as Error).stack,
       });
+      
+      // Special handling for quota errors
+      if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || 
+          errorMsg.includes('billing') || errorCode === 'insufficient_quota') {
+        await logger.error('💳 CRITICAL: OpenAI quota/billing issue detected', {
+          error: errorMsg,
+          action_required: 'Add payment method or wait for quota reset',
+          billing_url: 'https://platform.openai.com/account/billing',
+        });
+      }
+      
       await logger.flush();
       
       Logger.error('Test run failed', {
         testRunId,
-        error: (error as Error).message,
+        error: errorMsg,
       });
       
       res.status(500).json({
         success: false,
-        error: (error as Error).message,
+        error: errorMsg,
+        code: errorCode,
         testRunId,
+        isQuotaError: errorMsg.includes('quota') || errorMsg.includes('insufficient_quota'),
       });
     }
   });

@@ -859,12 +859,32 @@
                         refreshLogs();
                     }, 1000);
                 } else {
-                    showToast('Test failed: ' + result.error, 'error');
+                    const errorMsg = result.error || 'Unknown error';
+                    showToast('Test failed: ' + errorMsg, 'error');
                     console.error('Test failed:', result);
+                    
+                    // Log error to console with full details
+                    if (errorMsg.includes('quota') || errorMsg.includes('rate limit')) {
+                        console.error('OpenAI QUOTA ERROR:', result);
+                        showToast('⚠️ OpenAI quota exceeded. Check https://platform.openai.com/account/billing', 'error');
+                    }
+                    
+                    // Still switch to logs tab to see error details
+                    setTimeout(() => {
+                        switchTab('logs');
+                        refreshLogs();
+                    }, 2000);
                 }
             } catch (error) {
-                showToast('Test failed: ' + error.message, 'error');
-                console.error(error);
+                const errorMsg = error.message || error.toString();
+                showToast('Test failed: ' + errorMsg, 'error');
+                console.error('Test error:', error);
+                
+                // Check for quota errors
+                if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || errorMsg.includes('rate_limit')) {
+                    console.error('OpenAI QUOTA ERROR:', error);
+                    alert('❌ OpenAI API Quota Error\n\nYour OpenAI API quota has been exceeded.\n\nSolutions:\n1. Add payment method at https://platform.openai.com/account/billing\n2. Check usage limits at https://platform.openai.com/usage\n3. Wait for quota reset\n\nError: ' + errorMsg);
+                }
             }
         }
 
