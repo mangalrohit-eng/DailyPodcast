@@ -730,6 +730,66 @@
             </div>
 
             <div class="card">
+                <h2>📻 Podcast Metadata</h2>
+                <p style="color: #666; margin-bottom: 20px;">This information appears in podcast directories like Spotify, Apple Podcasts, etc.</p>
+                
+                <div class="form-group">
+                    <label>Podcast Title</label>
+                    <input type="text" id="podcastTitle" placeholder="My Awesome Podcast">
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="podcastDescription" rows="3" placeholder="A brief description of what your podcast is about"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Author Name</label>
+                    <input type="text" id="podcastAuthor" placeholder="Your Name">
+                </div>
+                
+                <div class="form-group">
+                    <label>Contact Email ⚠️</label>
+                    <input type="email" id="podcastEmail" placeholder="your.email@example.com">
+                    <small style="color: #dc3545; display: block; margin-top: 5px;">
+                        <strong>Important for Spotify!</strong> Use a real email address. Spotify sends verification emails here.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Language</label>
+                    <select id="podcastLanguage">
+                        <option value="en-us">English (US)</option>
+                        <option value="en-gb">English (UK)</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="podcastCategory">
+                        <option value="News">News</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Business">Business</option>
+                        <option value="Education">Education</option>
+                        <option value="Science">Science</option>
+                        <option value="Arts">Arts</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Podcast Base URL (Read-only)</label>
+                    <input type="text" id="podcastBaseUrl" readonly>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Automatically set from your Vercel deployment.
+                    </small>
+                </div>
+            </div>
+
+            <div class="card">
                 <h2>Voice & Style</h2>
                 <div class="form-group">
                     <label>Host Voice</label>
@@ -1331,6 +1391,15 @@ Full data in console (F12).`;
             document.getElementById('pronunciationGlossary').value = 
                 Object.entries(glossary).map(([k, v]) => `${k}=${v}`).join('\n');
             
+            // Podcast Metadata
+            document.getElementById('podcastTitle').value = config.podcast_title || "Rohit's Daily AI & Corporate News Brief";
+            document.getElementById('podcastDescription').value = config.podcast_description || 'Your personalized daily brief on AI, Verizon, and Accenture news.';
+            document.getElementById('podcastAuthor').value = config.podcast_author || 'Rohit';
+            document.getElementById('podcastEmail').value = config.podcast_email || 'podcast@example.com';
+            document.getElementById('podcastLanguage').value = config.podcast_language || 'en-us';
+            document.getElementById('podcastCategory').value = config.podcast_category || 'News';
+            document.getElementById('podcastBaseUrl').value = config.podcast_base_url || window.location.origin;
+            
             // Podcast Production
             const prod = config.podcast_production || {};
             document.getElementById('podcastStyle').value = prod.style || 'executive';
@@ -1449,6 +1518,13 @@ Full data in console (F12).`;
                         .map(line => line.split('='))
                         .filter(([k, v]) => k && v)
                 ),
+                podcast_title: document.getElementById('podcastTitle').value,
+                podcast_description: document.getElementById('podcastDescription').value,
+                podcast_author: document.getElementById('podcastAuthor').value,
+                podcast_email: document.getElementById('podcastEmail').value,
+                podcast_language: document.getElementById('podcastLanguage').value,
+                podcast_category: document.getElementById('podcastCategory').value,
+                podcast_base_url: document.getElementById('podcastBaseUrl').value,
                 podcast_production: {
                     style: document.getElementById('podcastStyle').value,
                     num_stories_min: parseInt(document.getElementById('numStoriesMin').value),
