@@ -480,6 +480,147 @@
                 font-size: 11px;
             }
         }
+
+        /* Progress Modal */
+        .progress-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-modal.show {
+            display: flex;
+        }
+
+        .progress-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .progress-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+        }
+
+        .progress-close:hover {
+            color: #000;
+        }
+
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 8px;
+            height: 24px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .progress-phase {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .progress-message {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .progress-updates {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .progress-update {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .progress-update:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .progress-update-phase {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .progress-update-message {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .progress-update-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .progress-update-running {
+            color: #856404;
+        }
+
+        .progress-update-completed {
+            color: #155724;
+        }
+
+        .progress-update-failed {
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -1301,79 +1442,55 @@ Full data in console (F12).`;
         }
 
         async function runNow() {
-            // Check for Hobby plan limitation
-            const warningMsg = 'Start generating a new episode?\n\n' +
-                '⚠️ IMPORTANT: Vercel Hobby plan has a 10-second timeout.\n' +
-                'Episode generation takes 2-5 minutes and will likely timeout.\n\n' +
-                '✅ Options:\n' +
-                '1. Upgrade to Vercel Pro ($20/month) for 300s timeout\n' +
-                '2. Use Vercel Cron (automatic daily at 12:00 UTC)\n' +
-                '3. Deploy to a different platform with longer timeouts\n\n' +
-                'Continue anyway? (It may timeout but the episode might still generate)';
-            
-            if (!confirm(warningMsg)) {
+            if (!confirm('Start generating a new episode?\n\n📊 You\'ll see real-time progress as the episode is generated.')) {
                 return;
             }
 
             const btn = document.getElementById('runNowBtn');
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Running...';
+            btn.innerHTML = '<div class="spinner"></div> Starting...';
 
-            // Set a longer timeout since generation takes time
-            const controller = new AbortController();
-            let timeoutId = setTimeout(() => controller.abort(), 310000); // 310s timeout
+            // Get today's date for runId
+            const today = new Date().toISOString().split('T')[0];
 
             try {
-                const response = await fetch(`${API_BASE}/api/run`, {
+                // Start the run (will likely timeout on Hobby plan, but that's OK)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s - expect timeout
+
+                fetch(`${API_BASE}/api/run`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     signal: controller.signal,
+                })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    return response.json();
+                })
+                .then(result => {
+                    if (!result.success) {
+                        console.error('Run failed immediately:', result);
+                        showToast(result.error || 'Failed to start episode generation', 'error');
+                        hideProgressModal();
+                    }
+                })
+                .catch(error => {
+                    // Timeout is expected - don't show error
+                    if (error.name !== 'AbortError') {
+                        console.error('Error starting run:', error);
+                    }
                 });
 
-                clearTimeout(timeoutId);
-
-                if (response.status === 504 || response.status === 524) {
-                    // Gateway timeout - common on Hobby plan
-                    showToast(
-                        '⏱️ Function timed out (Hobby plan limit). Check logs and wait 5 minutes, then refresh to see if episode generated.',
-                        'info'
-                    );
-                    
-                    // Still try to refresh after a delay
-                    setTimeout(() => {
-                        loadRuns();
-                        showToast('Checking if episode was generated...', 'info');
-                    }, 5000);
-                    
-                    btn.disabled = false;
-                    btn.innerHTML = '▶️ Run Now';
-                    return;
-                }
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showToast('✅ Episode generated successfully!', 'success');
-                    await loadRuns();
-                } else {
-                    showToast(result.error || 'Failed to generate episode', 'error');
-                    
-                    // Show detailed error in console
-                    console.error('Run failed:', result);
-                }
-            } catch (error) {
-                clearTimeout(timeoutId);
+                // Show progress modal immediately (don't wait for API to complete)
+                showProgressModal(today);
                 
-                if (error.name === 'AbortError') {
-                    showToast(
-                        '⏱️ Request timed out after 5 minutes. Episode might still be generating. Check back in a few minutes.',
-                        'info'
-                    );
-                } else {
-                    showToast('Failed to start run: ' + error.message, 'error');
-                    console.error('Run error:', error);
-                }
-            } finally {
+                // Re-enable button after modal is shown
+                btn.disabled = false;
+                btn.innerHTML = '▶️ Run Now';
+
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to start run: ' + error.message, 'error');
                 btn.disabled = false;
                 btn.innerHTML = '▶️ Run Now';
             }
@@ -1637,8 +1754,139 @@ Full data in console (F12).`;
             if (pollInterval) {
                 clearInterval(pollInterval);
             }
+            if (progressPollInterval) {
+                clearInterval(progressPollInterval);
+            }
         });
+
+        // ===== PROGRESS TRACKING =====
+        let progressPollInterval = null;
+
+        function showProgressModal(runId) {
+            const modal = document.getElementById('progressModal');
+            modal.classList.add('show');
+            startProgressPolling(runId);
+        }
+
+        function hideProgressModal() {
+            const modal = document.getElementById('progressModal');
+            modal.classList.remove('show');
+            if (progressPollInterval) {
+                clearInterval(progressPollInterval);
+                progressPollInterval = null;
+            }
+        }
+
+        async function startProgressPolling(runId) {
+            // Initial fetch
+            await updateProgress(runId);
+
+            // Poll every 2 seconds
+            progressPollInterval = setInterval(async () => {
+                const stillRunning = await updateProgress(runId);
+                if (!stillRunning) {
+                    clearInterval(progressPollInterval);
+                    progressPollInterval = null;
+                }
+            }, 2000);
+        }
+
+        async function updateProgress(runId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/progress?runId=${runId}`, {
+                    headers: getAuthHeaders(),
+                });
+
+                if (response.status === 404) {
+                    // Run not found or completed - check runs list
+                    console.log('Progress not found, likely completed');
+                    return false;
+                }
+
+                if (!response.ok) {
+                    console.error('Failed to fetch progress:', response.status);
+                    return false;
+                }
+
+                const progress = await response.json();
+                
+                // Update progress bar
+                const progressBar = document.getElementById('progressBar');
+                const progressPercentage = document.getElementById('progressPercentage');
+                progressBar.style.width = `${progress.progress}%`;
+                progressPercentage.textContent = `${progress.progress}%`;
+
+                // Update current phase
+                document.getElementById('currentPhase').textContent = progress.currentPhase;
+                const latestUpdate = progress.updates[progress.updates.length - 1];
+                document.getElementById('currentMessage').textContent = latestUpdate ? latestUpdate.message : '';
+
+                // Update updates list
+                const updatesList = document.getElementById('progressUpdates');
+                updatesList.innerHTML = progress.updates.map(update => {
+                    const statusClass = `progress-update-${update.status}`;
+                    const statusIcon = update.status === 'completed' ? '✅' : 
+                                      update.status === 'failed' ? '❌' : '🔄';
+                    const time = new Date(update.timestamp).toLocaleTimeString();
+                    
+                    return `
+                        <div class="progress-update">
+                            <div class="progress-update-phase ${statusClass}">
+                                ${statusIcon} ${update.phase}
+                            </div>
+                            <div class="progress-update-message">${update.message}</div>
+                            ${update.details ? `<div class="progress-update-message"><small>${JSON.stringify(update.details)}</small></div>` : ''}
+                            <div class="progress-update-time">${time}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Check if completed or failed
+                if (progress.status === 'completed') {
+                    showToast('✅ Episode generated successfully!', 'success');
+                    await loadRuns();
+                    setTimeout(() => hideProgressModal(), 2000);
+                    return false;
+                } else if (progress.status === 'failed') {
+                    showToast('❌ Episode generation failed', 'error');
+                    setTimeout(() => hideProgressModal(), 3000);
+                    return false;
+                }
+
+                return true; // Still running
+            } catch (error) {
+                console.error('Error fetching progress:', error);
+                return false;
+            }
+        }
     </script>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="progress-modal">
+        <div class="progress-content">
+            <div class="progress-header">
+                <h2>🎙️ Generating Episode...</h2>
+                <button class="progress-close" onclick="hideProgressModal()">×</button>
+            </div>
+            
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar" style="width: 0%;">
+                    <span id="progressPercentage">0%</span>
+                </div>
+            </div>
+
+            <div class="progress-phase" id="currentPhase">Starting...</div>
+            <div class="progress-message" id="currentMessage">Initializing...</div>
+
+            <h3 style="margin: 20px 0 10px 0; font-size: 16px;">Recent Updates:</h3>
+            <div class="progress-updates" id="progressUpdates">
+                <div class="progress-update">
+                    <div class="progress-update-phase progress-update-running">🔄 Starting</div>
+                    <div class="progress-update-message">Initializing podcast generation pipeline</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

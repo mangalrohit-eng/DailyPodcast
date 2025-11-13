@@ -78,6 +78,9 @@
     },
     "api/test-run.ts": {
       "maxDuration": 15
+    },
+    "api/progress.ts": {
+      "maxDuration": 5
     }
   }
 }
