@@ -117,3 +117,14 @@ export class AuthMiddleware {
   }
 }
 
+/**
+ * Convenience function for wrapping handlers with auth
+ */
+export function authenticate(
+  handler: (req: VercelRequest, res: VercelResponse) => Promise<any>
+): (req: VercelRequest, res: VercelResponse) => Promise<any> {
+  return async (req: VercelRequest, res: VercelResponse) => {
+    return AuthMiddleware.protect(req, res, handler);
+  };
+}
+
