@@ -192,6 +192,14 @@ export class Orchestrator {
         message: 'Analyzing and ranking stories by relevance',
       });
       const rankingStart = Date.now();
+      Logger.info('🎯 Passing weights to ranking agent', { 
+        weights: runConfig.weights,
+        story_count_by_topic: ingestionResult.output.stories.reduce((acc: any, s: any) => {
+          acc[s.topic] = (acc[s.topic] || 0) + 1;
+          return acc;
+        }, {}),
+      });
+      
       const rankingResult = await this.rankingAgent.execute(runId, {
         stories: ingestionResult.output.stories,
         topic_weights: runConfig.weights,
@@ -528,6 +536,7 @@ export class Orchestrator {
         topicWeights[t.label.toLowerCase()] = t.weight;
       });
       weights = topicWeights;
+      Logger.info('✅ Using dashboard topic weights', { weights: topicWeights });
     } else if (!input.weights) {
       try {
         const profile = await this.memoryAgent.getProfile();
