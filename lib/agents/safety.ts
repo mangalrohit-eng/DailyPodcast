@@ -133,7 +133,7 @@ Return one object per section in the same order.`;
       ],
       {
         responseFormat: 'json_object',
-        maxTokens: 6000,
+        maxTokens: 4000, // GPT-4-turbo max is 4096
       }
     );
 

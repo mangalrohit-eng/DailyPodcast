@@ -51,7 +51,7 @@ Technical Requirements:
 
 You must respond with valid JSON only.`,
       temperature: 0.8,
-      maxTokens: 6000,
+      maxTokens: 4000, // GPT-4-turbo max is 4096
     });
   }
   
@@ -193,7 +193,7 @@ Each section MUST:
       ],
       {
         responseFormat: 'json_object',
-        maxTokens: 8000,
+        maxTokens: 4000, // GPT-4-turbo max is 4096
       }
     );
 
