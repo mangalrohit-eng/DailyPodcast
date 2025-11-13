@@ -34,8 +34,12 @@ async function handleListRuns(req: VercelRequest, res: VercelResponse) {
     const page = parseInt((req.query.page as string) || '1', 10);
     const pageSize = parseInt((req.query.pageSize as string) || '20', 10);
     
+    Logger.info('Listing runs', { page, pageSize });
+    
     const runsStorage = new RunsStorage();
     const result = await runsStorage.list(page, pageSize);
+    
+    Logger.info('Runs listed successfully', { count: result.runs.length, total: result.total });
     
     // Check if there's an active run
     const activeRunId = RunsStorage.getActiveRunId();
@@ -47,28 +51,40 @@ async function handleListRuns(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     Logger.error('Failed to list runs', {
       error: (error as Error).message,
+      stack: (error as Error).stack,
     });
     
-    res.status(500).json({
-      error: 'Failed to list runs',
-      message: (error as Error).message,
+    // Return empty list on error instead of 500
+    res.status(200).json({
+      runs: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      hasMore: false,
+      activeRun: null,
+      error: (error as Error).message,
     });
   }
 }
 
 async function handleGetRun(req: VercelRequest, res: VercelResponse, runId: string) {
   try {
+    Logger.info('Getting run details', { runId });
+    
     const runsStorage = new RunsStorage();
     
     // Get run summary
     const summary = await runsStorage.get(runId);
     
     if (!summary) {
+      Logger.warn('Run not found', { runId });
       return res.status(404).json({ error: 'Run not found' });
     }
     
     // Get full manifest if available
     const manifest = await runsStorage.getManifest(runId);
+    
+    Logger.info('Run details retrieved', { runId });
     
     res.status(200).json({
       summary,
@@ -76,7 +92,9 @@ async function handleGetRun(req: VercelRequest, res: VercelResponse, runId: stri
     });
   } catch (error) {
     Logger.error('Failed to get run details', {
+      runId,
       error: (error as Error).message,
+      stack: (error as Error).stack,
     });
     
     res.status(500).json({
