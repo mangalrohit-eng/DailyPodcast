@@ -33,14 +33,12 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
   protected async process(input: AudioEngineerInput): Promise<AudioEngineerOutput> {
     const { synthesis_plan } = input;
     
-    Logger.info('Starting audio synthesis with music and pauses', { segments: synthesis_plan.length });
+    Logger.info('Starting audio synthesis', { segments: synthesis_plan.length });
     
-    // Render all segments with pauses between stories
+    // Render all segments
+    // NOTE: Music and pauses are currently disabled due to MP3 encoding issues
+    // OpenAI TTS generates complete, valid MP3s - adding silence breaks playback
     const audioSegments: Buffer[] = [];
-    
-    // Add intro music (3 seconds of upbeat tone)
-    Logger.info('Adding intro music');
-    audioSegments.push(this.generateUpbeatMusic(3000));
     
     for (let i = 0; i < synthesis_plan.length; i++) {
       const plan = synthesis_plan[i];
@@ -60,14 +58,6 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
         });
         
         audioSegments.push(audio);
-        
-        // Add pause after each segment (except the last one)
-        if (i < synthesis_plan.length - 1) {
-          // Longer pause after intro, shorter between stories
-          const pauseDuration = (i === 0) ? 800 : 1200;
-          Logger.debug('Adding pause', { duration_ms: pauseDuration });
-          audioSegments.push(AudioTool.generateSilence(pauseDuration));
-        }
       } catch (error) {
         Logger.error('TTS synthesis failed', {
           segment_id: plan.segment_id,
@@ -77,12 +67,7 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
       }
     }
     
-    // Add outro music (2 seconds of upbeat tone)
-    Logger.info('Adding outro music');
-    audioSegments.push(AudioTool.generateSilence(500)); // Brief pause before music
-    audioSegments.push(this.generateUpbeatMusic(2000));
-    
-    Logger.info('All segments synthesized with music', { count: audioSegments.length });
+    Logger.info('All segments synthesized', { count: audioSegments.length });
     
     // Concatenate all segments
     const concatenated = AudioTool.concat(audioSegments);
