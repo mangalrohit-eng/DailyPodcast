@@ -2,7 +2,7 @@
  * Storage Tool - Abstraction over Vercel Blob and S3-compatible storage
  */
 
-import { put, list, head, del } from '@vercel/blob';
+import { put, list, del } from '@vercel/blob';
 import { Config } from '../config';
 import { Logger } from '../utils';
 
@@ -47,8 +47,9 @@ export class StorageTool {
   async exists(path: string): Promise<boolean> {
     try {
       if (this.backend === 'vercel-blob') {
-        await head(path);
-        return true;
+        // List with the exact path - Vercel Blob matches on pathname
+        const { blobs } = await list({ prefix: path, limit: 1 });
+        return blobs.length > 0 && blobs[0].pathname === path;
       } else {
         // For S3, try HEAD request
         const url = this.getS3Url(path);
@@ -80,7 +81,14 @@ export class StorageTool {
     Logger.debug('Storage delete', { path });
     
     if (this.backend === 'vercel-blob') {
-      await del(path);
+      // Find the blob by pathname to get its URL
+      const { blobs } = await list({ prefix: path, limit: 1 });
+      
+      if (blobs.length > 0 && blobs[0].pathname === path) {
+        await del(blobs[0].url);
+      } else {
+        Logger.warn('Blob not found for deletion', { path });
+      }
     } else {
       // S3 delete would require AWS SDK
       Logger.warn('S3 delete not fully implemented');
@@ -101,8 +109,19 @@ export class StorageTool {
   }
   
   private async getVercelBlob(path: string): Promise<Buffer> {
-    const blobHead = await head(path);
-    const response = await fetch(blobHead.url);
+    // Find the blob by pathname
+    const { blobs } = await list({ prefix: path, limit: 1 });
+    
+    if (blobs.length === 0 || blobs[0].pathname !== path) {
+      throw new Error(`Blob not found: ${path}`);
+    }
+    
+    // Fetch using the blob's URL
+    const response = await fetch(blobs[0].url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blob: ${response.statusText}`);
+    }
+    
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   }
