@@ -1,0 +1,10 @@
+tests
+*.test.ts
+.git
+.github
+node_modules
+.env
+.env.local
+*.md
+!README.md
+

@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2022"],
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "allowJs": true,
@@ -11,14 +11,14 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "incremental": true,
+    "outDir": ".vercel/output",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".vercel"]
+  "exclude": ["node_modules", ".vercel", "tests"]
 }
 
