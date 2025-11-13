@@ -511,8 +511,9 @@
         <div id="settings" class="tab-content active">
             <div class="card">
                 <h2>System Health</h2>
+                <button class="btn btn-primary" onclick="runFullHealthCheck()" style="margin-bottom: 15px;">🏥 Run Full System Check</button>
                 <div class="health-status" id="healthStatus">
-                    <div class="spinner"></div> Loading...
+                    <div style="color: #666;">Click "Run Full System Check" to diagnose all components</div>
                 </div>
             </div>
 
@@ -952,6 +953,90 @@ Full data in console (F12).`;
                     console.error('OpenAI QUOTA ERROR:', error);
                     alert('❌ OpenAI API Quota Error\n\nYour OpenAI API quota has been exceeded.\n\nSolutions:\n1. Add payment method at https://platform.openai.com/account/billing\n2. Check usage limits at https://platform.openai.com/usage\n3. Wait for quota reset\n\nError: ' + errorMsg);
                 }
+            }
+        }
+
+        // Health Check
+        async function runFullHealthCheck() {
+            const statusDiv = document.getElementById('healthStatus');
+            statusDiv.innerHTML = '<div class="spinner"></div> Running comprehensive health check...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/health-check`, {
+                    headers: getAuthHeaders(),
+                });
+                
+                const result = await response.json();
+                
+                console.log('Health check results:', result);
+                
+                // Build status HTML
+                let html = `<div style="margin-bottom: 20px;">
+                    <h3 style="color: ${result.overall_status === 'pass' ? '#10b981' : result.overall_status === 'warn' ? '#f59e0b' : '#ef4444'};">
+                        Overall Status: ${result.overall_status.toUpperCase()}
+                    </h3>
+                    <small style="color: #666;">${result.timestamp}</small>
+                </div>`;
+                
+                // Tests
+                html += '<div style="margin-bottom: 20px;"><strong>Component Tests:</strong></div>';
+                for (const [key, test] of Object.entries(result.tests)) {
+                    const t = test as any;
+                    const statusColor = t.status === 'pass' ? '#10b981' : t.status === 'warn' ? '#f59e0b' : '#ef4444';
+                    const statusIcon = t.status === 'pass' ? '✓' : t.status === 'warn' ? '⚠' : '✗';
+                    
+                    html += `<div style="margin-bottom: 15px; padding: 12px; background: #f9fafb; border-left: 4px solid ${statusColor}; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="color: ${statusColor}; font-size: 18px;">${statusIcon}</span>
+                            <strong>${t.name}</strong>
+                            <span style="color: ${statusColor}; font-size: 12px; text-transform: uppercase;">${t.status}</span>
+                        </div>`;
+                    
+                    if (t.error) {
+                        html += `<div style="color: #ef4444; font-size: 13px; margin-top: 4px;">Error: ${t.error}</div>`;
+                    }
+                    
+                    if (t.details) {
+                        html += `<div style="font-size: 13px; color: #666; margin-top: 8px;">`;
+                        for (const [dk, dv] of Object.entries(t.details)) {
+                            html += `<div>• ${dk}: ${typeof dv === 'object' ? JSON.stringify(dv) : dv}</div>`;
+                        }
+                        html += `</div>`;
+                    }
+                    
+                    html += `</div>`;
+                }
+                
+                // Recommendations
+                if (result.recommendations && result.recommendations.length > 0) {
+                    html += '<div style="margin-top: 20px;"><strong>Recommendations:</strong></div>';
+                    result.recommendations.forEach((rec: any) => {
+                        const priorityColor = rec.priority === 'critical' ? '#ef4444' : rec.priority === 'high' ? '#f59e0b' : '#3b82f6';
+                        html += `<div style="margin-top: 10px; padding: 12px; background: #fef3c7; border-left: 4px solid ${priorityColor}; border-radius: 4px;">
+                            <div style="font-weight: bold; color: #92400e; margin-bottom: 4px;">[${rec.priority.toUpperCase()}] ${rec.issue}</div>
+                            <div style="color: #78350f; font-size: 13px;">→ ${rec.action}</div>
+                        </div>`;
+                    });
+                }
+                
+                statusDiv.innerHTML = html;
+                
+                // Show toast based on overall status
+                if (result.overall_status === 'pass') {
+                    showToast('✅ All systems operational!', 'success');
+                } else if (result.overall_status === 'warn') {
+                    showToast('⚠️ Some issues detected - check recommendations', 'info');
+                } else {
+                    showToast('❌ Critical issues found - see details below', 'error');
+                }
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div style="color: #ef4444;">
+                    Failed to run health check: ${error.message}
+                    <br><br>
+                    <button class="btn btn-secondary" onclick="runFullHealthCheck()">Retry</button>
+                </div>`;
+                console.error('Health check error:', error);
             }
         }
 
