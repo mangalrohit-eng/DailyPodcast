@@ -23,6 +23,8 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
       name: 'ScriptwriterAgent',
       systemPrompt: `You are a professional radio scriptwriter creating a conversational morning news brief.
 
+CRITICAL: Use SPECIFIC DETAILS from the story summaries provided. Mention company names, product names, numbers, dates, and key facts. DO NOT write generic summaries - listeners want to know EXACTLY what happened.
+
 Style Guidelines:
 - Write in a warm, conversational tone as if speaking to a friend
 - Use contractions (we're, it's, don't) naturally
@@ -32,6 +34,13 @@ Style Guidelines:
 - Avoid quotes longer than 25 words
 - Mark uncertainty with phrases like "reports suggest" or "according to"
 - Be engaging but professional and concise
+
+Content Requirements:
+- ALWAYS mention specific company names (Accenture, Verizon, etc.) when present
+- Include specific numbers, dollar amounts, percentages when available
+- Name specific products, services, or technologies mentioned
+- Reference specific people, locations, or organizations involved
+- Use the FULL story summary - don't just reword the title!
 
 Technical Requirements:
 - Every factual claim must reference a source with [n]
@@ -106,27 +115,37 @@ You must respond with valid JSON only.`,
    */
   private async writeAllSections(
     outlineSections: any[],
-    sourceMap: Map<string, Source>,
-    storyToSourceId: Map<string, string>,
+    sourceMap: Map<string, Pick>,  // Fixed: This is actually a map of Pick objects
+    storyToSourceId: Map<string, number>,  // Fixed: Source IDs are numbers
     date: string,
     listenerName: string
   ): Promise<ScriptSection[]> {
-    // Build comprehensive prompt for all sections
+    // Build comprehensive prompt for all sections with FULL story content
     const sectionsPrompt = outlineSections.map((section, idx) => {
       const picks = section.picks || [];
       const picksSummary = picks
         .map((pickId: string) => {
-          const story = Array.from(sourceMap.values())
-            .find(s => s.id === storyToSourceId.get(pickId));
-          return story ? `[${storyToSourceId.get(pickId)}] ${story.title}` : '';
+          const pick = Array.from(sourceMap.values())
+            .find(p => p.story_id === pickId);
+          if (!pick) return '';
+          
+          const sourceId = storyToSourceId.get(pickId);
+          const story = pick.story;
+          
+          // Include FULL story content: title, summary, topic, and source
+          return `[${sourceId}] ${story.title}
+Topic: ${story.topic || 'General'}
+Summary: ${story.summary || 'No summary available'}
+Source: ${story.source}
+URL: ${story.url}`;
         })
         .filter(Boolean)
-        .join('\n');
+        .join('\n\n');
 
       return `
 SECTION ${idx + 1}: ${section.type}
 Duration Target: ${section.duration_sec || 60} seconds
-Stories:
+Stories to cover:
 ${picksSummary || 'No specific stories (intro/outro)'}
 Guidance: ${section.guidance || 'Follow general style guidelines'}
 ---`;
@@ -138,10 +157,12 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
 
     const userPrompt = `Generate a complete radio script for ${listenerName}'s daily news brief on ${date}.
 
-SOURCES:
+IMPORTANT: Each story includes a Topic, Summary, and Source. Use the FULL SUMMARY to write detailed, specific content. Mention company names, products, numbers, and key facts from the summaries!
+
+SOURCES WITH FULL DETAILS:
 ${allSources}
 
-OUTLINE:
+OUTLINE WITH STORY SUMMARIES:
 ${sectionsPrompt}
 
 Respond with a JSON object:
@@ -149,19 +170,21 @@ Respond with a JSON object:
   "sections": [
     {
       "type": "cold-open" | "story" | "sign-off",
-      "text": "Complete script text with [citations]",
+      "text": "Complete script text with [citations] - USE SPECIFIC DETAILS FROM SUMMARIES",
       "duration_estimate_sec": 60,
       "word_count": 150
     }
   ]
 }
 
-Each section should:
+Each section MUST:
 - Match the type and duration target from the outline
+- Use SPECIFIC DETAILS from the story summaries (names, numbers, products, dates)
 - Cite sources inline using [1], [2], etc.
+- Mention the company names explicitly (Accenture, Verizon, etc.) when present
 - Use conversational tone with stage directions like (warmly), (pause)
 - Flow naturally into the next section
-- Be engaging and concise`;
+- Be engaging, concise, and INFORMATIVE with real details`;
 
     const response = await this.callOpenAI(
       [
