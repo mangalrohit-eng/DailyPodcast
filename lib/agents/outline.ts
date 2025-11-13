@@ -49,6 +49,12 @@ Target: 4-5 minutes total. Maximum information density. You must respond with va
       score: pick.score,
     }));
     
+    // Count stories by topic
+    const topicCounts: Record<string, number> = {};
+    picks.forEach(p => {
+      topicCounts[p.topic] = (topicCounts[p.topic] || 0) + 1;
+    });
+    
     const prompt = `Create an executive news briefing outline for ${date}.
 
 Stories available:
@@ -57,9 +63,14 @@ ${JSON.stringify(storySummaries, null, 2)}
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - Select 3-5 most impactful stories
+- **CRITICAL: MUST include at least one story from EACH topic (AI, Verizon, Accenture)**
 - Prioritize business implications and strategic context
+- Balance coverage across all topics
 - NO small talk, greetings, or filler - executive audience
 - Dense information delivery
+
+Topic distribution in provided stories:
+${JSON.stringify(topicCounts, null, 2)}
 
 Respond with JSON in this exact format:
 {
