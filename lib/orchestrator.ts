@@ -6,7 +6,7 @@ import { Config } from './config';
 import { Logger, Clock, Crypto } from './utils';
 import { EpisodeManifest, RunConfig } from './types';
 import { StorageTool } from './tools/storage';
-import { StructuredLogger } from './tools/logs-storage';
+// import { StructuredLogger } from './tools/logs-storage'; // REMOVED: Causing undefined errors
 import { RunsStorage } from './tools/runs-storage';
 
 // Import all agents
@@ -79,20 +79,15 @@ export class Orchestrator {
     const runConfig = await this.buildRunConfig(input);
     const runId = runConfig.date;
     
-    // Initialize structured logger and storage
-    let structuredLogger: StructuredLogger | null = null;
+    // Initialize storage (StructuredLogger removed due to undefined errors)
     let runsStorage: RunsStorage | null = null;
     
     try {
-      structuredLogger = new StructuredLogger(runId);
       runsStorage = new RunsStorage();
       
       // Check concurrency - only one run at a time
       if (!runConfig.force_overwrite && RunsStorage.isRunActive()) {
         const activeRun = RunsStorage.getActiveRunId();
-        if (structuredLogger) {
-          await structuredLogger.warn('Run already in progress', { activeRun });
-        }
         Logger.warn('Run already in progress', { activeRun });
         return {
           success: false,
@@ -107,9 +102,6 @@ export class Orchestrator {
       // Start the run
       const started = runsStorage ? await runsStorage.startRun(runId) : false;
       if (!started && !runConfig.force_overwrite) {
-        if (structuredLogger) {
-          await structuredLogger.warn('Failed to start run (concurrency)', { runId });
-        }
         Logger.warn('Failed to start run (concurrency)', { runId });
         return {
           success: false,
@@ -121,9 +113,6 @@ export class Orchestrator {
         };
       }
       
-      if (structuredLogger) {
-        await structuredLogger.info('Orchestrator starting', { runId });
-      }
       Logger.info('Orchestrator starting', { runId });
       
       // Check if episode already exists
@@ -147,9 +136,6 @@ export class Orchestrator {
       }
       
       // 1. INGESTION
-      if (structuredLogger) {
-        await structuredLogger.info('Phase 1: Ingestion', {}, 'orchestrator');
-      }
       Logger.info('Phase 1: Ingestion');
       const ingestionStart = Date.now();
       const ingestionResult = await this.ingestionAgent.execute(runId, {
@@ -163,19 +149,11 @@ export class Orchestrator {
         throw new Error('No stories found during ingestion');
       }
       
-      if (structuredLogger) {
-        await structuredLogger.info('Ingestion complete', {
-          stories: ingestionResult.output.stories.length,
-        }, 'ingestion');
-      }
       Logger.info('Ingestion complete', {
         stories: ingestionResult.output.stories.length,
       });
       
       // 2. RANKING
-      if (structuredLogger) {
-        await structuredLogger.info('Phase 2: Ranking', {}, 'orchestrator');
-      }
       Logger.info('Phase 2: Ranking');
       const rankingStart = Date.now();
       const rankingResult = await this.rankingAgent.execute(runId, {
@@ -189,11 +167,6 @@ export class Orchestrator {
         throw new Error('No stories ranked');
       }
       
-      if (structuredLogger) {
-        await structuredLogger.info('Ranking complete', {
-          picks: rankingResult.output.picks.length,
-        }, 'ranking');
-      }
       Logger.info('Ranking complete', {
         picks: rankingResult.output.picks.length,
       });
@@ -314,13 +287,6 @@ export class Orchestrator {
       
       const totalTime = Date.now() - startTime;
       
-      if (structuredLogger) {
-        await structuredLogger.info('Orchestrator complete', {
-          total_time_ms: totalTime,
-          duration_sec: manifest.duration_sec,
-        });
-      }
-      
       Logger.info('Orchestrator complete', {
         runId,
         total_time_ms: totalTime,
@@ -340,11 +306,6 @@ export class Orchestrator {
         // Don't fail the entire run if index update fails
       }
       
-      // Flush logs
-      if (structuredLogger) {
-        await structuredLogger.flush();
-      }
-      
       return {
         success: true,
         manifest,
@@ -356,13 +317,6 @@ export class Orchestrator {
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
-      if (structuredLogger) {
-        await structuredLogger.error('Orchestrator failed', {
-          error: (error as Error).message,
-          stack: (error as Error).stack,
-        });
-      }
-      
       Logger.error('Orchestrator failed', {
         error: (error as Error).message,
         stack: (error as Error).stack,
@@ -372,11 +326,6 @@ export class Orchestrator {
       // Fail the run
       if (runsStorage) {
         await runsStorage.failRun(runId, (error as Error).message);
-      }
-      
-      // Flush logs
-      if (structuredLogger) {
-        await structuredLogger.flush();
       }
       
       return {
