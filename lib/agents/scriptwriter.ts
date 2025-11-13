@@ -122,14 +122,14 @@ You must respond with valid JSON only.`,
   ): Promise<ScriptSection[]> {
     // Build comprehensive prompt for all sections with FULL story content
     const sectionsPrompt = outlineSections.map((section, idx) => {
-      const picks = section.picks || [];
-      const picksSummary = picks
-        .map((pickId: string) => {
-          const pick = Array.from(sourceMap.values())
-            .find(p => p.story_id === pickId);
+      // CRITICAL FIX: Outline sections have 'refs' (story IDs), not 'picks'!
+      const storyIds = section.refs || [];
+      const picksSummary = storyIds
+        .map((storyId: string) => {
+          const pick = sourceMap.get(storyId);  // Use .get() since sourceMap is keyed by story_id
           if (!pick) return '';
           
-          const sourceId = storyToSourceId.get(pickId);
+          const sourceId = storyToSourceId.get(storyId);  // Fixed: use storyId not pickId
           const story = pick.story;
           
           // Include FULL story content: title, summary, topic, and source
