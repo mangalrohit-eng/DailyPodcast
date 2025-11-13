@@ -551,16 +551,19 @@ async function handleIndexEpisodes(req: VercelRequest, res: VercelResponse) {
       
       const date = dateMatch[1];
       
-      // Check if already in index
-      const existing = runsIndex.runs.find((r: any) => r.run_id === date);
+      // Check if already in index WITH an episode URL
+      const existing = runsIndex.runs.find((r: any) => r.run_id === date && r.episode_url);
       
       if (existing) {
         skipped.push({ 
           filename, 
-          reason: `Already indexed (${date})`,
+          reason: `Already indexed (${date}) with episode URL`,
         });
         continue;
       }
+      
+      // Remove any failed runs for this date to make room for successful episode
+      runsIndex.runs = runsIndex.runs.filter((r: any) => r.run_id !== date);
       
       // Add to index
       const runSummary = {
