@@ -1463,7 +1463,13 @@ Full data in console (F12).`;
 
                 fetch(`${API_BASE}/api/run`, {
                     method: 'POST',
-                    headers: getAuthHeaders(),
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        force_overwrite: true, // Always regenerate on manual "Run Now"
+                    }),
                     signal: controller.signal,
                 })
                 .then(response => {
