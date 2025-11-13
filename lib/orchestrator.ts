@@ -355,12 +355,23 @@ export class Orchestrator {
       
       // Create manifest
       // Build pipeline report from all agent outputs
+      const ingestionReport = ingestionResult.output!.detailed_report || {
+        sources_scanned: [],
+        total_items_before_filter: 0,
+        filtered_out: [],
+        topics_breakdown: {},
+      };
+      
+      // Calculate stories_after_filtering from topics_breakdown
+      const storiesAfterFiltering = Object.values(ingestionReport.topics_breakdown).reduce((sum: number, count: number) => sum + count, 0);
+      
       const pipeline_report = {
-        ingestion: ingestionResult.output!.detailed_report || {
-          sources_scanned: [],
-          total_items_before_filter: 0,
-          filtered_out: [],
-          topics_breakdown: {},
+        ingestion: {
+          sources_scanned: ingestionReport.sources_scanned,
+          total_stories_found: ingestionReport.total_items_before_filter,
+          stories_after_filtering: storiesAfterFiltering,
+          filtered_out: ingestionReport.filtered_out,
+          topics_breakdown: ingestionReport.topics_breakdown,
         },
         ranking: rankingResult.output!.detailed_report || {
           stories_ranked: 0,
@@ -376,7 +387,7 @@ export class Orchestrator {
           })),
           total_duration_target: runConfig.target_duration_sec,
         },
-        scriptwriting: scriptwriterResult.output!.detailed_report || {
+        scriptwriting: scriptResult.output!.detailed_report || {
           sections_generated: 0,
           total_word_count: 0,
           full_script_text: '',
@@ -467,16 +478,10 @@ export class Orchestrator {
       // Add API calls to manifest metrics
       if (!manifest.metrics) {
         manifest.metrics = {
-          ingestion_time_ms: 0,
-          ranking_time_ms: 0,
-          outline_time_ms: 0,
-          scriptwriting_time_ms: 0,
-          factcheck_time_ms: 0,
-          safety_time_ms: 0,
-          tts_director_time_ms: 0,
-          audio_engineer_time_ms: 0,
-          publisher_time_ms: 0,
-          memory_time_ms: 0,
+          ingestion_time_ms: agentTimes['ingestion'] || 0,
+          ranking_time_ms: agentTimes['ranking'] || 0,
+          scripting_time_ms: agentTimes['scriptwriter'] || 0,
+          tts_time_ms: agentTimes['audio_engineer'] || 0,
           total_time_ms: totalTime,
           openai_tokens: 0,
         };
