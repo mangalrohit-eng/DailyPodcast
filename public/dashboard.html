@@ -1821,13 +1821,29 @@ Full data in console (F12).`;
                 const latestUpdate = progress.updates[progress.updates.length - 1];
                 document.getElementById('currentMessage').textContent = latestUpdate ? latestUpdate.message : '';
 
-                // Update updates list
+                // Update updates list with expandable agent data
                 const updatesList = document.getElementById('progressUpdates');
-                updatesList.innerHTML = progress.updates.map(update => {
+                updatesList.innerHTML = progress.updates.map((update, idx) => {
                     const statusClass = `progress-update-${update.status}`;
                     const statusIcon = update.status === 'completed' ? '✅' : 
                                       update.status === 'failed' ? '❌' : '🔄';
                     const time = new Date(update.timestamp).toLocaleTimeString();
+                    
+                    // Format agent data if available
+                    let agentDataHtml = '';
+                    if (update.agentData) {
+                        const detailsId = `details-${idx}`;
+                        agentDataHtml = `
+                            <div style="margin-top: 8px;">
+                                <button class="btn btn-secondary" onclick="toggleDetails('${detailsId}')" style="font-size: 11px; padding: 4px 8px;">
+                                    📋 View Details
+                                </button>
+                                <div id="${detailsId}" style="display: none; margin-top: 8px; padding: 8px; background: white; border-radius: 4px; font-size: 11px; max-height: 200px; overflow-y: auto;">
+                                    ${formatAgentData(update.agentData)}
+                                </div>
+                            </div>
+                        `;
+                    }
                     
                     return `
                         <div class="progress-update">
@@ -1835,21 +1851,81 @@ Full data in console (F12).`;
                                 ${statusIcon} ${update.phase}
                             </div>
                             <div class="progress-update-message">${update.message}</div>
-                            ${update.details ? `<div class="progress-update-message"><small>${JSON.stringify(update.details)}</small></div>` : ''}
+                            ${agentDataHtml}
                             <div class="progress-update-time">${time}</div>
                         </div>
                     `;
                 }).join('');
+                
+                // Helper function to format agent data
+                function formatAgentData(data) {
+                    let html = '';
+                    
+                    if (data.stories) {
+                        html += '<strong>Stories Found (top 20):</strong><ul style="margin: 4px 0; padding-left: 20px;">';
+                        data.stories.forEach(s => {
+                            html += `<li><strong>[${s.topic}]</strong> ${s.title}<br><small style="color: #666;">${s.source}</small></li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    if (data.picks) {
+                        html += '<strong>Selected Stories:</strong><ul style="margin: 4px 0; padding-left: 20px;">';
+                        data.picks.forEach(p => {
+                            html += `<li><strong>[${p.topic}]</strong> ${p.title}<br><small style="color: #666;">Score: ${p.score}</small></li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    if (data.outline) {
+                        html += '<strong>Outline Sections:</strong><ul style="margin: 4px 0; padding-left: 20px;">';
+                        data.outline.forEach(o => {
+                            html += `<li><strong>${o.type}</strong>: ${o.title} (${o.story_count} stories)</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    if (data.script) {
+                        html += `<strong>Script Generated:</strong><br>`;
+                        html += `- Word count: ${data.script.word_count}<br>`;
+                        html += `- Sections: ${data.script.sections}<br>`;
+                    }
+                    
+                    if (data.audio) {
+                        html += `<strong>Audio Generated:</strong><br>`;
+                        html += `- Segments: ${data.audio.segments}<br>`;
+                        html += `- Duration: ${Math.round(data.audio.total_duration)}s<br>`;
+                    }
+                    
+                    return html || '<em>No details available</em>';
+                }
+                
+                // Toggle details function
+                window.toggleDetails = function(id) {
+                    const elem = document.getElementById(id);
+                    if (elem.style.display === 'none') {
+                        elem.style.display = 'block';
+                    } else {
+                        elem.style.display = 'none';
+                    }
+                };
 
                 // Check if completed or failed
                 if (progress.status === 'completed') {
                     showToast('✅ Episode generated successfully!', 'success');
                     await loadRuns();
-                    setTimeout(() => hideProgressModal(), 2000);
+                    // DON'T auto-close - let user review details
+                    document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #10b981, #059669)';
+                    document.getElementById('currentPhase').textContent = '✅ Complete!';
+                    document.getElementById('currentMessage').innerHTML = 
+                        'Episode generated successfully! <button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>';
                     return false;
                 } else if (progress.status === 'failed') {
                     showToast('❌ Episode generation failed', 'error');
-                    setTimeout(() => hideProgressModal(), 3000);
+                    document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+                    document.getElementById('currentPhase').textContent = '❌ Failed';
+                    document.getElementById('currentMessage').innerHTML = 
+                        'Episode generation failed. <button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>';
                     return false;
                 }
 

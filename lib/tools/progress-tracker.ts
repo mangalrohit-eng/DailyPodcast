@@ -8,6 +8,13 @@ export interface ProgressUpdate {
   message: string;
   details?: any;
   timestamp: string;
+  agentData?: {
+    stories?: Array<{ title: string; topic: string; source: string }>;
+    picks?: Array<{ title: string; topic: string; score: number }>;
+    outline?: Array<{ type: string; title: string; story_count: number }>;
+    script?: { word_count: number; sections: number };
+    audio?: { segments: number; total_duration: number };
+  };
 }
 
 export interface RunProgress {

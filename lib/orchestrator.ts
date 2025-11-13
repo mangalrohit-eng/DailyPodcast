@@ -172,6 +172,13 @@ export class Orchestrator {
         status: 'completed',
         message: `Found ${ingestionResult.output.stories.length} stories`,
         details: { story_count: ingestionResult.output.stories.length },
+        agentData: {
+          stories: ingestionResult.output.stories.slice(0, 20).map(s => ({
+            title: s.title,
+            topic: s.topic || 'General',
+            source: s.source,
+          })),
+        },
       });
       
       // 2. RANKING
@@ -204,6 +211,13 @@ export class Orchestrator {
           picks: rankingResult.output.picks.length,
           topics: rankingResult.output.picks.map(p => p.topic),
         },
+        agentData: {
+          picks: rankingResult.output.picks.map(p => ({
+            title: p.story.title,
+            topic: p.topic,
+            score: Math.round(p.score * 1000) / 1000,
+          })),
+        },
       });
       
       // 3. OUTLINE
@@ -221,6 +235,19 @@ export class Orchestrator {
       });
       agentTimes['outline'] = Date.now() - outlineStart;
       
+      progressTracker.addUpdate(runId, {
+        phase: 'Outline',
+        status: 'completed',
+        message: `Created outline with ${outlineResult.output!.outline.sections.length} sections`,
+        agentData: {
+          outline: outlineResult.output!.outline.sections.map(s => ({
+            type: s.type,
+            title: s.title,
+            story_count: s.refs.length,
+          })),
+        },
+      });
+      
       // 4. SCRIPTWRITING
       Logger.info('Phase 4: Scriptwriting');
       progressTracker.addUpdate(runId, {
@@ -236,6 +263,18 @@ export class Orchestrator {
         listener_name: 'Rohit',
       });
       agentTimes['scriptwriter'] = Date.now() - scriptStart;
+      
+      progressTracker.addUpdate(runId, {
+        phase: 'Scriptwriting',
+        status: 'completed',
+        message: `Generated script with ${scriptResult.output!.script.word_count} words`,
+        agentData: {
+          script: {
+            word_count: scriptResult.output!.script.word_count,
+            sections: scriptResult.output!.script.sections.length,
+          },
+        },
+      });
       
       // 5. FACT-CHECK
       Logger.info('Phase 5: Fact-Check');
