@@ -621,6 +621,240 @@
         .progress-update-failed {
             color: #721c24;
         }
+
+        /* Pipeline Report Modal */
+        .report-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .report-modal.show {
+            display: flex;
+        }
+
+        .report-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 1200px;
+            width: 95%;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .report-header h2 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .report-close {
+            background: none;
+            border: none;
+            font-size: 32px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+        }
+
+        .report-close:hover {
+            color: #000;
+        }
+
+        .report-tabs {
+            display: flex;
+            gap: 5px;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .report-tab {
+            padding: 10px 20px;
+            border: none;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .report-tab.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .report-tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        .report-body {
+            padding: 20px 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .report-tab-content {
+            display: none;
+        }
+
+        .report-tab-content.active {
+            display: block;
+        }
+
+        .report-section {
+            margin-bottom: 30px;
+        }
+
+        .report-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+            font-size: 18px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .source-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            border-radius: 4px;
+        }
+
+        .source-item.failed {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .source-item strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .source-item small {
+            font-size: 12px;
+            color: #666;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .story-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+
+        .story-item .title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .story-item .meta {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .topic-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+
+        .topic-AI { background: #e3f2fd; color: #1976d2; }
+        .topic-Verizon { background: #ffebee; color: #c62828; }
+        .topic-Accenture { background: #f3e5f5; color: #7b1fa2; }
+        .topic-ai { background: #e3f2fd; color: #1976d2; }
+        .topic-verizon { background: #ffebee; color: #c62828; }
+        .topic-accenture { background: #f3e5f5; color: #7b1fa2; }
+
+        .score-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .script-viewer {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: 'Georgia', serif;
+            line-height: 1.8;
+            font-size: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .change-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .no-data {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -1717,12 +1951,317 @@ Full data in console (F12).`;
                 });
                 const data = await response.json();
                 
-                // Show details in alert for now (could be a modal in production)
-                alert(`Run Details: ${runId}\n\nStatus: ${data.summary.status}\nStories: ${data.summary.stories_count || 'N/A'}\nDuration: ${data.summary.duration_ms ? Math.round(data.summary.duration_ms / 1000) + 's' : 'N/A'}`);
+                // Show pipeline report modal
+                showPipelineReport(runId, data);
             } catch (error) {
                 showToast('Failed to load run details', 'error');
                 console.error(error);
             }
+        }
+
+        function showPipelineReport(runId, data) {
+            const modal = document.getElementById('pipelineReportModal');
+            const title = document.getElementById('reportTitle');
+            
+            title.textContent = `📊 Episode Report - ${runId}`;
+            
+            // Populate tabs with data
+            if (data.manifest && data.manifest.pipeline_report) {
+                const report = data.manifest.pipeline_report;
+                
+                renderIngestionTab(report.ingestion);
+                renderRankingTab(report.ranking);
+                renderOutlineTab(report.outline);
+                renderScriptTab(report.scriptwriting);
+                renderFactCheckTab(report.factcheck);
+                renderSafetyTab(report.safety);
+            } else {
+                // No pipeline report available
+                document.getElementById('tab-ingestion').innerHTML = 
+                    '<div class="no-data">Pipeline report not available for this episode.<br>This feature requires episodes generated with the latest version.</div>';
+                document.getElementById('tab-ranking').innerHTML = '<div class="no-data">No data available</div>';
+                document.getElementById('tab-outline').innerHTML = '<div class="no-data">No data available</div>';
+                document.getElementById('tab-script').innerHTML = '<div class="no-data">No data available</div>';
+                document.getElementById('tab-factcheck').innerHTML = '<div class="no-data">No data available</div>';
+                document.getElementById('tab-safety').innerHTML = '<div class="no-data">No data available</div>';
+            }
+            
+            // Reset to first tab
+            switchReportTab('ingestion');
+            
+            modal.classList.add('show');
+        }
+
+        function hidePipelineReport() {
+            document.getElementById('pipelineReportModal').classList.remove('show');
+        }
+
+        function switchReportTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.report-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.report-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function renderIngestionTab(ingestion) {
+            if (!ingestion) {
+                document.getElementById('tab-ingestion').innerHTML = '<div class="no-data">No ingestion data available</div>';
+                return;
+            }
+            
+            const topicsBreakdown = ingestion.topics_breakdown || {};
+            const totalStories = Object.values(topicsBreakdown).reduce((a, b) => a + b, 0);
+            
+            const html = `
+                <div class="report-section">
+                    <h3>📊 Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${ingestion.total_items_before_filter || 0}</div>
+                            <div class="stat-label">Items Found</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${totalStories}</div>
+                            <div class="stat-label">Stories Accepted</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${(ingestion.filtered_out || []).length}</div>
+                            <div class="stat-label">Stories Filtered</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>📰 Sources Scanned</h3>
+                    ${(ingestion.sources_scanned || []).map(source => `
+                        <div class="source-item ${source.status && source.status.includes('Failed') ? 'failed' : ''}">
+                            <strong>${source.name}</strong><br>
+                            <small style="color: #666;">${source.url}</small><br>
+                            <small>Found: ${source.items_found} items - ${source.status}</small>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="report-section">
+                    <h3>📊 Topic Breakdown</h3>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        ${Object.entries(topicsBreakdown).map(([topic, count]) => `
+                            <div style="padding: 15px; background: white; border-radius: 8px; border: 2px solid #e0e0e0;">
+                                <div style="font-size: 24px; font-weight: bold; color: #007bff;">${count}</div>
+                                <div style="color: #666;">${topic}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>❌ Filtered Out Stories (Top 20)</h3>
+                    ${(ingestion.filtered_out || []).slice(0, 20).length === 0 
+                        ? '<div class="no-data">No stories were filtered out</div>'
+                        : (ingestion.filtered_out || []).slice(0, 20).map(item => `
+                        <div style="padding: 10px; margin: 5px 0; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            <strong>${item.title}</strong><br>
+                            <small style="color: #856404;">Reason: ${item.reason}</small>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('tab-ingestion').innerHTML = html;
+        }
+
+        function renderRankingTab(ranking) {
+            if (!ranking) {
+                document.getElementById('tab-ranking').innerHTML = '<div class="no-data">No ranking data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3>✅ Selected Stories</h3>
+                    ${(ranking.top_picks || []).length === 0 
+                        ? '<div class="no-data">No stories selected</div>'
+                        : (ranking.top_picks || []).map((pick, idx) => `
+                        <div class="story-item" style="border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div style="flex: 1;">
+                                    <span style="color: #28a745; font-weight: bold; margin-right: 10px;">#${idx + 1}</span>
+                                    <span class="topic-badge topic-${pick.topic}">${pick.topic}</span>
+                                    <span class="score-badge">Score: ${pick.score ? pick.score.toFixed(2) : 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="title">${pick.title}</div>
+                            <div class="meta">
+                                <strong>Why selected:</strong> ${pick.why_selected || 'N/A'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="report-section">
+                    <h3>❌ Rejected Stories (Top 20)</h3>
+                    ${(ranking.rejected_stories || []).slice(0, 20).length === 0 
+                        ? '<div class="no-data">No rejected stories data</div>'
+                        : (ranking.rejected_stories || []).slice(0, 20).map(story => `
+                        <div class="story-item" style="border-left: 4px solid #dc3545; opacity: 0.7;">
+                            <div class="title">${story.title}</div>
+                            <div class="meta">
+                                <span class="score-badge">Score: ${story.score ? story.score.toFixed(2) : 'N/A'}</span>
+                                <span style="margin-left: 10px; color: #dc3545;">${story.reason || 'N/A'}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('tab-ranking').innerHTML = html;
+        }
+
+        function renderOutlineTab(outline) {
+            if (!outline) {
+                document.getElementById('tab-outline').innerHTML = '<div class="no-data">No outline data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3>📋 Podcast Structure</h3>
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                        ${(outline.sections || []).map((section, idx) => `
+                            <div style="padding: 15px; border-bottom: 1px solid #e0e0e0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <div>
+                                        <span style="font-weight: 600; font-size: 16px;">${idx + 1}. ${section.title || section.type}</span>
+                                        <span class="topic-badge" style="background: #e9ecef; color: #495057;">${section.type}</span>
+                                    </div>
+                                    <span class="score-badge">${section.target_words || 0} words</span>
+                                </div>
+                                ${section.story_count ? `<small style="color: #666;">Stories in section: ${section.story_count}</small>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <strong>Target Duration:</strong> ${outline.total_duration_target || 0} seconds (~${Math.round((outline.total_duration_target || 0) / 60)} minutes)
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-outline').innerHTML = html;
+        }
+
+        function renderScriptTab(scriptwriting) {
+            if (!scriptwriting) {
+                document.getElementById('tab-script').innerHTML = '<div class="no-data">No script data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3>📊 Stats</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${scriptwriting.sections_generated || 0}</div>
+                            <div class="stat-label">Sections</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${scriptwriting.total_word_count || 0}</div>
+                            <div class="stat-label">Words</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${(scriptwriting.citations_used || []).length}</div>
+                            <div class="stat-label">Citations</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>📝 Full Script</h3>
+                    <div class="script-viewer">${scriptwriting.full_script_text || 'Script text not available'}</div>
+                </div>
+            `;
+            
+            document.getElementById('tab-script').innerHTML = html;
+        }
+
+        function renderFactCheckTab(factcheck) {
+            if (!factcheck) {
+                document.getElementById('tab-factcheck').innerHTML = '<div class="no-data">No fact-check data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3>✏️ Changes Made</h3>
+                    ${(factcheck.changes_made || []).length === 0 
+                        ? '<div class="no-data">No changes needed - all facts verified!</div>'
+                        : (factcheck.changes_made || []).map(change => `
+                        <div class="change-item">
+                            ${change}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="report-section">
+                    <h3>🚩 Flags Raised</h3>
+                    ${(factcheck.flags_raised || []).length === 0 
+                        ? '<div class="no-data">No flags - all content looks good!</div>'
+                        : (factcheck.flags_raised || []).map(flag => `
+                        <div style="padding: 10px; margin: 5px 0; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            ${flag}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('tab-factcheck').innerHTML = html;
+        }
+
+        function renderSafetyTab(safety) {
+            if (!safety) {
+                document.getElementById('tab-safety').innerHTML = '<div class="no-data">No safety data available</div>';
+                return;
+            }
+            
+            const getRiskColor = (level) => {
+                switch(level) {
+                    case 'low': return '#28a745';
+                    case 'medium': return '#ffc107';
+                    case 'high': return '#dc3545';
+                    default: return '#6c757d';
+                }
+            };
+            
+            const html = `
+                <div class="report-section">
+                    <h3>🛡️ Risk Assessment</h3>
+                    <div style="padding: 20px; background: white; border-radius: 8px; border: 3px solid ${getRiskColor(safety.risk_level)};">
+                        <div style="font-size: 32px; font-weight: bold; color: ${getRiskColor(safety.risk_level)}; margin-bottom: 10px;">
+                            ${(safety.risk_level || 'none').toUpperCase()}
+                        </div>
+                        <div style="color: #666;">Overall Risk Level</div>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>✏️ Safety Edits Made</h3>
+                    ${(safety.edits_made || []).length === 0 
+                        ? '<div class="no-data">No safety edits needed - content is safe!</div>'
+                        : (safety.edits_made || []).map(edit => `
+                        <div class="change-item">
+                            ${edit}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('tab-safety').innerHTML = html;
         }
 
         // Logs
@@ -2232,6 +2771,34 @@ Full data in console (F12).`;
                     <div class="progress-update-phase progress-update-running">🔄 Starting</div>
                     <div class="progress-update-message">Initializing podcast generation pipeline</div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Report Modal -->
+    <div id="pipelineReportModal" class="report-modal">
+        <div class="report-content">
+            <div class="report-header">
+                <h2 id="reportTitle">📊 Episode Generation Report</h2>
+                <button class="report-close" onclick="hidePipelineReport()">×</button>
+            </div>
+            
+            <div class="report-tabs">
+                <button class="report-tab active" onclick="switchReportTab('ingestion')">📥 Ingestion</button>
+                <button class="report-tab" onclick="switchReportTab('ranking')">🎯 Ranking</button>
+                <button class="report-tab" onclick="switchReportTab('outline')">📋 Outline</button>
+                <button class="report-tab" onclick="switchReportTab('script')">📝 Script</button>
+                <button class="report-tab" onclick="switchReportTab('factcheck')">✅ Fact Check</button>
+                <button class="report-tab" onclick="switchReportTab('safety')">🛡️ Safety</button>
+            </div>
+            
+            <div class="report-body">
+                <div id="tab-ingestion" class="report-tab-content active"></div>
+                <div id="tab-ranking" class="report-tab-content"></div>
+                <div id="tab-outline" class="report-tab-content"></div>
+                <div id="tab-script" class="report-tab-content"></div>
+                <div id="tab-factcheck" class="report-tab-content"></div>
+                <div id="tab-safety" class="report-tab-content"></div>
             </div>
         </div>
     </div>
