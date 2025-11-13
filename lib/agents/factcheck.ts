@@ -49,35 +49,24 @@ You must respond with valid JSON only.`,
       sources: script.sources.length,
     });
     
+    // Fact-check ALL sections in ONE API call (batch processing)
+    Logger.info('Fact-checking all sections in single API call', { sectionCount: script.sections.length });
+    
+    const result = await this.checkAllSections(script.sections, script.sources);
+    
     const changesMade: string[] = [];
     const flagsRaised: string[] = [];
     
-    // Check each section
-    for (let i = 0; i < script.sections.length; i++) {
-      const section = script.sections[i];
+    // Apply changes to each section
+    for (let i = 0; i < result.sections.length; i++) {
+      const sectionResult = result.sections[i];
       
-      // Skip intro/outro sections
-      if (section.type === 'cold-open' || section.type === 'sign-off') {
-        Logger.debug('Skipping fact-check for section', { type: section.type });
-        continue;
+      if (sectionResult.revised_text) {
+        script.sections[i].text = sectionResult.revised_text;
+        changesMade.push(...sectionResult.changes);
       }
       
-      Logger.debug('Fact-checking section', { index: i + 1, total: script.sections.length, type: section.type });
-      
-      const result = await this.checkSection(section, script.sources);
-      
-      if (result.revised_text) {
-        script.sections[i].text = result.revised_text;
-        changesMade.push(...result.changes);
-      }
-      
-      flagsRaised.push(...result.flags);
-      
-      // Add delay between sections to avoid rate limiting (except after last section)
-      if (i < script.sections.length - 1) {
-        Logger.debug('Rate limit pause between fact-checks', { delayMs: 800 });
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
+      flagsRaised.push(...sectionResult.flags);
     }
     
     Logger.info('Fact-check complete', {
@@ -92,6 +81,87 @@ You must respond with valid JSON only.`,
     };
   }
   
+  /**
+   * Fact-check ALL sections in a single API call (batch processing)
+   */
+  private async checkAllSections(
+    sections: any[],
+    sources: Source[]
+  ): Promise<{
+    sections: Array<{
+      revised_text: string | null;
+      changes: string[];
+      flags: string[];
+    }>;
+  }> {
+    const sectionsText = sections
+      .map((section, idx) => {
+        // Skip intro/outro sections
+        if (section.type === 'cold-open' || section.type === 'sign-off') {
+          return `SECTION ${idx + 1} (${section.type}): [SKIP - no fact-checking needed]\n${section.text}`;
+        }
+        return `SECTION ${idx + 1} (${section.type}):\n${section.text}`;
+      })
+      .join('\n\n---\n\n');
+
+    const sourcesText = sources
+      .map((source, idx) => `[${idx + 1}] ${source.title} - ${source.url}`)
+      .join('\n');
+
+    const userPrompt = `Fact-check ALL script sections in one pass.
+
+AVAILABLE SOURCES:
+${sourcesText}
+
+SCRIPT SECTIONS:
+${sectionsText}
+
+For EACH section (except those marked SKIP), check for:
+1. Unsupported factual claims (no citation)
+2. Speculative statements presented as fact
+3. Statistics or quotes without attribution
+4. Potential inaccuracies
+
+Respond with JSON:
+{
+  "sections": [
+    {
+      "section_index": 0,
+      "revised_text": "corrected text with proper citations or null if no changes",
+      "changes": ["description of change 1", "description of change 2"],
+      "flags": ["concern 1", "concern 2"]
+    }
+  ]
+}
+
+Return one object per section in the same order. For SKIP sections, return null for revised_text and empty arrays.`;
+
+    const response = await this.callOpenAI(
+      [
+        { role: 'system', content: this.config.systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      {
+        responseFormat: 'json_object',
+        maxTokens: 6000,
+      }
+    );
+
+    const parsed = JSON.parse(response);
+    
+    // Ensure we have results for all sections
+    return {
+      sections: parsed.sections.map((s: any) => ({
+        revised_text: s.revised_text,
+        changes: s.changes || [],
+        flags: s.flags || [],
+      })),
+    };
+  }
+
+  /**
+   * Legacy method: Fact-check a single section (kept for backward compatibility)
+   */
   private async checkSection(
     section: any,
     sources: Source[]

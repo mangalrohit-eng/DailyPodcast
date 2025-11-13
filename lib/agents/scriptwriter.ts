@@ -71,29 +71,16 @@ You must respond with valid JSON only.`,
       }
     });
     
-    // Generate script sections
-    const sections: ScriptSection[] = [];
+    // Generate script sections in ONE API call (batch processing)
+    Logger.info('Writing all script sections in single API call', { sectionCount: outline.sections.length });
     
-    for (let i = 0; i < outline.sections.length; i++) {
-      const outlineSection = outline.sections[i];
-      Logger.debug('Writing section', { type: outlineSection.type, index: i + 1, total: outline.sections.length });
-      
-      const sectionScript = await this.writeSection(
-        outlineSection,
-        sourceMap,
-        storyToSourceId,
-        date,
-        listener_name
-      );
-      
-      sections.push(sectionScript);
-      
-      // Add delay between sections to avoid rate limiting (except after last section)
-      if (i < outline.sections.length - 1) {
-        Logger.debug('Rate limit pause between script sections', { delayMs: 1000 });
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+    const sections = await this.writeAllSections(
+      outline.sections,
+      sourceMap,
+      storyToSourceId,
+      date,
+      listener_name
+    );
     
     // Calculate total word count
     const totalText = sections.map(s => s.text).join(' ');
@@ -114,6 +101,94 @@ You must respond with valid JSON only.`,
     return { script };
   }
   
+  /**
+   * Write ALL sections in a single API call (batch processing)
+   */
+  private async writeAllSections(
+    outlineSections: any[],
+    sourceMap: Map<string, Source>,
+    storyToSourceId: Map<string, string>,
+    date: string,
+    listenerName: string
+  ): Promise<ScriptSection[]> {
+    // Build comprehensive prompt for all sections
+    const sectionsPrompt = outlineSections.map((section, idx) => {
+      const picks = section.picks || [];
+      const picksSummary = picks
+        .map((pickId: string) => {
+          const story = Array.from(sourceMap.values())
+            .find(s => s.id === storyToSourceId.get(pickId));
+          return story ? `[${storyToSourceId.get(pickId)}] ${story.title}` : '';
+        })
+        .filter(Boolean)
+        .join('\n');
+
+      return `
+SECTION ${idx + 1}: ${section.type}
+Duration Target: ${section.duration_sec || 60} seconds
+Stories:
+${picksSummary || 'No specific stories (intro/outro)'}
+Guidance: ${section.guidance || 'Follow general style guidelines'}
+---`;
+    }).join('\n\n');
+
+    const allSources = Array.from(sourceMap.values())
+      .map((source, idx) => `[${idx + 1}] ${source.title} - ${source.url}`)
+      .join('\n');
+
+    const userPrompt = `Generate a complete radio script for ${listenerName}'s daily news brief on ${date}.
+
+SOURCES:
+${allSources}
+
+OUTLINE:
+${sectionsPrompt}
+
+Respond with a JSON object:
+{
+  "sections": [
+    {
+      "type": "cold-open" | "story" | "sign-off",
+      "text": "Complete script text with [citations]",
+      "duration_estimate_sec": 60,
+      "word_count": 150
+    }
+  ]
+}
+
+Each section should:
+- Match the type and duration target from the outline
+- Cite sources inline using [1], [2], etc.
+- Use conversational tone with stage directions like (warmly), (pause)
+- Flow naturally into the next section
+- Be engaging and concise`;
+
+    const response = await this.callOpenAI(
+      [
+        { role: 'system', content: this.config.systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      {
+        responseFormat: 'json_object',
+        maxTokens: 8000,
+      }
+    );
+
+    const parsed = JSON.parse(response);
+    
+    // Map back to ScriptSection format
+    return parsed.sections.map((section: any, idx: number) => ({
+      type: section.type,
+      text: section.text,
+      duration_estimate_sec: section.duration_estimate_sec || 60,
+      word_count: section.word_count || section.text.split(/\s+/).length,
+      citations: this.extractCitations(section.text),
+    }));
+  }
+
+  /**
+   * Legacy method: Write a single section (kept for backward compatibility)
+   */
   private async writeSection(
     section: any,
     sourceMap: Map<string, Pick>,

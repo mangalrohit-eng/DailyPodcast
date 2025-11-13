@@ -49,31 +49,28 @@ You must respond with valid JSON only.`,
     
     Logger.info('Safety check starting', { sections: script.sections.length });
     
+    // Screen ALL sections in ONE API call (batch processing)
+    Logger.info('Screening all sections in single API call', { sectionCount: script.sections.length });
+    
+    const result = await this.screenAllSections(script.sections);
+    
     const editsMade: string[] = [];
     let maxRiskLevel: 'low' | 'medium' | 'high' = 'low';
     
-    for (let i = 0; i < script.sections.length; i++) {
-      const section = script.sections[i];
-      Logger.debug('Screening section', { index: i + 1, total: script.sections.length, type: section.type });
+    // Apply changes to each section
+    for (let i = 0; i < result.sections.length; i++) {
+      const sectionResult = result.sections[i];
       
-      const result = await this.screenSection(section);
-      
-      if (result.revised_text) {
-        script.sections[i].text = result.revised_text;
-        editsMade.push(...result.edits);
+      if (sectionResult.revised_text) {
+        script.sections[i].text = sectionResult.revised_text;
+        editsMade.push(...sectionResult.edits);
       }
       
       // Update max risk level
-      if (result.risk_level === 'high' || maxRiskLevel === 'high') {
+      if (sectionResult.risk_level === 'high' || maxRiskLevel === 'high') {
         maxRiskLevel = 'high';
-      } else if (result.risk_level === 'medium' || maxRiskLevel === 'medium') {
+      } else if (sectionResult.risk_level === 'medium' || maxRiskLevel === 'medium') {
         maxRiskLevel = 'medium';
-      }
-      
-      // Add delay between sections to avoid rate limiting (except after last section)
-      if (i < script.sections.length - 1) {
-        Logger.debug('Rate limit pause between safety checks', { delayMs: 800 });
-        await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
     
@@ -89,6 +86,72 @@ You must respond with valid JSON only.`,
     };
   }
   
+  /**
+   * Screen ALL sections in a single API call (batch processing)
+   */
+  private async screenAllSections(sections: any[]): Promise<{
+    sections: Array<{
+      revised_text: string | null;
+      edits: string[];
+      risk_level: 'low' | 'medium' | 'high';
+    }>;
+  }> {
+    const sectionsText = sections
+      .map((section, idx) => `SECTION ${idx + 1} (${section.type}):\n${section.text}`)
+      .join('\n\n---\n\n');
+
+    const userPrompt = `Review ALL script sections for safety and compliance in one pass.
+
+${sectionsText}
+
+For EACH section, check for:
+1. Legal/compliance risks (SEC, financial regulations)
+2. Defamation or unverified negative claims
+3. Leaked/confidential information
+4. Investment advice
+5. Inflammatory language
+6. Privacy issues
+
+Respond with JSON:
+{
+  "sections": [
+    {
+      "section_index": 0,
+      "risk_level": "low" | "medium" | "high",
+      "revised_text": "safer version text or null if no changes needed",
+      "edits": ["specific edit 1", "specific edit 2"]
+    }
+  ]
+}
+
+Return one object per section in the same order.`;
+
+    const response = await this.callOpenAI(
+      [
+        { role: 'system', content: this.config.systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      {
+        responseFormat: 'json_object',
+        maxTokens: 6000,
+      }
+    );
+
+    const parsed = JSON.parse(response);
+    
+    // Ensure we have results for all sections
+    return {
+      sections: parsed.sections.map((s: any) => ({
+        revised_text: s.revised_text,
+        edits: s.edits || [],
+        risk_level: s.risk_level || 'low',
+      })),
+    };
+  }
+
+  /**
+   * Legacy method: Screen a single section (kept for backward compatibility)
+   */
   private async screenSection(section: any): Promise<{
     revised_text?: string;
     edits: string[];
