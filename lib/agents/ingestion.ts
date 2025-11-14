@@ -240,7 +240,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     
     // Update allStoriesDetailed to mark removed stories as rejected
     removedStories.forEach(story => {
-      const reason = `Duplicate domain (max ${Config.MAX_STORIES_PER_DOMAIN} per domain)`;
+      const reason = `Duplicate domain+topic (max ${Config.MAX_STORIES_PER_DOMAIN} per domain per topic)`;
       filteredOut.push({ title: story.title, reason });
       
       // Find and update the existing entry in allStoriesDetailed
@@ -464,30 +464,33 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   }
   
   private deduplicateStoriesWithTracking(stories: Story[]): { dedupedStories: Story[]; removedStories: Story[] } {
-    // Group by domain and limit per domain
-    const byDomain = new Map<string, Story[]>();
+    // Group by domain+topic combination (not just domain!)
+    // This allows same domain to provide stories for multiple topics
+    const byDomainAndTopic = new Map<string, Story[]>();
     
     for (const story of stories) {
-      const existing = byDomain.get(story.domain) || [];
+      // Key: "domain:topic" - e.g. "cnbc.com:Verizon"
+      const key = `${story.domain}:${story.topic || 'General'}`;
+      const existing = byDomainAndTopic.get(key) || [];
       existing.push(story);
-      byDomain.set(story.domain, existing);
+      byDomainAndTopic.set(key, existing);
     }
     
     const deduplicated: Story[] = [];
     const removed: Story[] = [];
-    const maxPerDomain = Config.MAX_STORIES_PER_DOMAIN;
+    const maxPerDomainPerTopic = Config.MAX_STORIES_PER_DOMAIN;
     
-    for (const [domain, domainStories] of byDomain.entries()) {
-      // Sort by recency and take top N
-      const sorted = domainStories.sort(
+    for (const [key, domainTopicStories] of byDomainAndTopic.entries()) {
+      // Sort by recency and take top N per domain+topic
+      const sorted = domainTopicStories.sort(
         (a, b) => b.published_at.getTime() - a.published_at.getTime()
       );
       
-      deduplicated.push(...sorted.slice(0, maxPerDomain));
-      removed.push(...sorted.slice(maxPerDomain)); // Track removed stories
+      deduplicated.push(...sorted.slice(0, maxPerDomainPerTopic));
+      removed.push(...sorted.slice(maxPerDomainPerTopic)); // Track removed stories
       
-      if (sorted.length > maxPerDomain) {
-        Logger.debug(`Domain ${domain}: kept ${maxPerDomain} stories, removed ${sorted.length - maxPerDomain}`);
+      if (sorted.length > maxPerDomainPerTopic) {
+        Logger.debug(`${key}: kept ${maxPerDomainPerTopic} stories, removed ${sorted.length - maxPerDomainPerTopic}`);
       }
     }
     
