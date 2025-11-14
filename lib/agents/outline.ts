@@ -54,13 +54,20 @@ Structure for maximum impact with dense, actionable information. You must respon
     const introOutroTimeSec = Math.max(15, Math.floor(contentTimeSec * 0.1)); // 10% for intro/outro, min 15s each
     const storyTimeSec = Math.floor((contentTimeSec - (introOutroTimeSec * 2)) / ((numStoriesMin + numStoriesMax) / 2));
     
-    // Sort picks by topic weight (highest weight first) to order stories by priority
+    // Sort picks by topic weight (highest weight first), then by score within each topic
+    // This groups all stories from the same topic together, ordered by topic priority
     const sortedPicks = topic_weights
       ? [...picks].sort((a, b) => {
           const weightA = topic_weights[a.topic] || 0;
           const weightB = topic_weights[b.topic] || 0;
-          // Sort descending: higher weight first
-          return weightB - weightA;
+          
+          // Primary sort: by topic weight (descending - highest first)
+          if (weightB !== weightA) {
+            return weightB - weightA;
+          }
+          
+          // Secondary sort: within same topic, sort by story score (descending)
+          return b.score - a.score;
         })
       : picks;
     
