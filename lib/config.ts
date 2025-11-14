@@ -41,8 +41,15 @@ export class Config {
   static TARGET_DURATION_SECONDS = parseInt(process.env.TARGET_DURATION_SECONDS || '900', 10);
   
   static parseTopicWeights(): Record<string, number> {
-    const weightsStr = process.env.TOPIC_WEIGHTS || 'ai:0.5,vz:0.3,acn:0.2';
+    // DEPRECATED: Weights should come from dashboard settings only
+    // This is kept only as an emergency fallback
+    const weightsStr = process.env.TOPIC_WEIGHTS || '';
     const weights: Record<string, number> = {};
+    
+    if (!weightsStr) {
+      return weights; // Empty - force loading from dashboard
+    }
+    
     weightsStr.split(',').forEach(pair => {
       const [key, val] = pair.split(':');
       if (key && val) {
