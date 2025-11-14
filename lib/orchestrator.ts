@@ -744,50 +744,12 @@ export class Orchestrator {
       return existingKeywords;
     }
     
-    // Otherwise, auto-generate based on topic label
-    const label = topicLabel.toLowerCase();
-    const keywords: string[] = [topicLabel]; // Always include the full label
+    // Simple: use the exact topic label and split it into words
+    const keywords: string[] = [topicLabel]; // Full label
     
-    // Telecommunications
-    if (label.includes('verizon')) {
-      keywords.push('verizon', 'vz', '5g', 'wireless', 'telecom', 'fios');
-    }
-    // Major Consulting Firms
-    else if (label.includes('accenture')) {
-      keywords.push('accenture', 'acn', 'consulting', 'technology consulting', 'digital transformation');
-    } else if (label.includes('deloitte')) {
-      keywords.push('deloitte', 'consulting', 'audit', 'advisory', 'professional services');
-    } else if (label.includes('pwc') || label.includes('pricewaterhousecoopers')) {
-      keywords.push('pwc', 'pricewaterhousecoopers', 'consulting', 'audit', 'tax', 'advisory');
-    } else if (label.includes('mckinsey')) {
-      keywords.push('mckinsey', 'mckinsey & company', 'consulting', 'management consulting', 'strategy');
-    } else if (label.includes('boston consulting') || label.includes('bcg')) {
-      keywords.push('boston consulting group', 'bcg', 'consulting', 'management consulting', 'strategy');
-    } else if (label.includes('bain')) {
-      keywords.push('bain', 'bain & company', 'consulting', 'management consulting', 'private equity');
-    } else if (label.includes('kpmg')) {
-      keywords.push('kpmg', 'consulting', 'audit', 'tax', 'advisory', 'professional services');
-    } else if (label.includes('ey') || label.includes('ernst') || label.includes('young')) {
-      keywords.push('ey', 'ernst & young', 'ernst and young', 'consulting', 'audit', 'advisory');
-    }
-    // Technology & AI
-    else if (label.includes('ai') || label.includes('artificial intelligence')) {
-      keywords.push('ai', 'artificial intelligence', 'machine learning', 'ml', 'deep learning', 'neural network', 'gpt', 'llm', 'large language model');
-    } else if (label.includes('tech')) {
-      keywords.push('technology', 'tech', 'software', 'hardware', 'startup');
-    }
-    // Generic business
-    else if (label.includes('business') || label.includes('consulting')) {
-      keywords.push('business', 'enterprise', 'corporate', 'company', 'industry', 'consulting');
-    } else {
-      // Generic: split label into words and add "consulting" if not present
-      const words = topicLabel.split(/\s+/).map(w => w.toLowerCase());
-      keywords.push(...words);
-      // If it looks like a company name, add business-related terms
-      if (words.length <= 3) {
-        keywords.push('business', 'corporate', 'company');
-      }
-    }
+    // Add individual words from the label
+    const words = topicLabel.split(/\s+/).map(w => w.trim()).filter(w => w.length > 0);
+    keywords.push(...words.map(w => w.toLowerCase()));
     
     Logger.debug(`Auto-generated keywords for "${topicLabel}"`, { keywords });
     
