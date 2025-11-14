@@ -296,6 +296,8 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
         date: runConfig.date,
         listener_name: 'Rohit',
+        target_duration_sec: runConfig.target_duration_sec,
+        podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['scriptwriter'] = Date.now() - scriptStart;
       
