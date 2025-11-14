@@ -220,6 +220,9 @@ Respond with a JSON object:
 Each section MUST:
 - COLD-OPEN: Strong opening that immediately engages
 - STORY: Lead with impact, then specific details
+  * END each story section (except the last) with a natural, brief transition to the next story
+  * Transition examples: "Speaking of innovation...", "In related news...", "Shifting gears to...", "Meanwhile..."
+  * Keep transitions SHORT (5-10 words max) and conversational - they should flow naturally
 - SIGN-OFF: Brief summary of key takeaways
 - Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
 - Cite sources inline using [1], [2], etc.
@@ -280,7 +283,8 @@ ${styleGuidance}`;
     sourceMap: Map<string, Pick>,
     storyToSourceId: Map<string, number>,
     date: string,
-    listenerName: string
+    listenerName: string,
+    isLastStorySection: boolean = false
   ): Promise<ScriptSection> {
     const storyDetails = section.refs
       .map((storyId: string) => {
@@ -299,6 +303,14 @@ ${styleGuidance}`;
       })
       .filter(Boolean);
     
+    // Build transition guidance for story sections
+    let transitionGuidance = '';
+    if (section.type === 'story' && !isLastStorySection) {
+      transitionGuidance = `\n- END with a brief, natural transition phrase that smoothly leads to the next story
+- Transition examples: "Speaking of innovation...", "In related news...", "Shifting gears to...", "Meanwhile...", "On a similar note..."
+- Keep transitions SHORT (5-10 words) and conversational`;
+    }
+    
     const prompt = `Write the "${section.type}" section for ${date} morning brief for ${listenerName}.
 
 Target words: ${section.target_words}
@@ -314,7 +326,7 @@ Remember:
 - Cite sources as [n] where n is the sourceId
 - Include stage directions in parentheses
 - Add natural pauses with [beat 300ms] or similar
-- Stay within word target ± 20%
+- Stay within word target ± 20%${transitionGuidance}
 
 Respond with JSON:
 {
