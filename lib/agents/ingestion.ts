@@ -324,15 +324,20 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     let storyUrl: string;
     let domain: string;
     
-    if (isGoogleNewsUrl && tracking) {
-      tracking.attempted++;
+    if (isGoogleNewsUrl) {
+      // ALWAYS extract for Google News URLs (tracking is optional)
+      if (tracking) {
+        tracking.attempted++;
+      }
       
       const extracted = this.extractFromGoogleNewsUrl(item.link);
       
       if (extracted) {
         storyUrl = extracted.url;  // Use actual article URL for scraping!
         domain = extracted.domain;
-        tracking.successful++;
+        if (tracking) {
+          tracking.successful++;
+        }
         Logger.debug(`✅ Decoded Google News URL`, { 
           original: item.link.substring(0, 60),
           actual_url: storyUrl.substring(0, 60),
@@ -342,7 +347,9 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         // Fallback to Google News URL if decoding fails
         storyUrl = item.link;
         domain = extractDomain(item.link);
-        tracking.failed++;
+        if (tracking) {
+          tracking.failed++;
+        }
         Logger.warn(`⚠️ Failed to decode Google News URL, using fallback`, { 
           url: item.link.substring(0, 60),
           fallback_domain: domain
