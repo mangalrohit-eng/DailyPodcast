@@ -167,7 +167,7 @@ export class Orchestrator {
         .filter((t: any) => runConfig.topics.includes(t.label))
         .map((t: any) => {
           // Auto-generate sources and keywords if not provided by dashboard
-          const autoSources = this.generateSourcesForTopic(t.label, t.sources);
+          const autoSources = this.generateSourcesForTopic(t.label, t.sources, runConfig.window_hours);
           const autoKeywords = this.generateKeywordsForTopic(t.label, t.keywords);
           
           Logger.info(`🔍 Topic config for "${t.label}"`, {
@@ -868,37 +868,41 @@ export class Orchestrator {
   /**
    * Auto-generate RSS sources for a topic if not provided
    */
-  private generateSourcesForTopic(topicLabel: string, existingSources?: string[]): string[] {
-    // If dashboard already configured sources AND they include date filtering, use them
-    // Otherwise regenerate with date filter
-    const hasDateFilter = existingSources?.some(src => src.includes('after:'));
-    if (existingSources && existingSources.length > 0 && hasDateFilter) {
-      return existingSources;
+    private generateSourcesForTopic(topicLabel: string, existingSources?: string[], windowHours?: number): string[] {
+        // If dashboard already configured sources AND they include date filtering, use them
+        // Otherwise regenerate with date filter
+        const hasDateFilter = existingSources?.some(src => src.includes('after:'));
+        if (existingSources && existingSources.length > 0 && hasDateFilter) {
+            return existingSources;
+        }
+        
+        // Regenerate sources with date filter (either no existing sources, or old sources without date filter)
+        
+        // Add date filtering to Google News search query
+        // Google News RSS caches results, so we add "after:" to force recent results
+        // IMPORTANT: Use the SAME cutoff as ingestion quality filter (window_hours)
+        const cutoffHours = windowHours || 72; // Default to 72 if not provided
+        const cutoffDate = new Date();
+        cutoffDate.setHours(cutoffDate.getHours() - cutoffHours);
+        const dateStr = cutoffDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Include date filter in search query: "Verizon after:2025-11-08"
+        const searchWithDate = `${topicLabel} after:${dateStr}`;
+        const searchQuery = encodeURIComponent(searchWithDate);
+        
+        const sources: string[] = [
+            `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
+        ];
+        
+        Logger.info(`Generated sources for "${topicLabel}" with date filter`, { 
+            search_query: searchWithDate,
+            cutoff_hours: cutoffHours,
+            cutoff_date: cutoffDate.toISOString(),
+            sources 
+        });
+        
+        return sources;
     }
-    
-    // Regenerate sources with date filter (either no existing sources, or old sources without date filter)
-    
-    // Add date filtering to Google News search query
-    // Google News RSS caches results, so we add "after:" to force recent results
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const dateStr = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Include date filter in search query: "Verizon after:2025-11-07"
-    const searchWithDate = `${topicLabel} after:${dateStr}`;
-    const searchQuery = encodeURIComponent(searchWithDate);
-    
-    const sources: string[] = [
-      `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
-    ];
-    
-    Logger.info(`Generated sources for "${topicLabel}" with date filter`, { 
-      search_query: searchWithDate,
-      sources 
-    });
-    
-    return sources;
-  }
   
   /**
    * Auto-generate keywords for a topic if not provided
