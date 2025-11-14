@@ -91,13 +91,14 @@ Structure for maximum impact with dense, actionable information. You must respon
     
     const prompt = `Create an executive news briefing outline for ${date}.
 
-Stories available:
+Stories available (ordered by topic priority - MAINTAIN THIS ORDER):
 ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - Select ${numStoriesMin}-${numStoriesMax} most impactful stories
 - **CRITICAL: MUST include at least one story from EACH configured topic**
+- **CRITICAL: PRESENT STORIES IN THE ORDER GIVEN** - stories are pre-sorted by topic priority (highest weight first)
 - Intro: ~${introOutroTimeSec} seconds - Welcome + brief topic preview list
 - Each story: ~${storyTimeSec} seconds - Dense, actionable information
 - Outro: ~${introOutroTimeSec} seconds - Key takeaways + upbeat closing
