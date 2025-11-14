@@ -416,7 +416,22 @@ export class Orchestrator {
         Logger.warn('High risk content detected - review before publishing');
       }
       
-      // 7. TTS DIRECTOR
+      // ===================================================================
+      // 🔇 AUDIO GENERATION DISABLED TO SAVE API COSTS
+      // Pipeline stops at script generation
+      // To re-enable: uncomment phases 7-8 below
+      // ===================================================================
+      
+      Logger.info('⏸️  AUDIO GENERATION DISABLED - Stopping at script generation to save costs');
+      
+      progressTracker.addUpdate(runId, {
+        phase: 'Script Complete',
+        status: 'completed',
+        message: '✅ Script generated successfully! (Audio disabled to save API costs)',
+      });
+      
+      /*
+      // 7. TTS DIRECTOR (DISABLED)
       Logger.info('Phase 7: TTS Planning');
       progressTracker.addUpdate(runId, {
         phase: 'TTS Planning',
@@ -429,7 +444,7 @@ export class Orchestrator {
       });
       agentTimes['tts_director'] = Date.now() - ttsDirectorStart;
       
-      // 8. AUDIO ENGINEER
+      // 8. AUDIO ENGINEER (DISABLED)
       Logger.info('Phase 8: Audio Synthesis');
       progressTracker.addUpdate(runId, {
         phase: 'Audio Generation',
@@ -441,6 +456,7 @@ export class Orchestrator {
         synthesis_plan: ttsDirectorResult.output!.synthesis_plan,
       });
       agentTimes['audio_engineer'] = Date.now() - audioStart;
+      */
       
       // Create manifest
       // Build pipeline report from all agent outputs
@@ -505,9 +521,9 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
         outline_hash: Crypto.contentId(outlineResult.output!.outline),
         script_hash: Crypto.contentId(safetyResult.output!.script),
-        audio_hash: Crypto.sha256(audioResult.output!.audio_buffer),
-        mp3_url: '', // Will be set by publisher
-        duration_sec: audioResult.output!.actual_duration_sec,
+        audio_hash: 'NO_AUDIO_GENERATED', // Audio generation disabled
+        mp3_url: '', // No audio file
+        duration_sec: 0, // No audio duration
         word_count: safetyResult.output!.script.word_count,
         created_at: new Date().toISOString(),
         pipeline_report, // Add the compiled report
@@ -515,13 +531,14 @@ export class Orchestrator {
           ingestion_time_ms: agentTimes['ingestion'],
           ranking_time_ms: agentTimes['ranking'],
           scripting_time_ms: agentTimes['scriptwriter'],
-          tts_time_ms: agentTimes['audio_engineer'],
+          tts_time_ms: 0, // No TTS
           total_time_ms: Date.now() - startTime,
           openai_tokens: 0, // Would need to track from actual API calls
         },
       };
       
-      // 10. PUBLISHER
+      /*
+      // 10. PUBLISHER (DISABLED - no audio to publish)
       Logger.info('Phase 10: Publishing');
       progressTracker.addUpdate(runId, {
         phase: 'Publishing',
@@ -543,13 +560,18 @@ export class Orchestrator {
       // Update manifest with published episode URL
       manifest.mp3_url = publishResult.output!.episode_url;
       
-      // 10. MEMORY UPDATE
-      Logger.info('Phase 10: Memory Update');
+      // 11. MEMORY UPDATE (DISABLED)
+      Logger.info('Phase 11: Memory Update');
       const memoryStart = Date.now();
       await this.memoryAgent.execute(runId, {
         manifest,
       });
       agentTimes['memory'] = Date.now() - memoryStart;
+      */
+      
+      // Save manifest directly (since publisher is disabled)
+      Logger.info('Saving manifest without audio');
+      await this.storage.saveJson(`episodes/${runId}_manifest.json`, manifest);
       
       const totalTime = Date.now() - startTime;
       
