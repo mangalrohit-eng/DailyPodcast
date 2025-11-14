@@ -457,15 +457,15 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         length: originalEncoded.length
       });
       
-      // Remove query parameters if present
-      if (encodedUrl.includes('?')) {
-        encodedUrl = encodedUrl.split('?')[0];
-      }
+      // Remove query parameters and fragments if present
+      // Google News URLs may have ?oc=5 or other query params
+      encodedUrl = encodedUrl.split('?')[0].split('#')[0];
       
       // Extract Base64 String: Remove Google News prefixes
-      // Pattern: Starts with CBM, CBA, or similar, optionally followed by lowercase letter
-      // Examples: CBM, CBMi, CBAi, CBAU
-      encodedUrl = encodedUrl.replace(/^(CBM[a-z]?|CBA[a-z]?)/, '');
+      // Pattern: Starts with CB followed by M or A, then 0+ lowercase letters
+      // Examples: CBM, CBMi, CBMij, CBA, CBAi, CBAU
+      // Using * (0 or more) instead of ? (0 or 1) to handle any prefix length
+      encodedUrl = encodedUrl.replace(/^CB[MA][a-z]*/, '');
       
       Logger.debug(`🔍 Decoding Google News URL`, {
         original_encoded: originalEncoded.substring(0, 40),
@@ -474,6 +474,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       });
       
       // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
+      // Note: base64url doesn't strictly require padding, but adding it doesn't hurt
       while (encodedUrl.length % 4 !== 0) {
         encodedUrl += '=';
       }
@@ -481,7 +482,18 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       // Base64 Decode (URL-safe)
       // Node.js 14.18+ supports 'base64url' encoding natively
       // This properly handles URL-safe characters (- and _) without manual conversion
-      const decodedBuffer = Buffer.from(encodedUrl, 'base64url');
+      let decodedBuffer: Buffer;
+      try {
+        decodedBuffer = Buffer.from(encodedUrl, 'base64url');
+      } catch (base64Error) {
+        // Fallback: If base64url is not supported (shouldn't happen on Node 14.18+),
+        // try manual conversion
+        Logger.warn(`⚠️ base64url not supported, using manual conversion`, {
+          node_version: process.version
+        });
+        const base64 = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
+        decodedBuffer = Buffer.from(base64, 'base64');
+      }
       const decodedString = decodedBuffer.toString('utf8');
       
       Logger.info(`✅ Successfully decoded base64`, {
@@ -492,7 +504,9 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       });
       
       // Extract Actual URL: Look for http/https URL in the decoded string
-      const urlMatch = decodedString.match(/(https?:\/\/[^\s\x00-\x1f\x7f]+)/);
+      // More robust regex that handles valid URL characters and stops at binary junk
+      // Matches: http(s)://domain/path with common URL characters
+      const urlMatch = decodedString.match(/(https?:\/\/[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+)/);
       
       Logger.info(`🎯 URL regex match result`, {
         matched: !!urlMatch,
@@ -502,18 +516,34 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       
       if (urlMatch && urlMatch[0]) {
         const actualUrl = urlMatch[0];
-        const hostname = new URL(actualUrl).hostname;
         
-        // Strip 'www.' for cleaner domain
-        const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
-        
-        Logger.info(`✅ Successfully decoded Google News URL`, { 
-          original: googleNewsUrl.substring(0, 60),
-          actual_url: actualUrl.substring(0, 60),
-          domain: cleanDomain
-        });
-        
-        return { url: actualUrl, domain: cleanDomain };
+        // Validate the extracted URL can be parsed
+        try {
+          const hostname = new URL(actualUrl).hostname;
+          
+          // Strip 'www.' for cleaner domain
+          const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
+          
+          // Additional validation: ensure domain has at least one dot (e.g., "example.com")
+          if (!cleanDomain.includes('.')) {
+            Logger.warn(`⚠️ Invalid domain extracted (no TLD): ${cleanDomain}`);
+            return null;
+          }
+          
+          Logger.info(`✅ Successfully decoded Google News URL`, { 
+            original: googleNewsUrl.substring(0, 60),
+            actual_url: actualUrl.substring(0, 60),
+            domain: cleanDomain
+          });
+          
+          return { url: actualUrl, domain: cleanDomain };
+        } catch (urlError) {
+          Logger.warn(`⚠️ Extracted URL is invalid`, {
+            extracted: actualUrl.substring(0, 80),
+            error: urlError instanceof Error ? urlError.message : 'Unknown'
+          });
+          return null;
+        }
       }
       
       Logger.warn(`❌ FAILED: Could not extract URL from decoded string`, {
