@@ -159,12 +159,27 @@ export class Orchestrator {
       // We need TopicConfig: { name, weight, sources, keywords }
       const enabledTopicConfigs = (dashboardConfig?.topics || [])
         .filter((t: any) => runConfig.topics.includes(t.label))
-        .map((t: any) => ({
-          name: t.label,
-          weight: t.weight,
-          sources: t.sources || [],
-          keywords: t.keywords || [],
-        }));
+        .map((t: any) => {
+          // Auto-generate sources and keywords if not provided by dashboard
+          const autoSources = this.generateSourcesForTopic(t.label, t.sources);
+          const autoKeywords = this.generateKeywordsForTopic(t.label, t.keywords);
+          
+          Logger.info(`🔍 Topic config for "${t.label}"`, {
+            label: t.label,
+            weight: t.weight,
+            sources_count: autoSources.length,
+            keywords_count: autoKeywords.length,
+            sources_sample: autoSources.slice(0, 2),
+            keywords_sample: autoKeywords.slice(0, 5),
+          });
+          
+          return {
+            name: t.label,
+            weight: t.weight,
+            sources: autoSources,
+            keywords: autoKeywords,
+          };
+        });
       
       Logger.info('🎯 Ingestion will fetch from topics', { 
         enabled_topics: enabledTopicConfigs.map(t => t.name),
