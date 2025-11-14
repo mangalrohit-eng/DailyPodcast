@@ -29,6 +29,14 @@ export interface IngestionOutput {
     total_items_before_filter: number;
     filtered_out: Array<{ title: string; reason: string }>;
     topics_breakdown: Record<string, number>;
+    all_stories_detailed: Array<{ 
+      title: string; 
+      topic: string; 
+      url: string;
+      published_at: string;
+      status: 'accepted' | 'rejected'; 
+      reason?: string;
+    }>;
   };
 }
 
@@ -56,6 +64,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     // Detailed tracking
     const sourcesScanned: Array<{ name: string; url: string; items_found: number; status: string }> = [];
     const filteredOut: Array<{ title: string; reason: string }> = [];
+    const allStoriesDetailed: Array<{ title: string; topic: string; url: string; published_at: string; status: 'accepted' | 'rejected'; reason?: string }> = [];
     
     // Fetch from all topic sources
     for (const topic of topics) {
@@ -94,12 +103,30 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
             
             // Apply filters with detailed tracking
             if (seenUrls.has(story.url)) {
-              filteredOut.push({ title: story.title, reason: 'Duplicate URL' });
+              const reason = 'Duplicate URL';
+              filteredOut.push({ title: story.title, reason });
+              allStoriesDetailed.push({ 
+                title: story.title, 
+                topic: topic.name, 
+                url: story.url,
+                published_at: story.published_at.toISOString(),
+                status: 'rejected', 
+                reason 
+              });
               continue;
             }
             if (story.published_at < cutoff_date) {
               const hoursOld = Math.round((Date.now() - story.published_at.getTime()) / (1000 * 60 * 60));
-              filteredOut.push({ title: story.title, reason: `Too old (${story.published_at.toISOString()}, ${hoursOld}hrs old, cutoff: ${input.window_hours}hrs)` });
+              const reason = `Too old (${hoursOld}hrs old, cutoff: ${input.window_hours}hrs)`;
+              filteredOut.push({ title: story.title, reason });
+              allStoriesDetailed.push({ 
+                title: story.title, 
+                topic: topic.name, 
+                url: story.url,
+                published_at: story.published_at.toISOString(),
+                status: 'rejected', 
+                reason 
+              });
               Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()}, ${hoursOld}hrs old)`);
               continue;
             }
@@ -110,7 +137,16 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
             // Skip quality filter for Google News - RSS summaries are short snippets, 
             // but actual articles are full-length
             if (!isGoogleNews && !this.passesQualityFilter(story)) {
-              filteredOut.push({ title: story.title, reason: 'Failed quality filter (content too short)' });
+              const reason = 'Failed quality filter (content too short)';
+              filteredOut.push({ title: story.title, reason });
+              allStoriesDetailed.push({ 
+                title: story.title, 
+                topic: topic.name, 
+                url: story.url,
+                published_at: story.published_at.toISOString(),
+                status: 'rejected', 
+                reason 
+              });
               Logger.debug(`Story failed quality filter: ${story.title.substring(0, 50)}...`);
               continue;
             }
@@ -118,16 +154,33 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
             // Skip keyword matching for Google News RSS - it's already topic-filtered
             
             if (!isGoogleNews && !this.matchesTopic(story, topic.keywords)) {
-              filteredOut.push({ title: story.title, reason: `No keyword match for ${topic.name}` });
+              const reason = `No keyword match for ${topic.name}`;
+              filteredOut.push({ title: story.title, reason });
+              allStoriesDetailed.push({ 
+                title: story.title, 
+                topic: topic.name, 
+                url: story.url,
+                published_at: story.published_at.toISOString(),
+                status: 'rejected', 
+                reason 
+              });
               Logger.debug(`Story doesn't match topic keywords: ${story.title.substring(0, 50)}...`, {
                 keywords: topic.keywords.slice(0, 3),
               });
               continue;
             }
             
+            // Story accepted!
             seenUrls.add(story.url);
             allStories.push(story);
             topicStoriesCount++;
+            allStoriesDetailed.push({ 
+              title: story.title, 
+              topic: topic.name, 
+              url: story.url,
+              published_at: story.published_at.toISOString(),
+              status: 'accepted'
+            });
             Logger.debug(`✓ Story accepted for ${topic.name}: ${story.title.substring(0, 60)}...`);
           }
           
@@ -175,6 +228,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         total_items_before_filter: itemsFound,
         filtered_out: filteredOut,
         topics_breakdown: topicsBreakdown,
+        all_stories_detailed: allStoriesDetailed,
       },
     };
   }

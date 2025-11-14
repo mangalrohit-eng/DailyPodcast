@@ -2019,6 +2019,7 @@ Full data in console (F12).`;
             
             const topicsBreakdown = ingestion.topics_breakdown || {};
             const totalStories = Object.values(topicsBreakdown).reduce((a, b) => a + b, 0);
+            const allStories = ingestion.all_stories_detailed || [];
             
             const html = `
                 <div class="report-section">
@@ -2062,6 +2063,73 @@ Full data in console (F12).`;
                     </div>
                 </div>
                 
+                ${allStories.length > 0 ? `
+                <div class="report-section">
+                    <h3>📋 All Stories (${allStories.length})</h3>
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="storySearchInput" placeholder="Search by title..." 
+                               style="flex: 1; min-width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                               onkeyup="filterStoriesTable()">
+                        <select id="storyStatusFilter" onchange="filterStoriesTable()"
+                                style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Statuses</option>
+                            <option value="accepted">✅ Accepted</option>
+                            <option value="rejected">❌ Rejected</option>
+                        </select>
+                        <select id="storyTopicFilter" onchange="filterStoriesTable()"
+                                style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="all">All Topics</option>
+                            ${[...new Set(allStories.map(s => s.topic))].map(topic => 
+                                `<option value="${topic}">${topic}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div style="overflow-x: auto; max-height: 500px; overflow-y: auto;">
+                        <table id="storiesTable" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                                <tr>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Status</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Topic</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; min-width: 300px;">Title</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Published</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allStories.map(story => {
+                                    const statusBadge = story.status === 'accepted' 
+                                        ? '<span style="background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px;">✅ Accepted</span>'
+                                        : '<span style="background: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-size: 12px;">❌ Rejected</span>';
+                                    const publishedDate = new Date(story.published_at).toLocaleString('en-US', { 
+                                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                                    });
+                                    return `
+                                        <tr class="story-row" data-status="${story.status}" data-topic="${story.topic}" data-title="${story.title.toLowerCase()}">
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">${statusBadge}</td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">
+                                                <span style="background: #e7f3ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${story.topic}</span>
+                                            </td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">
+                                                <a href="${story.url}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                                    ${story.title}
+                                                </a>
+                                            </td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; white-space: nowrap; font-size: 13px; color: #666;">
+                                                ${publishedDate}
+                                            </td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-size: 13px; color: ${story.status === 'accepted' ? '#28a745' : '#dc3545'};">
+                                                ${story.reason || '—'}
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="storiesTableStats" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 14px; color: #666;"></div>
+                </div>
+                ` : ''}
+                
                 <div class="report-section">
                     <h3>❌ Filtered Out Stories (Top 20)</h3>
                     ${(ingestion.filtered_out || []).slice(0, 20).length === 0 
@@ -2076,6 +2144,46 @@ Full data in console (F12).`;
             `;
             
             document.getElementById('tab-ingestion').innerHTML = html;
+            
+            // Initialize filter stats
+            if (allStories.length > 0) {
+                filterStoriesTable();
+            }
+        }
+        
+        function filterStoriesTable() {
+            const searchTerm = document.getElementById('storySearchInput')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('storyStatusFilter')?.value || 'all';
+            const topicFilter = document.getElementById('storyTopicFilter')?.value || 'all';
+            
+            const rows = document.querySelectorAll('.story-row');
+            let visibleCount = 0;
+            let acceptedCount = 0;
+            let rejectedCount = 0;
+            
+            rows.forEach(row => {
+                const title = row.getAttribute('data-title') || '';
+                const status = row.getAttribute('data-status') || '';
+                const topic = row.getAttribute('data-topic') || '';
+                
+                const matchesSearch = !searchTerm || title.includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' || status === statusFilter;
+                const matchesTopic = topicFilter === 'all' || topic === topicFilter;
+                
+                if (matchesSearch && matchesStatus && matchesTopic) {
+                    row.style.display = '';
+                    visibleCount++;
+                    if (status === 'accepted') acceptedCount++;
+                    else rejectedCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            const statsDiv = document.getElementById('storiesTableStats');
+            if (statsDiv) {
+                statsDiv.textContent = `Showing ${visibleCount} stories (${acceptedCount} accepted, ${rejectedCount} rejected)`;
+            }
         }
 
         function renderRankingTab(ranking) {
