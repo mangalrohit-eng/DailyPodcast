@@ -266,6 +266,7 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
         date: runConfig.date,
         target_duration_sec: runConfig.target_duration_sec,
+        podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['outline'] = Date.now() - outlineStart;
       

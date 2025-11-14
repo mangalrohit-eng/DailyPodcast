@@ -10,6 +10,13 @@ export interface OutlineInput {
   picks: Pick[];
   date: string;
   target_duration_sec: number;
+  podcast_production?: {
+    num_stories_min: number;
+    num_stories_max: number;
+    pause_after_intro_ms: number;
+    pause_between_stories_ms: number;
+    pause_before_outro_ms: number;
+  };
 }
 
 export interface OutlineOutput {
@@ -20,23 +27,38 @@ export class OutlineAgent extends BaseAgent<OutlineInput, OutlineOutput> {
   constructor() {
     super({
       name: 'OutlineAgent',
+      // System prompt is now built dynamically in process() method
+      // to include actual target duration and story count from dashboard
       systemPrompt: `You are a producer creating an executive news brief outline for C-suite leaders.
 
-Structure for maximum impact:
-- Intro (15-20 seconds): Welcome + brief topic preview list
-- Story Segments (50-90 seconds each): Dense, actionable information
-- Outro (15-20 seconds): Key takeaways + upbeat closing
-
-Target: 4-5 minutes total. Maximum information density. You must respond with valid JSON only.`,
+Structure for maximum impact with dense, actionable information. You must respond with valid JSON only.`,
       temperature: 0.7,
       maxTokens: 2000,
     });
   }
   
   protected async process(input: OutlineInput): Promise<OutlineOutput> {
-    const { picks, date, target_duration_sec } = input;
+    const { picks, date, target_duration_sec, podcast_production } = input;
     
-    Logger.info('Creating outline', { picks: picks.length, target_duration_sec });
+    // Use dashboard settings or defaults
+    const numStoriesMin = podcast_production?.num_stories_min || 3;
+    const numStoriesMax = podcast_production?.num_stories_max || 5;
+    const pauseAfterIntroMs = podcast_production?.pause_after_intro_ms || 800;
+    const pauseBetweenStoriesMs = podcast_production?.pause_between_stories_ms || 1200;
+    const pauseBeforeOutroMs = podcast_production?.pause_before_outro_ms || 500;
+    
+    // Calculate dynamic timing
+    const totalPauseTimeSec = (pauseAfterIntroMs + pauseBeforeOutroMs + (pauseBetweenStoriesMs * (numStoriesMax - 1))) / 1000;
+    const contentTimeSec = target_duration_sec - totalPauseTimeSec;
+    const introOutroTimeSec = Math.max(15, Math.floor(contentTimeSec * 0.1)); // 10% for intro/outro, min 15s each
+    const storyTimeSec = Math.floor((contentTimeSec - (introOutroTimeSec * 2)) / ((numStoriesMin + numStoriesMax) / 2));
+    
+    Logger.info('Creating outline', { 
+      picks: picks.length, 
+      target_duration_sec,
+      num_stories: `${numStoriesMin}-${numStoriesMax}`,
+      story_duration_sec: storyTimeSec,
+    });
     
     // Prepare story summaries for the prompt
     const storySummaries = picks.map((pick, idx) => ({
@@ -62,8 +84,11 @@ ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
-- Select 3-5 most impactful stories
+- Select ${numStoriesMin}-${numStoriesMax} most impactful stories
 - **CRITICAL: MUST include at least one story from EACH configured topic**
+- Intro: ~${introOutroTimeSec} seconds - Welcome + brief topic preview list
+- Each story: ~${storyTimeSec} seconds - Dense, actionable information
+- Outro: ~${introOutroTimeSec} seconds - Key takeaways + upbeat closing
 - Prioritize business implications and strategic context
 - Balance coverage across all topics
 - NO small talk, greetings, or filler - executive audience
