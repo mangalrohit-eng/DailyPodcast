@@ -718,20 +718,30 @@ export class Orchestrator {
     
     // Otherwise, auto-generate based on topic label
     const searchQuery = encodeURIComponent(topicLabel);
+    const label = topicLabel.toLowerCase();
     
-    return [
-      // Google News RSS (most reliable)
+    const sources: string[] = [
+      // Google News RSS (most reliable, specific to topic)
       `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
-      
-      // TechCrunch (for tech topics)
-      `https://techcrunch.com/feed/`,
-      
-      // The Verge (for tech/business)
-      `https://www.theverge.com/rss/index.xml`,
-      
-      // Reuters (general news)
-      `https://www.reutersagency.com/feed/`,
     ];
+    
+    // Add company-specific feeds if available
+    if (label.includes('verizon')) {
+      sources.push('https://www.verizon.com/about/rss/news');
+    } else if (label.includes('accenture')) {
+      sources.push('https://newsroom.accenture.com/rss/news.xml');
+    }
+    
+    // Only add generic tech feeds for broad tech topics (not company-specific)
+    if (label.includes('ai') || label.includes('artificial intelligence') || 
+        label.includes('technology') || label.includes('tech')) {
+      sources.push('https://techcrunch.com/feed/');
+      sources.push('https://www.theverge.com/rss/index.xml');
+    }
+    
+    Logger.debug(`Generated sources for "${topicLabel}"`, { sources });
+    
+    return sources;
   }
   
   /**
