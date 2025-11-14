@@ -98,7 +98,14 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           for (const item of items) {
             const story = this.normalizeItem(item, topic.name);
             
-            if (!story) continue;
+            if (!story) {
+              // Track items that couldn't be normalized
+              filteredOut.push({ 
+                title: item.title || 'No title', 
+                reason: 'Invalid story (missing link or title)' 
+              });
+              continue;
+            }
             beforeFilter++;
             
             // Apply filters with detailed tracking
@@ -203,7 +210,26 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     }
     
     // Deduplicate by content similarity (simple domain-based approach)
-    const dedupedStories = this.deduplicateStories(allStories);
+    Logger.info('Before deduplication', { total_stories: allStories.length });
+    const { dedupedStories, removedStories } = this.deduplicateStoriesWithTracking(allStories);
+    Logger.info('After deduplication', { 
+      deduplicated_stories: dedupedStories.length, 
+      removed_by_dedup: removedStories.length 
+    });
+    
+    // Track removed stories from deduplication
+    removedStories.forEach(story => {
+      const reason = `Duplicate domain (max ${Config.MAX_STORIES_PER_DOMAIN} per domain)`;
+      filteredOut.push({ title: story.title, reason });
+      allStoriesDetailed.push({
+        title: story.title,
+        topic: story.topic || 'General',
+        url: story.url,
+        published_at: story.published_at.toISOString(),
+        status: 'rejected',
+        reason
+      });
+    });
     
     // Count stories by topic
     const topicsBreakdown: Record<string, number> = {};
@@ -306,7 +332,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     });
   }
   
-  private deduplicateStories(stories: Story[]): Story[] {
+  private deduplicateStoriesWithTracking(stories: Story[]): { dedupedStories: Story[]; removedStories: Story[] } {
     // Group by domain and limit per domain
     const byDomain = new Map<string, Story[]>();
     
@@ -317,6 +343,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     }
     
     const deduplicated: Story[] = [];
+    const removed: Story[] = [];
     const maxPerDomain = Config.MAX_STORIES_PER_DOMAIN;
     
     for (const [domain, domainStories] of byDomain.entries()) {
@@ -326,9 +353,19 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       );
       
       deduplicated.push(...sorted.slice(0, maxPerDomain));
+      removed.push(...sorted.slice(maxPerDomain)); // Track removed stories
+      
+      if (sorted.length > maxPerDomain) {
+        Logger.debug(`Domain ${domain}: kept ${maxPerDomain} stories, removed ${sorted.length - maxPerDomain}`);
+      }
     }
     
-    return deduplicated;
+    return { dedupedStories: deduplicated, removedStories: removed };
+  }
+  
+  // Keep old method for backward compatibility
+  private deduplicateStories(stories: Story[]): Story[] {
+    return this.deduplicateStoriesWithTracking(stories).dedupedStories;
   }
 }
 

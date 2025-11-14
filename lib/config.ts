@@ -33,7 +33,7 @@ export class Config {
   // Content
   static RUMOR_FILTER = process.env.RUMOR_FILTER !== 'false';
   static MIN_CONTENT_LENGTH = parseInt(process.env.MIN_CONTENT_LENGTH || '100', 10);
-  static MAX_STORIES_PER_DOMAIN = parseInt(process.env.MAX_STORIES_PER_DOMAIN || '10', 10); // Increased from 2 to allow more story diversity
+  static MAX_STORIES_PER_DOMAIN = parseInt(process.env.MAX_STORIES_PER_DOMAIN || '50', 10); // Increased to allow more story diversity (Google News already curates sources)
   
   // Operational
   static FORCE_OVERWRITE = process.env.FORCE_OVERWRITE === 'true';
