@@ -118,6 +118,15 @@ export interface PipelineReport {
     successful_scrapes: number;
     failed_scrapes: Array<{ url: string; reason: string }>;
     avg_content_length: number;
+    all_scrape_attempts?: Array<{
+      title: string;
+      topic: string;
+      article_url: string;
+      rss_source_url: string;
+      status: 'success' | 'failed';
+      content_length?: number;
+      reason?: string;
+    }>;
   };
   outline: {
     sections: Array<{ type: string; title: string; target_words: number; story_count: number }>;

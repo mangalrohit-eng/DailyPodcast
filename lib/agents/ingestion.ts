@@ -217,18 +217,31 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       removed_by_dedup: removedStories.length 
     });
     
-    // Track removed stories from deduplication
+    // Update status for stories removed by deduplication
+    // Build a Set of kept story URLs for quick lookup
+    const keptUrls = new Set(dedupedStories.map(s => s.url));
+    
+    // Update allStoriesDetailed to mark removed stories as rejected
     removedStories.forEach(story => {
       const reason = `Duplicate domain (max ${Config.MAX_STORIES_PER_DOMAIN} per domain)`;
       filteredOut.push({ title: story.title, reason });
-      allStoriesDetailed.push({
-        title: story.title,
-        topic: story.topic || 'General',
-        url: story.url,
-        published_at: story.published_at.toISOString(),
-        status: 'rejected',
-        reason
-      });
+      
+      // Find and update the existing entry in allStoriesDetailed
+      const existingEntry = allStoriesDetailed.find(s => s.url === story.url);
+      if (existingEntry) {
+        existingEntry.status = 'rejected';
+        existingEntry.reason = reason;
+      } else {
+        // Shouldn't happen, but add it just in case
+        allStoriesDetailed.push({
+          title: story.title,
+          topic: story.topic || 'General',
+          url: story.url,
+          published_at: story.published_at.toISOString(),
+          status: 'rejected',
+          reason
+        });
+      }
     });
     
     // Count stories by topic

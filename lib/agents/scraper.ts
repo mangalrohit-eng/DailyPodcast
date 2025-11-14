@@ -22,6 +22,15 @@ export interface ScraperOutput {
     successful_scrapes: number;
     failed_scrapes: Array<{ url: string; reason: string }>;
     avg_content_length: number;
+    all_scrape_attempts: Array<{
+      title: string;
+      topic: string;
+      article_url: string;
+      rss_source_url: string;
+      status: 'success' | 'failed';
+      content_length?: number;
+      reason?: string;
+    }>;
   };
 }
 
@@ -41,6 +50,15 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
     
     const enrichedPicks: Pick[] = [];
     const failedScrapes: Array<{ url: string; reason: string }> = [];
+    const allScrapeAttempts: Array<{
+      title: string;
+      topic: string;
+      article_url: string;
+      rss_source_url: string;
+      status: 'success' | 'failed';
+      content_length?: number;
+      reason?: string;
+    }> = [];
     let totalContentLength = 0;
     let successfulScrapes = 0;
 
@@ -53,15 +71,32 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
             enrichedPicks.push({ ...pick, story: enrichedStory });
             totalContentLength += enrichedStory.raw.length;
             successfulScrapes++;
+            allScrapeAttempts.push({
+              title: pick.story.title,
+              topic: pick.story.topic || 'General',
+              article_url: pick.story.url,
+              rss_source_url: pick.story.canonical || pick.story.url,
+              status: 'success',
+              content_length: enrichedStory.raw.length,
+            });
             Logger.debug(`✅ Scraped ${enrichedStory.title.substring(0, 50)}...`, {
               content_length: enrichedStory.raw.length,
             });
           } else {
             // Failed or insufficient content - keep original summary
             enrichedPicks.push(pick);
+            const reason = 'Content too short or empty';
             failedScrapes.push({
               url: pick.story.url,
-              reason: 'Content too short or empty',
+              reason,
+            });
+            allScrapeAttempts.push({
+              title: pick.story.title,
+              topic: pick.story.topic || 'General',
+              article_url: pick.story.url,
+              rss_source_url: pick.story.canonical || pick.story.url,
+              status: 'failed',
+              reason,
             });
             Logger.debug(`⚠️ Insufficient content for ${pick.story.title.substring(0, 50)}...`);
           }
@@ -69,9 +104,18 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
         .catch(error => {
           // Keep original pick with summary only
           enrichedPicks.push(pick);
+          const reason = error.message;
           failedScrapes.push({
             url: pick.story.url,
-            reason: error.message,
+            reason,
+          });
+          allScrapeAttempts.push({
+            title: pick.story.title,
+            topic: pick.story.topic || 'General',
+            article_url: pick.story.url,
+            rss_source_url: pick.story.canonical || pick.story.url,
+            status: 'failed',
+            reason,
           });
           Logger.warn(`❌ Failed to scrape ${pick.story.url}`, { error: error.message });
         })
@@ -96,6 +140,7 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
         successful_scrapes: successfulScrapes,
         failed_scrapes: failedScrapes,
         avg_content_length: avgContentLength,
+        all_scrape_attempts: allScrapeAttempts,
       },
     };
   }
