@@ -723,28 +723,12 @@ export class Orchestrator {
       return existingSources;
     }
     
-    // Otherwise, auto-generate based on topic label
+    // Simple: just use Google News RSS with the topic name
     const searchQuery = encodeURIComponent(topicLabel);
-    const label = topicLabel.toLowerCase();
     
     const sources: string[] = [
-      // Google News RSS (most reliable, specific to topic)
       `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
     ];
-    
-    // Add company-specific feeds if available
-    if (label.includes('verizon')) {
-      sources.push('https://www.verizon.com/about/rss/news');
-    } else if (label.includes('accenture')) {
-      sources.push('https://newsroom.accenture.com/rss/news.xml');
-    }
-    
-    // Only add generic tech feeds for broad tech topics (not company-specific)
-    if (label.includes('ai') || label.includes('artificial intelligence') || 
-        label.includes('technology') || label.includes('tech')) {
-      sources.push('https://techcrunch.com/feed/');
-      sources.push('https://www.theverge.com/rss/index.xml');
-    }
     
     Logger.debug(`Generated sources for "${topicLabel}"`, { sources });
     
@@ -764,21 +748,45 @@ export class Orchestrator {
     const label = topicLabel.toLowerCase();
     const keywords: string[] = [topicLabel]; // Always include the full label
     
-    // Add common variations
+    // Telecommunications
     if (label.includes('verizon')) {
       keywords.push('verizon', 'vz', '5g', 'wireless', 'telecom', 'fios');
-    } else if (label.includes('accenture')) {
-      keywords.push('accenture', 'acn', 'consulting', 'technology consulting');
-    } else if (label.includes('ai') || label.includes('artificial intelligence')) {
+    }
+    // Major Consulting Firms
+    else if (label.includes('accenture')) {
+      keywords.push('accenture', 'acn', 'consulting', 'technology consulting', 'digital transformation');
+    } else if (label.includes('deloitte')) {
+      keywords.push('deloitte', 'consulting', 'audit', 'advisory', 'professional services');
+    } else if (label.includes('pwc') || label.includes('pricewaterhousecoopers')) {
+      keywords.push('pwc', 'pricewaterhousecoopers', 'consulting', 'audit', 'tax', 'advisory');
+    } else if (label.includes('mckinsey')) {
+      keywords.push('mckinsey', 'mckinsey & company', 'consulting', 'management consulting', 'strategy');
+    } else if (label.includes('boston consulting') || label.includes('bcg')) {
+      keywords.push('boston consulting group', 'bcg', 'consulting', 'management consulting', 'strategy');
+    } else if (label.includes('bain')) {
+      keywords.push('bain', 'bain & company', 'consulting', 'management consulting', 'private equity');
+    } else if (label.includes('kpmg')) {
+      keywords.push('kpmg', 'consulting', 'audit', 'tax', 'advisory', 'professional services');
+    } else if (label.includes('ey') || label.includes('ernst') || label.includes('young')) {
+      keywords.push('ey', 'ernst & young', 'ernst and young', 'consulting', 'audit', 'advisory');
+    }
+    // Technology & AI
+    else if (label.includes('ai') || label.includes('artificial intelligence')) {
       keywords.push('ai', 'artificial intelligence', 'machine learning', 'ml', 'deep learning', 'neural network', 'gpt', 'llm', 'large language model');
     } else if (label.includes('tech')) {
       keywords.push('technology', 'tech', 'software', 'hardware', 'startup');
-    } else if (label.includes('business')) {
-      keywords.push('business', 'enterprise', 'corporate', 'company', 'industry');
+    }
+    // Generic business
+    else if (label.includes('business') || label.includes('consulting')) {
+      keywords.push('business', 'enterprise', 'corporate', 'company', 'industry', 'consulting');
     } else {
-      // Generic: split label into words and add variations
+      // Generic: split label into words and add "consulting" if not present
       const words = topicLabel.split(/\s+/).map(w => w.toLowerCase());
       keywords.push(...words);
+      // If it looks like a company name, add business-related terms
+      if (words.length <= 3) {
+        keywords.push('business', 'corporate', 'company');
+      }
     }
     
     Logger.debug(`Auto-generated keywords for "${topicLabel}"`, { keywords });
