@@ -161,10 +161,14 @@ You must respond with valid JSON only.`,
           const sourceId = storyToSourceId.get(storyId);  // Fixed: use storyId not pickId
           const story = pick.story;
           
-          // Include FULL story content: title, summary, topic, and source
+          // Include FULL story content: prefer scraped full article (raw), fallback to RSS summary
+          const content = story.raw && story.raw.length > 500 
+            ? `Full Article: ${story.raw}` 
+            : `Summary: ${story.summary || 'No summary available'}`;
+          
           return `[${sourceId}] ${story.title}
 Topic: ${story.topic || 'General'}
-Summary: ${story.summary || 'No summary available'}
+${content}
 Source: ${story.source}
 URL: ${story.url}`;
         })

@@ -73,13 +73,16 @@ Structure for maximum impact with dense, actionable information. You must respon
     });
     
     // Prepare story summaries for the prompt (using sorted picks)
+    // Prefer full scraped content (raw) over RSS summary for richer context
     const storySummaries = sortedPicks.map((pick, idx) => ({
       index: idx,
       id: pick.story_id,
       topic: pick.topic,
       title: pick.story.title,
       source: pick.story.source,
-      summary: pick.story.summary || 'No summary available',
+      summary: pick.story.raw && pick.story.raw.length > 500 
+        ? pick.story.raw.substring(0, 1000) + '...' // First 1000 chars for outline
+        : (pick.story.summary || 'No summary available'),
       score: pick.score,
     }));
     

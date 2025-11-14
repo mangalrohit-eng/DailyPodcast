@@ -105,6 +105,12 @@ export interface PipelineReport {
     top_picks: Array<{ title: string; topic: string; score: number; why_selected: string }>;
     rejected_stories: Array<{ title: string; score: number; reason: string }>;
   };
+  scraper: {
+    total_articles: number;
+    successful_scrapes: number;
+    failed_scrapes: Array<{ url: string; reason: string }>;
+    avg_content_length: number;
+  };
   outline: {
     sections: Array<{ type: string; title: string; target_words: number; story_count: number }>;
     total_duration_target: number;

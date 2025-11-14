@@ -15,6 +15,7 @@ import { BaseAgent } from './agents/base';
 // Import all agents
 import { IngestionAgent } from './agents/ingestion';
 import { RankingAgent } from './agents/ranking';
+import { ScraperAgent } from './agents/scraper';
 import { OutlineAgent } from './agents/outline';
 import { ScriptwriterAgent } from './agents/scriptwriter';
 import { FactCheckAgent } from './agents/factcheck';
@@ -49,6 +50,7 @@ export class Orchestrator {
   // Agents
   private ingestionAgent: IngestionAgent;
   private rankingAgent: RankingAgent;
+  private scraperAgent: ScraperAgent;
   private outlineAgent: OutlineAgent;
   private scriptwriterAgent: ScriptwriterAgent;
   private factCheckAgent: FactCheckAgent;
@@ -64,6 +66,7 @@ export class Orchestrator {
     // Initialize agents
     this.ingestionAgent = new IngestionAgent();
     this.rankingAgent = new RankingAgent();
+    this.scraperAgent = new ScraperAgent();
     this.outlineAgent = new OutlineAgent();
     this.scriptwriterAgent = new ScriptwriterAgent();
     this.factCheckAgent = new FactCheckAgent();
@@ -275,8 +278,40 @@ export class Orchestrator {
         },
       });
       
-      // 3. OUTLINE
-      Logger.info('Phase 3: Outline');
+      // 3. SCRAPER (NEW!)
+      Logger.info('Phase 3: Scraper - Fetching full article content');
+      progressTracker.addUpdate(runId, {
+        phase: 'Scraper',
+        status: 'running',
+        message: 'Enriching stories with full article content',
+      });
+      const scraperStart = Date.now();
+      const scraperResult = await this.scraperAgent.execute(runId, {
+        picks: rankingResult.output.picks,
+      });
+      agentTimes['scraper'] = Date.now() - scraperStart;
+      
+      Logger.info('Scraping complete', {
+        successful: scraperResult.output.scraping_report.successful_scrapes,
+        failed: scraperResult.output.scraping_report.failed_scrapes.length,
+        avg_length: scraperResult.output.scraping_report.avg_content_length,
+      });
+      progressTracker.addUpdate(runId, {
+        phase: 'Scraper',
+        status: 'completed',
+        message: `Enriched ${scraperResult.output.scraping_report.successful_scrapes}/${scraperResult.output.scraping_report.total_articles} articles`,
+        details: {
+          successful: scraperResult.output.scraping_report.successful_scrapes,
+          failed: scraperResult.output.scraping_report.failed_scrapes.length,
+          avg_content_length: scraperResult.output.scraping_report.avg_content_length,
+        },
+        agentData: {
+          scraping_report: scraperResult.output.scraping_report,
+        },
+      });
+      
+      // 4. OUTLINE
+      Logger.info('Phase 4: Outline');
       progressTracker.addUpdate(runId, {
         phase: 'Outline',
         status: 'running',
@@ -284,7 +319,7 @@ export class Orchestrator {
       });
       const outlineStart = Date.now();
       const outlineResult = await this.outlineAgent.execute(runId, {
-        picks: rankingResult.output.picks,
+        picks: scraperResult.output.enriched_picks, // Use enriched picks with full content!
         date: runConfig.date,
         target_duration_sec: runConfig.target_duration_sec,
         topic_weights: runConfig.weights, // Pass weights to order stories by priority
@@ -305,8 +340,8 @@ export class Orchestrator {
         },
       });
       
-      // 4. SCRIPTWRITING
-      Logger.info('Phase 4: Scriptwriting');
+      // 5. SCRIPTWRITING
+      Logger.info('Phase 5: Scriptwriting');
       progressTracker.addUpdate(runId, {
         phase: 'Scriptwriting',
         status: 'running',
@@ -426,6 +461,7 @@ export class Orchestrator {
           top_picks: [],
           rejected_stories: [],
         },
+        scraper: scraperResult.output!.scraping_report,
         outline: {
           sections: outlineResult.output!.outline.sections.map((s: any) => ({
             type: s.type,
@@ -479,8 +515,8 @@ export class Orchestrator {
         },
       };
       
-      // 9. PUBLISHER
-      Logger.info('Phase 9: Publishing');
+      // 10. PUBLISHER
+      Logger.info('Phase 10: Publishing');
       progressTracker.addUpdate(runId, {
         phase: 'Publishing',
         status: 'running',
