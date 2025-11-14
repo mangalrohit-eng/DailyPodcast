@@ -147,29 +147,21 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
 
   /**
    * Scrape a single article and extract main content
+   * NOTE: story.url is already the actual article URL (decoded by ingestion agent for Google News)
    */
   private async scrapeArticle(story: Story): Promise<Story> {
     try {
-      let targetUrl = story.url;
-      
-      // If it's a Google News redirect, resolve it first
-      if (story.url.includes('news.google.com/rss/articles/')) {
-        Logger.debug('Resolving Google News redirect', { original_url: story.url.substring(0, 80) });
-        targetUrl = await this.resolveGoogleNewsRedirect(story.url);
-        Logger.debug('Resolved to actual URL', { resolved_url: targetUrl.substring(0, 80) });
-      }
-      
       // Fetch HTML with timeout
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-      const response = await fetch(targetUrl, {
+      const response = await fetch(story.url, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; PodcastBot/1.0; +https://daily-podcast.vercel.app)',
           'Accept': 'text/html,application/xhtml+xml',
         },
-        redirect: 'follow', // Explicitly follow redirects
+        redirect: 'follow', // Follow any redirects
       });
 
       clearTimeout(timeout);
@@ -183,6 +175,11 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
       // Extract main content using simple heuristics
       const content = this.extractMainContent(html);
 
+      Logger.debug(`✅ Scraped article`, {
+        url: story.url.substring(0, 60),
+        content_length: content.length
+      });
+
       return {
         ...story,
         raw: content,
@@ -192,37 +189,6 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
         throw new Error(`Scrape failed: ${error.message}`);
       }
       throw error;
-    }
-  }
-  
-  /**
-   * Resolve Google News redirect URL to actual article URL
-   */
-  private async resolveGoogleNewsRedirect(googleUrl: string): Promise<string> {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout for redirect
-      
-      // Make a HEAD request to get the final URL without downloading the full page
-      const response = await fetch(googleUrl, {
-        method: 'HEAD',
-        signal: controller.signal,
-        redirect: 'follow',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; PodcastBot/1.0)',
-        },
-      });
-      
-      clearTimeout(timeout);
-      
-      // The final URL after redirects
-      return response.url || googleUrl;
-    } catch (error) {
-      Logger.warn('Failed to resolve Google News redirect, using original URL', { 
-        url: googleUrl.substring(0, 80),
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      return googleUrl; // Fallback to original URL
     }
   }
 

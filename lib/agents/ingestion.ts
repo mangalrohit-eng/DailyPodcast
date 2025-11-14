@@ -319,24 +319,28 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       return null;
     }
     
-    // Extract domain from Google News URLs by decoding the base64-encoded URL
+    // Extract BOTH actual URL and domain from Google News URLs by decoding the base64-encoded URL
     const isGoogleNewsUrl = item.link.includes('news.google.com/rss/articles/');
+    let storyUrl: string;
     let domain: string;
     
     if (isGoogleNewsUrl && tracking) {
       tracking.attempted++;
       
-      const decodedDomain = this.findActualDomain(item.link);
+      const extracted = this.extractFromGoogleNewsUrl(item.link);
       
-      if (decodedDomain) {
-        domain = decodedDomain;
+      if (extracted) {
+        storyUrl = extracted.url;  // Use actual article URL for scraping!
+        domain = extracted.domain;
         tracking.successful++;
-        Logger.debug(`✅ Decoded Google News domain`, { 
-          url: item.link.substring(0, 60),
-          domain: decodedDomain
+        Logger.debug(`✅ Decoded Google News URL`, { 
+          original: item.link.substring(0, 60),
+          actual_url: storyUrl.substring(0, 60),
+          domain: domain
         });
       } else {
-        // Fallback to news.google.com if decoding fails
+        // Fallback to Google News URL if decoding fails
+        storyUrl = item.link;
         domain = extractDomain(item.link);
         tracking.failed++;
         Logger.warn(`⚠️ Failed to decode Google News URL, using fallback`, { 
@@ -345,21 +349,22 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         });
       }
     } else {
-      // Non-Google News URLs: use regular domain extraction
+      // Non-Google News URLs: use as-is
+      storyUrl = item.link;
       domain = extractDomain(item.link);
     }
     
     const pubDate = item.pubDate || new Date();
     
     const story: Story = {
-      id: Crypto.sha256(item.link).substring(0, 16),
-      url: item.link, // Keep original URL (Google News or direct)
+      id: Crypto.sha256(storyUrl).substring(0, 16),
+      url: storyUrl, // Use actual article URL (decoded from Google News or direct)
       title: cleanText(item.title),
       source: domain,
       published_at: pubDate,
       summary: item.contentSnippet ? cleanText(item.contentSnippet) : undefined,
       raw: item.content,
-      canonical: item.link,
+      canonical: item.link, // Keep original RSS link for reference
       domain, // Use decoded domain for deduplication
       topic,
     };
@@ -368,11 +373,12 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   }
   
   /**
-   * Extract actual source domain from a Google News RSS URL by decoding the base64-encoded URL.
+   * Extract actual article URL and domain from a Google News RSS URL by decoding the base64-encoded URL.
    * Google News RSS URLs contain the actual article URL encoded in the path.
    * This is MUCH more reliable than following HTTP redirects!
+   * Returns both the full article URL (for scraping) and the domain (for deduplication).
    */
-  private findActualDomain(googleNewsUrl: string): string | null {
+  private extractFromGoogleNewsUrl(googleNewsUrl: string): { url: string; domain: string } | null {
     try {
       const url = new URL(googleNewsUrl);
       const parts = url.pathname.split('/');
@@ -401,18 +407,19 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       const urlMatch = decodedString.match(/(https?:\/\/[^\s\x00-\x1f\x7f]+)/);
       
       if (urlMatch && urlMatch[0]) {
-        const actualUrl = new URL(urlMatch[0]);
-        const hostname = actualUrl.hostname;
+        const actualUrl = urlMatch[0];
+        const hostname = new URL(actualUrl).hostname;
         
         // Strip 'www.' for cleaner domain
         const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
         
         Logger.debug(`✅ Decoded Google News URL`, { 
           original: googleNewsUrl.substring(0, 60),
-          decoded_domain: cleanDomain
+          actual_url: actualUrl.substring(0, 60),
+          domain: cleanDomain
         });
         
-        return cleanDomain;
+        return { url: actualUrl, domain: cleanDomain };
       }
       
       return null;
