@@ -66,6 +66,11 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     const filteredOut: Array<{ title: string; reason: string }> = [];
     const allStoriesDetailed: Array<{ title: string; topic: string; url: string; published_at: string; status: 'accepted' | 'rejected'; reason?: string }> = [];
     
+    // Track Google News redirect resolution success/failure
+    let googleNewsRedirectsAttempted = 0;
+    let googleNewsRedirectsSuccessful = 0;
+    let googleNewsRedirectsFailed = 0;
+    
     // Fetch from all topic sources
     for (const topic of topics) {
       Logger.info(`Fetching ${topic.name} sources`, { count: topic.sources.length });
@@ -95,8 +100,9 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           Logger.debug(`Fetched ${items.length} items from ${sourceUrl.substring(0, 50)}...`);
           
           let beforeFilter = 0;
+          const redirectTracking = { attempted: 0, successful: 0, failed: 0 };
           for (const item of items) {
-            const story = await this.normalizeItem(item, topic.name);
+            const story = await this.normalizeItem(item, topic.name, redirectTracking);
             
             if (!story) {
               // Track items that couldn't be normalized
@@ -191,7 +197,18 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
             Logger.debug(`✓ Story accepted for ${topic.name}: ${story.title.substring(0, 60)}...`);
           }
           
-          Logger.info(`${topic.name} - Source processed: ${beforeFilter} stories, ${topicStoriesCount} accepted so far`);
+          // Update global redirect tracking
+          googleNewsRedirectsAttempted += redirectTracking.attempted;
+          googleNewsRedirectsSuccessful += redirectTracking.successful;
+          googleNewsRedirectsFailed += redirectTracking.failed;
+          
+          Logger.info(`${topic.name} - Source processed`, { 
+            stories_processed: beforeFilter, 
+            accepted_so_far: topicStoriesCount,
+            google_redirects_attempted: redirectTracking.attempted,
+            google_redirects_successful: redirectTracking.successful,
+            google_redirects_failed: redirectTracking.failed
+          });
         } catch (error) {
           sourcesScanned.push({
             name: topic.name,
@@ -250,12 +267,29 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       topicsBreakdown[story.topic || 'General'] = (topicsBreakdown[story.topic || 'General'] || 0) + 1;
     }
     
-    Logger.info('Ingestion complete', {
+    Logger.info('========== INGESTION COMPLETE ==========', {
       sources_fetched: sourcesFetched,
       items_found: itemsFound,
       stories_after_filter: dedupedStories.length,
       topics_breakdown: topicsBreakdown,
+      google_news_redirect_resolution: {
+        attempted: googleNewsRedirectsAttempted,
+        successful: googleNewsRedirectsSuccessful,
+        failed: googleNewsRedirectsFailed,
+        success_rate: googleNewsRedirectsAttempted > 0 
+          ? `${((googleNewsRedirectsSuccessful / googleNewsRedirectsAttempted) * 100).toFixed(1)}%`
+          : 'N/A'
+      }
     });
+    
+    // CRITICAL WARNING if redirect resolution is failing
+    if (googleNewsRedirectsFailed > 0) {
+      Logger.warn(`⚠️ CRITICAL: ${googleNewsRedirectsFailed} Google News redirects failed to resolve!`, {
+        impact: 'Stories will be grouped under news.google.com domain',
+        consequence: 'Deduplication will treat all Google News stories as same domain',
+        action_needed: 'Check logs above for resolution errors'
+      });
+    }
     
     return {
       stories: dedupedStories,
@@ -272,22 +306,37 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     };
   }
   
-  private async normalizeItem(item: FeedItem, topic: string): Promise<Story | null> {
+  private async normalizeItem(item: FeedItem, topic: string, tracking?: { attempted: number; successful: number; failed: number }): Promise<Story | null> {
     if (!item.link || !item.title) {
       return null;
     }
     
     // Resolve Google News redirects to get the actual article URL
     let actualUrl = item.link;
-    if (item.link.includes('news.google.com/rss/articles/')) {
+    const isGoogleNewsRedirect = item.link.includes('news.google.com/rss/articles/');
+    
+    if (isGoogleNewsRedirect && tracking) {
+      tracking.attempted++;
       try {
         actualUrl = await this.resolveGoogleNewsRedirect(item.link);
-        Logger.debug(`Resolved Google News redirect`, { 
-          original: item.link.substring(0, 60),
-          resolved: actualUrl.substring(0, 60)
-        });
+        
+        // Check if resolution actually worked (URL changed and is not Google)
+        if (actualUrl !== item.link && !actualUrl.includes('news.google.com')) {
+          tracking.successful++;
+          Logger.debug(`✅ Resolved Google News redirect`, { 
+            original: item.link.substring(0, 60),
+            resolved: actualUrl.substring(0, 60),
+            domain: extractDomain(actualUrl)
+          });
+        } else {
+          tracking.failed++;
+          Logger.warn(`⚠️ Google News redirect resolution failed - URL unchanged`, { 
+            url: item.link.substring(0, 60)
+          });
+        }
       } catch (error) {
-        Logger.warn(`Failed to resolve Google News redirect, using original URL`, { 
+        tracking.failed++;
+        Logger.error(`❌ Exception while resolving Google News redirect`, { 
           url: item.link.substring(0, 60),
           error: error instanceof Error ? error.message : 'Unknown error'
         });
@@ -315,28 +364,52 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   
   /**
    * Resolve Google News redirect URL to actual article URL
+   * CRITICAL: This must work or all stories will be grouped under news.google.com domain
    */
   private async resolveGoogleNewsRedirect(googleUrl: string): Promise<string> {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout (increased)
       
-      // Make a HEAD request to get the final URL without downloading the full page
+      // Try GET request (some servers don't respond to HEAD properly)
+      // We won't read the body, just get the final URL after redirects
       const response = await fetch(googleUrl, {
-        method: 'HEAD',
+        method: 'GET',
         signal: controller.signal,
         redirect: 'follow',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; PodcastBot/1.0)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
         },
       });
       
       clearTimeout(timeout);
       
-      // The final URL after redirects
-      return response.url || googleUrl;
+      // Check if we got redirected
+      const resolvedUrl = response.url;
+      
+      if (resolvedUrl && resolvedUrl !== googleUrl && !resolvedUrl.includes('news.google.com')) {
+        Logger.info(`✅ Successfully resolved Google News redirect`, { 
+          original: googleUrl.substring(0, 80),
+          resolved: resolvedUrl.substring(0, 80),
+          domain: extractDomain(resolvedUrl)
+        });
+        return resolvedUrl;
+      } else {
+        Logger.warn(`⚠️ Redirect resolution returned Google URL or same URL`, { 
+          original: googleUrl.substring(0, 80),
+          resolved: resolvedUrl?.substring(0, 80),
+          will_use: 'Fallback to Google URL - stories will be grouped under news.google.com'
+        });
+        return googleUrl;
+      }
     } catch (error) {
-      // If redirect resolution fails, return original URL
+      Logger.error(`❌ CRITICAL: Failed to resolve Google News redirect`, { 
+        url: googleUrl.substring(0, 80),
+        error: error instanceof Error ? error.message : 'Unknown error',
+        impact: 'Story will be grouped under news.google.com domain, may be deduplicated incorrectly'
+      });
+      // If redirect resolution fails, return original URL as last resort
       return googleUrl;
     }
   }
