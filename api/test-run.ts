@@ -469,13 +469,107 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing runId parameter' });
   }
 
-  const progress = progressTracker.getProgress(runId);
+  // Try to get progress from in-memory tracker first
+  let progress = progressTracker.getProgress(runId);
 
+  // Fallback: Check RunsStorage for active/recent runs
+  // This handles the case where the orchestrator is running in a different serverless instance
   if (!progress) {
-    return res.status(404).json({ error: 'Run not found or completed' });
+    try {
+      const runsStorage = new RunsStorage();
+      
+      if (runId === 'latest') {
+        // Get all runs, find the most recent one
+        const allRuns = await runsStorage.list();
+        
+        if (allRuns.length > 0) {
+          // Sort by run_id (which includes timestamp) to get the most recent
+          const sortedRuns = allRuns.sort((a, b) => {
+            return b.run_id.localeCompare(a.run_id);
+          });
+          
+          const latestRun = sortedRuns[0];
+          
+          // Return synthetic progress based on run status
+          progress = {
+            runId: latestRun.run_id,
+            status: latestRun.status as 'running' | 'completed' | 'failed',
+            progress: latestRun.status === 'completed' ? 100 : latestRun.status === 'failed' ? 0 : 50,
+            currentPhase: latestRun.status === 'completed' ? 'Complete' : latestRun.status === 'failed' ? 'Failed' : 'Processing',
+            startedAt: new Date(latestRun.date).toISOString(),
+            updates: [
+              {
+                phase: latestRun.status === 'completed' ? 'Complete' : 'Processing',
+                status: latestRun.status as any,
+                message: latestRun.status === 'completed' 
+                  ? `Episode generated successfully! ${latestRun.stories_count || 0} stories, ${Math.round((latestRun.duration_ms || 0) / 1000)}s`
+                  : latestRun.status === 'failed'
+                  ? 'Episode generation failed'
+                  : 'Episode is being generated in the background (Vercel timeout after 10s)',
+                timestamp: new Date().toISOString(),
+                details: latestRun.status === 'completed' ? {
+                  episode_url: latestRun.episode_url,
+                  feed_url: latestRun.feed_url,
+                } : undefined,
+              },
+            ],
+          };
+          
+          Logger.info('Synthesized progress from RunsStorage', {
+            runId: latestRun.run_id,
+            status: latestRun.status,
+          });
+        }
+      } else {
+        // Specific runId requested
+        const runSummary = await runsStorage.get(runId);
+        
+        if (runSummary) {
+          progress = {
+            runId: runSummary.run_id,
+            status: runSummary.status as 'running' | 'completed' | 'failed',
+            progress: runSummary.status === 'completed' ? 100 : runSummary.status === 'failed' ? 0 : 50,
+            currentPhase: runSummary.status === 'completed' ? 'Complete' : runSummary.status === 'failed' ? 'Failed' : 'Processing',
+            startedAt: new Date(runSummary.date).toISOString(),
+            updates: [
+              {
+                phase: runSummary.status === 'completed' ? 'Complete' : 'Processing',
+                status: runSummary.status as any,
+                message: runSummary.status === 'completed' 
+                  ? `Episode generated successfully! ${runSummary.stories_count || 0} stories, ${Math.round((runSummary.duration_ms || 0) / 1000)}s`
+                  : runSummary.status === 'failed'
+                  ? 'Episode generation failed'
+                  : 'Episode is being generated in the background',
+                timestamp: new Date().toISOString(),
+                details: runSummary.status === 'completed' ? {
+                  episode_url: runSummary.episode_url,
+                  feed_url: runSummary.feed_url,
+                } : undefined,
+              },
+            ],
+          };
+          
+          Logger.info('Synthesized progress from RunsStorage for specific runId', {
+            runId: runSummary.run_id,
+            status: runSummary.status,
+          });
+        }
+      }
+    } catch (error) {
+      Logger.error('Failed to fetch progress from RunsStorage', {
+        error: (error as Error).message,
+      });
+    }
   }
 
-  // Clean up old runs
+  if (!progress) {
+    return res.status(404).json({ 
+      error: 'Run not found', 
+      hint: 'The run may still be starting. Wait a few seconds and refresh the Runs tab.',
+    });
+  }
+
+  // Clean up old runs from in-memory tracker
   progressTracker.clearOldRuns();
 
   return res.status(200).json(progress);
