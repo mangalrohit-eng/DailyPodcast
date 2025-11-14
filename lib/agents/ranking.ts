@@ -30,6 +30,9 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
   // Pre-computed topic vectors (in production, cache these)
   private topicVectors: Map<string, number[]> = new Map();
   
+  // Topic weights from dashboard (stored during process)
+  private topicWeights: Record<string, number> = {};
+  
   constructor() {
     super({
       name: 'RankingAgent',
@@ -42,6 +45,9 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
   
   protected async process(input: RankingInput): Promise<RankingOutput> {
     const { stories, topic_weights, target_count } = input;
+    
+    // Store topic weights for use in diversifySelectionWithTracking
+    this.topicWeights = topic_weights || {};
     
     if (stories.length === 0) {
       return { 
