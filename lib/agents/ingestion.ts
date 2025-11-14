@@ -473,18 +473,15 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         prefix_removed: originalEncoded.substring(0, originalEncoded.length - encodedUrl.length)
       });
       
-      // Convert URL-safe base64 to standard base64
-      // URL-safe: - and _ 
-      // Standard: + and /
-      let base64 = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
-      
       // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
-      while (base64.length % 4 !== 0) {
-        base64 += '=';
+      while (encodedUrl.length % 4 !== 0) {
+        encodedUrl += '=';
       }
       
-      // Base64 Decode (standard)
-      const decodedBuffer = Buffer.from(base64, 'base64');
+      // Base64 Decode (URL-safe)
+      // Node.js 14.18+ supports 'base64url' encoding natively
+      // This properly handles URL-safe characters (- and _) without manual conversion
+      const decodedBuffer = Buffer.from(encodedUrl, 'base64url');
       const decodedString = decodedBuffer.toString('utf8');
       
       Logger.info(`✅ Successfully decoded base64`, {
