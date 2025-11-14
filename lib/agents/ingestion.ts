@@ -96,7 +96,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           
           let beforeFilter = 0;
           for (const item of items) {
-            const story = this.normalizeItem(item, topic.name);
+            const story = await this.normalizeItem(item, topic.name);
             
             if (!story) {
               // Track items that couldn't be normalized
@@ -259,28 +259,73 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     };
   }
   
-  private normalizeItem(item: FeedItem, topic: string): Story | null {
+  private async normalizeItem(item: FeedItem, topic: string): Promise<Story | null> {
     if (!item.link || !item.title) {
       return null;
     }
     
-    const domain = extractDomain(item.link);
+    // Resolve Google News redirects to get the actual article URL
+    let actualUrl = item.link;
+    if (item.link.includes('news.google.com/rss/articles/')) {
+      try {
+        actualUrl = await this.resolveGoogleNewsRedirect(item.link);
+        Logger.debug(`Resolved Google News redirect`, { 
+          original: item.link.substring(0, 60),
+          resolved: actualUrl.substring(0, 60)
+        });
+      } catch (error) {
+        Logger.warn(`Failed to resolve Google News redirect, using original URL`, { 
+          url: item.link.substring(0, 60),
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+    
+    const domain = extractDomain(actualUrl);
     const pubDate = item.pubDate || new Date();
     
     const story: Story = {
-      id: Crypto.sha256(item.link).substring(0, 16),
-      url: item.link,
+      id: Crypto.sha256(actualUrl).substring(0, 16),
+      url: actualUrl, // Use resolved URL
       title: cleanText(item.title),
       source: domain,
       published_at: pubDate,
       summary: item.contentSnippet ? cleanText(item.contentSnippet) : undefined,
       raw: item.content,
-      canonical: item.link,
+      canonical: item.link, // Keep original for reference
       domain,
       topic,
     };
     
     return story;
+  }
+  
+  /**
+   * Resolve Google News redirect URL to actual article URL
+   */
+  private async resolveGoogleNewsRedirect(googleUrl: string): Promise<string> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+      
+      // Make a HEAD request to get the final URL without downloading the full page
+      const response = await fetch(googleUrl, {
+        method: 'HEAD',
+        signal: controller.signal,
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; PodcastBot/1.0)',
+        },
+      });
+      
+      clearTimeout(timeout);
+      
+      // The final URL after redirects
+      return response.url || googleUrl;
+    } catch (error) {
+      // If redirect resolution fails, return original URL
+      return googleUrl;
+    }
   }
   
   private passesQualityFilter(story: Story): boolean {
