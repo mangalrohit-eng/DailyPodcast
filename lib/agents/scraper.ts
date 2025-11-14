@@ -8,7 +8,10 @@
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import fetch from 'node-fetch';
+
+// Use global fetch (available in Node 18+)
+// @ts-ignore - global fetch is available on Vercel
+const fetchFn = globalThis.fetch || fetch;
 
 export interface ScraperInput {
   picks: Pick[];
@@ -108,7 +111,7 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-      const response = await fetch(story.url, {
+      const response = await fetchFn(story.url, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; PodcastBot/1.0; +https://daily-podcast.vercel.app)',
