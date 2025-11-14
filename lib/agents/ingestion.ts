@@ -423,22 +423,39 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
    */
   private extractFromGoogleNewsUrl(googleNewsUrl: string): { url: string; domain: string } | null {
     try {
+      Logger.info(`🔍 STARTING extraction for URL: ${googleNewsUrl.substring(0, 100)}`);
+      
       const url = new URL(googleNewsUrl);
       const parts = url.pathname.split('/');
+      
+      Logger.info(`📋 URL parts`, {
+        hostname: url.hostname,
+        pathname: url.pathname,
+        parts: parts,
+        articles_index: parts.indexOf('articles')
+      });
       
       // Check if the URL structure matches: /rss/articles/[encoded_string]
       const articlesIndex = parts.indexOf('articles');
       if (url.hostname !== 'news.google.com' || articlesIndex === -1 || articlesIndex + 1 >= parts.length) {
-        Logger.warn(`⚠️ Not a Google News RSS article URL`, { 
+        Logger.warn(`⚠️ Not a Google News RSS article URL - FAILED CHECK`, { 
           url: googleNewsUrl.substring(0, 80),
           hostname: url.hostname,
-          has_articles: parts.includes('articles')
+          expected_hostname: 'news.google.com',
+          has_articles: parts.includes('articles'),
+          articles_index: articlesIndex,
+          next_part_exists: articlesIndex + 1 < parts.length
         });
         return null;
       }
       
       let encodedUrl = parts[articlesIndex + 1];
       const originalEncoded = encodedUrl;
+      
+      Logger.info(`📦 Encoded part extracted`, {
+        original: originalEncoded.substring(0, 50),
+        length: originalEncoded.length
+      });
       
       // Remove query parameters if present
       if (encodedUrl.includes('?')) {
@@ -470,13 +487,21 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       const decodedBuffer = Buffer.from(base64, 'base64');
       const decodedString = decodedBuffer.toString('utf8');
       
-      Logger.debug(`🔍 Decoded string preview`, {
+      Logger.info(`✅ Successfully decoded base64`, {
         decoded_length: decodedString.length,
-        first_100_chars: decodedString.substring(0, 100)
+        first_100_chars: decodedString.substring(0, 100),
+        has_http: decodedString.includes('http'),
+        has_https: decodedString.includes('https')
       });
       
       // Extract Actual URL: Look for http/https URL in the decoded string
       const urlMatch = decodedString.match(/(https?:\/\/[^\s\x00-\x1f\x7f]+)/);
+      
+      Logger.info(`🎯 URL regex match result`, {
+        matched: !!urlMatch,
+        match_length: urlMatch ? urlMatch[0].length : 0,
+        match_preview: urlMatch ? urlMatch[0].substring(0, 80) : 'NO MATCH'
+      });
       
       if (urlMatch && urlMatch[0]) {
         const actualUrl = urlMatch[0];
@@ -494,15 +519,18 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         return { url: actualUrl, domain: cleanDomain };
       }
       
-      Logger.warn(`⚠️ Could not extract URL from decoded string`, {
-        decoded_preview: decodedString.substring(0, 200)
+      Logger.warn(`❌ FAILED: Could not extract URL from decoded string`, {
+        decoded_preview: decodedString.substring(0, 200),
+        decoded_full_length: decodedString.length,
+        decoded_bytes: Array.from(decodedString.substring(0, 20)).map(c => c.charCodeAt(0))
       });
       return null;
     } catch (error) {
-      Logger.error(`❌ Failed to decode Google News URL`, { 
+      Logger.error(`❌ EXCEPTION in extractFromGoogleNewsUrl`, { 
         url: googleNewsUrl.substring(0, 80),
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        error_name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack?.substring(0, 200) : undefined
       });
       return null;
     }
