@@ -102,6 +102,9 @@ export class Orchestrator {
     // Initialize storage (StructuredLogger removed due to undefined errors)
     let runsStorage: RunsStorage | null = null;
     
+    // Track agent results for partial manifest on failure
+    const agentResults: any = {};
+    
     try {
       runsStorage = new RunsStorage();
       
@@ -209,6 +212,7 @@ export class Orchestrator {
         cutoff_date: Clock.addHours(new Date(), -runConfig.window_hours),
       });
       agentTimes['ingestion'] = Date.now() - ingestionStart;
+      agentResults.ingestion = ingestionResult; // Save for partial manifest
       
       if (!ingestionResult.output || ingestionResult.output.stories.length === 0) {
         throw new Error('No stories found during ingestion');
@@ -253,6 +257,7 @@ export class Orchestrator {
         target_count: 5,
       });
       agentTimes['ranking'] = Date.now() - rankingStart;
+      agentResults.ranking = rankingResult; // Save for partial manifest
       
       if (!rankingResult.output || rankingResult.output.picks.length === 0) {
         throw new Error('No stories ranked');
@@ -290,6 +295,7 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
       });
       agentTimes['scraper'] = Date.now() - scraperStart;
+      agentResults.scraper = scraperResult; // Save for partial manifest
       
       Logger.info('Scraping complete', {
         successful: scraperResult.output.scraping_report.successful_scrapes,
@@ -623,8 +629,29 @@ export class Orchestrator {
         phase: 'Failed',
         status: 'failed',
         message: (error as Error).message,
-        details: { error: (error as Error).message },
+        details: { 
+          error: (error as Error).message,
+          stack: (error as Error).stack,
+          completed_agents: Object.keys(agentResults),
+        },
       });
+      
+      // Build PARTIAL manifest from completed agents
+      try {
+        const partialManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
+        
+        // Save partial manifest for debugging
+        await this.storage.saveJson(`episodes/${runId}/manifest.json`, partialManifest);
+        
+        Logger.info('Saved partial manifest for failed run', {
+          runId,
+          completed_agents: Object.keys(agentResults),
+        });
+      } catch (manifestError) {
+        Logger.error('Failed to save partial manifest', {
+          error: (manifestError as Error).message,
+        });
+      }
       
       // Fail the run
       if (runsStorage) {
@@ -750,6 +777,60 @@ export class Orchestrator {
     };
   }
   
+  /**
+   * Build partial manifest from completed agents (for failed runs)
+   */
+  private buildPartialManifest(
+    runId: string,
+    runConfig: any,
+    agentResults: any,
+    agentTimes: Record<string, number>,
+    errorMessage: string
+  ): any {
+    const partial: any = {
+      run_id: runId,
+      date: runConfig.date,
+      status: 'failed',
+      error: errorMessage,
+      created_at: new Date().toISOString(),
+      metrics: {
+        ingestion_time_ms: agentTimes['ingestion'] || 0,
+        ranking_time_ms: agentTimes['ranking'] || 0,
+        scraping_time_ms: agentTimes['scraper'] || 0,
+        total_time_ms: Object.values(agentTimes).reduce((sum, t) => sum + t, 0),
+      },
+      pipeline_report: {} as any,
+    };
+
+    // Add ingestion data if available
+    if (agentResults.ingestion?.output?.detailed_report) {
+      const ingestionReport = agentResults.ingestion.output.detailed_report;
+      const storiesAfterFiltering = Object.values(ingestionReport.topics_breakdown || {})
+        .reduce((sum: number, count: number) => sum + count, 0);
+      
+      partial.pipeline_report.ingestion = {
+        sources_scanned: ingestionReport.sources_scanned || [],
+        total_stories_found: ingestionReport.total_items_before_filter || 0,
+        stories_after_filtering: storiesAfterFiltering,
+        filtered_out: ingestionReport.filtered_out || [],
+        topics_breakdown: ingestionReport.topics_breakdown || {},
+      };
+    }
+
+    // Add ranking data if available
+    if (agentResults.ranking?.output?.detailed_report) {
+      partial.pipeline_report.ranking = agentResults.ranking.output.detailed_report;
+      partial.picks = agentResults.ranking.output.picks || [];
+    }
+
+    // Add scraper data if available
+    if (agentResults.scraper?.output?.scraping_report) {
+      partial.pipeline_report.scraper = agentResults.scraper.output.scraping_report;
+    }
+
+    return partial;
+  }
+
   /**
    * Auto-generate RSS sources for a topic if not provided
    */
