@@ -212,58 +212,92 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     targetCount: number
   ): Pick[] {
     const picks: Pick[] = [];
-    const selectedEmbeddings: number[] = [];
     const topicCounts = new Map<string, number>();
     
-    // Ensure at least one story per topic if available
-    const topics = new Set(scoredStories.map(s => s.story.topic));
+    // Get unique topics from stories
+    const topics = Array.from(new Set(scoredStories.map(s => s.story.topic)));
     
+    Logger.info('🎯 Enforcing balanced topic distribution', {
+      topics,
+      targetCount,
+      weights: this.topicWeights,
+    });
+    
+    // Calculate target count per topic based on weights
+    const topicTargets = new Map<string, number>();
     for (const topic of topics) {
-      const topicStories = scoredStories.filter(s => s.story.topic === topic);
-      if (topicStories.length > 0) {
-        const best = topicStories[0];
-        const pick = this.createPick(best.story, best.score, picks.length);
-        pick.rationale = `Top ${topic} story (score: ${best.score.toFixed(3)}) - guaranteed topic coverage`;
-        picks.push(pick);
-        selectedEmbeddings.push(...best.embedding);
-        topicCounts.set(topic!, (topicCounts.get(topic!) || 0) + 1);
-      }
+      const weight = this.topicWeights[topic] || 1.0 / topics.length;
+      const target = Math.max(1, Math.round(targetCount * weight)); // At least 1 per topic
+      topicTargets.set(topic, target);
+      Logger.info(`📊 Topic target: ${topic}`, { weight, target_stories: target });
     }
     
-    // Fill remaining slots with diversity consideration
-    for (const candidate of scoredStories) {
-      if (picks.length >= targetCount) break;
+    // Adjust targets to exactly match targetCount
+    let totalTargets = Array.from(topicTargets.values()).reduce((a, b) => a + b, 0);
+    if (totalTargets !== targetCount) {
+      const diff = targetCount - totalTargets;
+      // Distribute the difference to the topic with the highest weight
+      const maxWeightTopic = topics.reduce((max, t) => 
+        (this.topicWeights[t] || 0) > (this.topicWeights[max] || 0) ? t : max
+      );
+      topicTargets.set(maxWeightTopic, (topicTargets.get(maxWeightTopic) || 1) + diff);
+      Logger.info(`⚖️ Adjusted ${maxWeightTopic} target by ${diff} to match total`, {
+        new_target: topicTargets.get(maxWeightTopic),
+      });
+    }
+    
+    // Select stories topic by topic, proportionally
+    for (const topic of topics) {
+      const target = topicTargets.get(topic) || 1;
+      const topicStories = scoredStories
+        .filter(s => s.story.topic === topic)
+        .sort((a, b) => b.score - a.score); // Sort by score descending
       
-      // Skip if already selected
-      if (picks.some(p => p.story_id === candidate.story.id)) continue;
-      
-      // Check diversity (avoid similar stories)
-      let isDiverse = true;
-      for (let i = 0; i < picks.length; i++) {
-        const pickEmbedding = scoredStories.find(
-          s => s.story.id === picks[i].story_id
-        )?.embedding;
+      let selected = 0;
+      for (const candidate of topicStories) {
+        if (selected >= target) break;
+        if (picks.some(p => p.story_id === candidate.story.id)) continue;
         
-        if (pickEmbedding) {
-          const similarity = cosineSimilarity(candidate.embedding, pickEmbedding);
-          if (similarity > 0.85) {
-            isDiverse = false;
-            break;
+        // Check diversity (avoid very similar stories within same topic)
+        let isDiverse = true;
+        for (const existingPick of picks) {
+          if (existingPick.topic === topic) {
+            const pickEmbedding = scoredStories.find(
+              s => s.story.id === existingPick.story_id
+            )?.embedding;
+            
+            if (pickEmbedding) {
+              const similarity = cosineSimilarity(candidate.embedding, pickEmbedding);
+              if (similarity > 0.85) {
+                isDiverse = false;
+                break;
+              }
+            }
           }
+        }
+        
+        if (isDiverse) {
+          const pick = this.createPick(candidate.story, candidate.score, picks.length);
+          pick.rationale = `${topic} story #${selected + 1}/${target} (score: ${candidate.score.toFixed(3)}) - proportional topic coverage (weight: ${this.topicWeights[topic]?.toFixed(2) || 'N/A'})`;
+          picks.push(pick);
+          topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
+          selected++;
         }
       }
       
-      if (isDiverse) {
-        const pick = this.createPick(candidate.story, candidate.score, picks.length);
-        const topicCount = topicCounts.get(candidate.story.topic!) || 0;
-        pick.rationale = `High score (${candidate.score.toFixed(3)}) + diverse content - ${candidate.story.topic} story #${topicCount + 1}`;
-        picks.push(pick);
-        topicCounts.set(
-          candidate.story.topic!,
-          topicCount + 1
-        );
+      if (selected < target) {
+        Logger.warn(`⚠️ Could not fill target for ${topic}`, {
+          target,
+          selected,
+          available: topicStories.length,
+        });
       }
     }
+    
+    Logger.info('✅ Final topic distribution', {
+      total_picks: picks.length,
+      by_topic: Object.fromEntries(topicCounts),
+    });
     
     return picks;
   }
