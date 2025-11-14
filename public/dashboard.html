@@ -283,56 +283,6 @@
             color: #721c24;
         }
 
-        .logs-viewer {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 20px;
-            border-radius: 6px;
-            height: 600px;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 4px 0;
-        }
-
-        .log-entry.INFO {
-            color: #4fc3f7;
-        }
-
-        .log-entry.WARN {
-            color: #ffb74d;
-        }
-
-        .log-entry.ERROR {
-            color: #ef5350;
-        }
-
-        .log-entry.DEBUG {
-            color: #9e9e9e;
-        }
-
-        .log-timestamp {
-            color: #888;
-            margin-right: 10px;
-        }
-
-        .log-agent {
-            color: #ba68c8;
-            margin-right: 10px;
-            font-weight: 600;
-        }
-
-        .logs-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
 
         .toast {
             position: fixed;
@@ -475,10 +425,6 @@
                 font-size: 12px;
             }
 
-            .logs-viewer {
-                height: 400px;
-                font-size: 11px;
-            }
         }
 
         /* Progress Modal */
@@ -878,7 +824,6 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('settings')">⚙️ Settings</button>
             <button class="tab" onclick="switchTab('runs')">▶️ Runs</button>
-            <button class="tab" onclick="switchTab('logs')">📋 Logs</button>
             <button class="tab" onclick="switchTab('urls')">🔗 URLs</button>
         </div>
 
@@ -1183,31 +1128,6 @@
             </div>
         </div>
 
-        <!-- Logs Tab -->
-        <div id="logs" class="tab-content">
-            <div class="card">
-                <h2>Latest Run Logs</h2>
-                <div class="logs-controls">
-                    <button class="btn btn-secondary" onclick="refreshLogs()">🔄 Refresh</button>
-                    <button class="btn btn-secondary" onclick="toggleAutoScroll()" id="autoScrollBtn">
-                        ⏸️ Pause Auto-scroll
-                    </button>
-                    <button class="btn btn-secondary" onclick="downloadLogs()">⬇️ Download</button>
-                    <select id="logLevel" onchange="filterLogs()">
-                        <option value="all">All Levels</option>
-                        <option value="INFO">INFO</option>
-                        <option value="WARN">WARN</option>
-                        <option value="ERROR">ERROR</option>
-                        <option value="DEBUG">DEBUG</option>
-                    </select>
-                    <input type="text" id="logSearch" placeholder="Search logs..." oninput="filterLogs()" style="max-width: 200px;">
-                </div>
-                <div class="logs-viewer" id="logsViewer">
-                    <div style="color: #888;">Connecting to log stream...</div>
-                </div>
-            </div>
-        </div>
-
         <!-- URLs Tab -->
         <div id="urls" class="tab-content">
             <div class="card">
@@ -1249,9 +1169,6 @@
         const API_BASE = window.location.origin;
         let authToken = '';
         let currentConfig = null;
-        let autoScroll = true;
-        let logStream = null;
-        let allLogs = [];
 
         // Toggle music settings visibility based on checkbox
         function toggleMusicSettings() {
@@ -1328,8 +1245,6 @@
             // Load data for tab
             if (tabName === 'runs') {
                 loadRuns();
-            } else if (tabName === 'logs') {
-                startLogStream();
             } else if (tabName === 'urls') {
                 loadEpisodes();
             }
@@ -1444,14 +1359,8 @@ Full data in console (F12).`;
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast('✅ System test passed! Check Logs tab for details.', 'success');
+                    showToast('✅ System test passed!', 'success');
                     console.log('Test results:', result.checks);
-                    
-                    // Switch to logs tab
-                    setTimeout(() => {
-                        switchTab('logs');
-                        refreshLogs();
-                    }, 1000);
                 } else {
                     const errorMsg = result.error || 'Unknown error';
                     showToast('Test failed: ' + errorMsg, 'error');
@@ -1462,12 +1371,6 @@ Full data in console (F12).`;
                         console.error('OpenAI QUOTA ERROR:', result);
                         showToast('⚠️ OpenAI quota exceeded. Check https://platform.openai.com/account/billing', 'error');
                     }
-                    
-                    // Still switch to logs tab to see error details
-                    setTimeout(() => {
-                        switchTab('logs');
-                        refreshLogs();
-                    }, 2000);
                 }
             } catch (error) {
                 const errorMsg = error.message || error.toString();
@@ -2345,123 +2248,6 @@ Full data in console (F12).`;
             document.getElementById('tab-safety').innerHTML = html;
         }
 
-        // Logs
-        function startLogStream() {
-            if (logStream) {
-                logStream.close();
-            }
-
-            allLogs = [];
-            const viewer = document.getElementById('logsViewer');
-            viewer.innerHTML = '<div style="color: #888;">Connecting to log stream...</div>';
-
-            // Use polling instead of SSE for better Vercel compatibility
-            pollLogs();
-        }
-
-        let logCursor = 0;
-        let pollInterval = null;
-
-        async function pollLogs() {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
-
-            pollInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_BASE}/api/logs?type=latest&cursor=${logCursor}`, {
-                        headers: getAuthHeaders(),
-                    });
-                    const data = await response.json();
-
-                    if (data.logs && data.logs.length > 0) {
-                        allLogs.push(...data.logs);
-                        logCursor = data.nextCursor || logCursor;
-                        renderLogs();
-                    }
-                } catch (error) {
-                    console.error('Failed to poll logs:', error);
-                }
-            }, 2000);
-        }
-
-        function renderLogs() {
-            const viewer = document.getElementById('logsViewer');
-            const level = document.getElementById('logLevel').value;
-            const search = document.getElementById('logSearch').value.toLowerCase();
-
-            let filtered = allLogs;
-
-            if (level !== 'all') {
-                filtered = filtered.filter(log => log.level === level);
-            }
-
-            if (search) {
-                filtered = filtered.filter(log => 
-                    log.msg.toLowerCase().includes(search) ||
-                    (log.agent && log.agent.toLowerCase().includes(search))
-                );
-            }
-
-            viewer.innerHTML = filtered.map(log => `
-                <div class="log-entry ${log.level}">
-                    <span class="log-timestamp">${new Date(log.ts).toLocaleTimeString()}</span>
-                    ${log.agent ? `<span class="log-agent">[${log.agent}]</span>` : ''}
-                    <span class="log-level">${log.level}</span>
-                    <span>${log.msg}</span>
-                </div>
-            `).join('');
-
-            if (autoScroll) {
-                viewer.scrollTop = viewer.scrollHeight;
-            }
-        }
-
-        function refreshLogs() {
-            logCursor = 0;
-            allLogs = [];
-            startLogStream();
-            showToast('Logs refreshed', 'info');
-        }
-
-        function toggleAutoScroll() {
-            autoScroll = !autoScroll;
-            const btn = document.getElementById('autoScrollBtn');
-            btn.textContent = autoScroll ? '⏸️ Pause Auto-scroll' : '▶️ Resume Auto-scroll';
-        }
-
-        function filterLogs() {
-            renderLogs();
-        }
-
-        async function downloadLogs() {
-            try {
-                const latestResponse = await fetch(`${API_BASE}/api/logs?type=latest`, {
-                    headers: getAuthHeaders(),
-                });
-                const latestData = await latestResponse.json();
-                
-                if (!latestData.runId) {
-                    showToast('No logs available', 'info');
-                    return;
-                }
-
-                const response = await fetch(`${API_BASE}/api/logs?type=run&runId=${latestData.runId}&download=true`, {
-                    headers: getAuthHeaders(),
-                });
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `logs-${latestData.runId}.jsonl`;
-                a.click();
-                showToast('Logs downloaded', 'success');
-            } catch (error) {
-                showToast('Failed to download logs', 'error');
-                console.error(error);
-            }
-        }
-
         // URLs
         function updateHeaderLinks() {
             const feedUrl = `${API_BASE}/podcast/feed.xml`;
@@ -2582,12 +2368,6 @@ Full data in console (F12).`;
 
         // Cleanup
         window.addEventListener('beforeunload', () => {
-            if (logStream) {
-                logStream.close();
-            }
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
             if (progressPollInterval) {
                 clearInterval(progressPollInterval);
             }
