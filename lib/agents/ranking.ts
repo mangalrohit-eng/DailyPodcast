@@ -222,6 +222,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     
     // Get unique topics from stories, SORTED BY WEIGHT (highest first)
     const topics = Array.from(new Set(scoredStories.map(s => s.story.topic)))
+      .filter((t): t is string => !!t) // Filter out undefined/empty topics
       .sort((a, b) => {
         const weightA = this.topicWeights[a] || 0;
         const weightB = this.topicWeights[b] || 0;
