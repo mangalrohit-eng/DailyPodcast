@@ -91,23 +91,22 @@ Structure for maximum impact with dense, actionable information. You must respon
     
     const prompt = `Create an executive news briefing outline for ${date}.
 
-Stories available (ordered by topic priority - MAINTAIN THIS ORDER):
+Stories to include (PRE-SELECTED and PRE-SORTED by topic priority - highest weight first):
 ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
-- Select ${numStoriesMin}-${numStoriesMax} most impactful stories
-- **CRITICAL: MUST include at least one story from EACH configured topic**
-- **CRITICAL: PRESENT STORIES IN THE ORDER GIVEN** - stories are pre-sorted by topic priority (highest weight first)
+- **CRITICAL: USE ALL ${sortedPicks.length} STORIES IN THE EXACT ORDER SHOWN ABOVE**
+- **DO NOT reorder, skip, or add stories** - the list is already optimized
+- Stories are ordered by topic weight: highest priority topics appear FIRST
 - Intro: ~${introOutroTimeSec} seconds - Welcome + brief topic preview list
 - Each story: ~${storyTimeSec} seconds - Dense, actionable information
 - Outro: ~${introOutroTimeSec} seconds - Key takeaways + upbeat closing
-- Prioritize business implications and strategic context
-- Balance coverage across all topics
 - NO small talk, greetings, or filler - executive audience
 - Dense information delivery
+- Prioritize business implications and strategic context
 
-Topic distribution in provided stories:
+Topic distribution (for your reference only):
 ${JSON.stringify(topicCounts, null, 2)}
 
 Respond with JSON in this exact format:
