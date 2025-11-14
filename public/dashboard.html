@@ -1165,7 +1165,7 @@
                 <table class="runs-table" id="runsTable">
                     <thead>
                         <tr>
-                            <th>Date</th>
+                            <th>Date & Time</th>
                             <th>Status</th>
                             <th>Stories</th>
                             <th>Duration</th>
@@ -1854,18 +1854,38 @@ Full data in console (F12).`;
                 return;
             }
 
-            tbody.innerHTML = runs.map(run => `
-                <tr>
-                    <td>${new Date(run.date).toLocaleDateString()}</td>
-                    <td><span class="status-badge status-${run.status}">${run.status.toUpperCase()}</span></td>
-                    <td>${run.stories_count || '-'}</td>
-                    <td>${run.duration_ms ? Math.round(run.duration_ms / 1000) + 's' : '-'}</td>
-                    <td>
-                        ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;">▶️ Play</a>` : ''}
-                        <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')">Details</button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = runs.map(run => {
+                // Extract timestamp from runId (format: YYYY-MM-DD_timestamp)
+                let displayDate = new Date(run.date).toLocaleDateString();
+                
+                if (run.run_id && run.run_id.includes('_')) {
+                    const timestamp = parseInt(run.run_id.split('_')[1]);
+                    if (!isNaN(timestamp)) {
+                        const runDate = new Date(timestamp);
+                        displayDate = runDate.toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                    }
+                }
+                
+                return `
+                    <tr>
+                        <td>${displayDate}</td>
+                        <td><span class="status-badge status-${run.status}">${run.status.toUpperCase()}</span></td>
+                        <td>${run.stories_count || '-'}</td>
+                        <td>${run.duration_ms ? Math.round(run.duration_ms / 1000) + 's' : '-'}</td>
+                        <td>
+                            ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;">▶️ Play</a>` : ''}
+                            <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')">Details</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function showActiveRun(runId) {
