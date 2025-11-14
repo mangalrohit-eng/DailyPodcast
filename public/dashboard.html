@@ -1907,17 +1907,26 @@ Full data in console (F12).`;
                 })
                 .then(response => {
                     clearTimeout(timeoutId);
+                    console.log('✅ /api/run responded:', response.status);
                     return response.json();
                 })
                 .then(result => {
+                    console.log('✅ /api/run result:', result);
+                    
                     if (!result.success) {
-                        console.error('Run failed immediately:', result);
+                        console.error('❌ Run failed immediately:', result);
                         showToast(result.error || 'Failed to start episode generation', 'error');
                         document.getElementById('currentPhase').textContent = '❌ Failed to Start';
                         document.getElementById('currentMessage').innerHTML = 
                             `${result.error || 'Failed to start'}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
                     } else {
-                        console.log('Run started successfully');
+                        console.log('✅ Run started successfully, result:', result);
+                        // If the API returns a runId, use it for progress tracking
+                        if (result.manifest && result.manifest.run_id) {
+                            console.log('✅ Using runId from API:', result.manifest.run_id);
+                            // Update progress polling to use the correct runId
+                            showProgressModal(result.manifest.run_id);
+                        }
                     }
                 })
                 .catch(error => {
