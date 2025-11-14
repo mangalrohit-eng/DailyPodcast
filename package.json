@@ -1,6 +1,6 @@
 {
   "name": "daily-personal-news-podcast",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered daily morning news podcast with configurable topics",
   "private": true,
   "scripts": {
