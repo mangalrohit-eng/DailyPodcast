@@ -77,6 +77,15 @@ class ProgressTracker {
   }
   
   getProgress(runId: string): RunProgress | null {
+    // Support 'latest' to get the most recent run
+    if (runId === 'latest') {
+      // Get all runs sorted by start time (most recent first)
+      const allRuns = Array.from(this.runs.values())
+        .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+      
+      return allRuns[0] || null; // Return most recent
+    }
+    
     return this.runs.get(runId) || null;
   }
   

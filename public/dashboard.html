@@ -1883,12 +1883,10 @@ Full data in console (F12).`;
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Starting...';
 
-            // Get today's date for runId
-            const today = new Date().toISOString().split('T')[0];
-
             try {
-                // Show progress modal immediately
-                showProgressModal(today);
+                // Show progress modal immediately with 'latest' runId
+                // This will poll for the most recent run (which is the one we're about to start)
+                showProgressModal('latest');
                 
                 // Start the run (will likely timeout on Hobby plan after 10s, but episode will keep generating)
                 const controller = new AbortController();
