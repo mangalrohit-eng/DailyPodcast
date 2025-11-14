@@ -185,6 +185,12 @@ export class Orchestrator {
         enabled_topics: enabledTopicConfigs.map(t => t.name),
         dashboard_topics_count: dashboardConfig?.topics?.length || 0,
         enabled_count: enabledTopicConfigs.length,
+        full_config: enabledTopicConfigs.map(t => ({
+          name: t.name,
+          weight: t.weight,
+          sources_count: t.sources.length,
+          keywords_count: t.keywords.length,
+        })),
       });
       
       progressTracker.addUpdate(runId, {

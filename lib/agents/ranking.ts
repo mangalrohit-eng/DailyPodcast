@@ -303,6 +303,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     Logger.info('✅ Final topic distribution', {
       total_picks: picks.length,
       by_topic: Object.fromEntries(topicCounts),
+      picks_list: picks.map(p => `${p.topic}: ${p.story.title.substring(0, 60)}...`),
     });
     
     return picks;
