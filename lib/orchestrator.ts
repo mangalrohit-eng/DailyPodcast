@@ -604,11 +604,13 @@ export class Orchestrator {
       progressTracker.addUpdate(runId, {
         phase: 'Complete',
         status: 'completed',
-        message: `Episode generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls)`,
+        message: manifest.mp3_url 
+          ? `Episode generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls)`
+          : `Script generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls) - Audio disabled`,
         details: {
           duration_sec: manifest.duration_sec,
           word_count: manifest.word_count,
-          episode_url: manifest.mp3_url,
+          episode_url: manifest.mp3_url || 'No audio (disabled)',
           total_api_calls: totalApiCalls,
           api_calls_by_agent: apiCalls,
         },

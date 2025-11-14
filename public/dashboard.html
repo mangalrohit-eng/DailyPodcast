@@ -1953,6 +1953,7 @@ Full data in console (F12).`;
                 
                 renderIngestionTab(report.ingestion);
                 renderRankingTab(report.ranking);
+                renderScraperTab(report.scraper);
                 renderOutlineTab(report.outline);
                 renderScriptTab(report.scriptwriting);
                 renderFactCheckTab(report.factcheck);
@@ -1977,6 +1978,7 @@ Full data in console (F12).`;
                 
                 document.getElementById('tab-ingestion').innerHTML = noDataMessage;
                 document.getElementById('tab-ranking').innerHTML = '<div class="no-data">Generate a new episode to see ranking details</div>';
+                document.getElementById('tab-scraper').innerHTML = '<div class="no-data">Generate a new episode to see scraper details</div>';
                 document.getElementById('tab-outline').innerHTML = '<div class="no-data">Generate a new episode to see outline details</div>';
                 document.getElementById('tab-script').innerHTML = '<div class="no-data">Generate a new episode to see script details</div>';
                 document.getElementById('tab-factcheck').innerHTML = '<div class="no-data">Generate a new episode to see fact-check details</div>';
@@ -2121,6 +2123,93 @@ Full data in console (F12).`;
             `;
             
             document.getElementById('tab-ranking').innerHTML = html;
+        }
+
+        function renderScraperTab(scraper) {
+            if (!scraper) {
+                document.getElementById('tab-scraper').innerHTML = '<div class="no-data">No scraper data available (scraper may not have run)</div>';
+                return;
+            }
+            
+            const successRate = scraper.total_articles > 0 
+                ? ((scraper.successful_scrapes / scraper.total_articles) * 100).toFixed(1)
+                : 0;
+            
+            const html = `
+                <div class="report-section">
+                    <h3>📊 Scraping Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${scraper.total_articles || 0}</div>
+                            <div class="stat-label">Articles Attempted</div>
+                        </div>
+                        <div class="stat-card" style="background: #d4edda;">
+                            <div class="stat-value">${scraper.successful_scrapes || 0}</div>
+                            <div class="stat-label">✅ Successfully Scraped</div>
+                        </div>
+                        <div class="stat-card" style="background: #f8d7da;">
+                            <div class="stat-value">${(scraper.failed_scrapes || []).length}</div>
+                            <div class="stat-label">❌ Failed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${successRate}%</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>📏 Content Quality</h3>
+                    <div style="background: white; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 28px; font-weight: 700; color: #007bff;">
+                                    ${scraper.avg_content_length ? scraper.avg_content_length.toLocaleString() : 0}
+                                </div>
+                                <div style="color: #666; font-size: 14px;">Average Characters Per Article</div>
+                            </div>
+                        </div>
+                        <div style="color: #666; font-size: 13px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                            💡 <strong>Tip:</strong> Average article length of ${scraper.avg_content_length || 0} chars means stories have 
+                            ${scraper.avg_content_length > 2000 ? 'rich, detailed' : scraper.avg_content_length > 1000 ? 'moderate' : 'brief'} 
+                            content for the AI to work with.
+                        </div>
+                    </div>
+                </div>
+
+                ${(scraper.failed_scrapes || []).length > 0 ? `
+                <div class="report-section">
+                    <h3>❌ Failed Scrapes</h3>
+                    <div style="background: #fff3cd; padding: 15px; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 15px;">
+                        <strong>⚠️ ${(scraper.failed_scrapes || []).length} articles couldn't be scraped.</strong><br>
+                        <span style="font-size: 13px; color: #666;">The podcast will use RSS summaries for these stories instead.</span>
+                    </div>
+                    ${(scraper.failed_scrapes || []).slice(0, 10).map(fail => `
+                        <div class="story-item" style="border-left: 4px solid #dc3545;">
+                            <div class="title" style="font-size: 13px; margin-bottom: 5px;">${fail.url}</div>
+                            <div class="meta" style="color: #dc3545;">
+                                <strong>Reason:</strong> ${fail.reason || 'Unknown error'}
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${(scraper.failed_scrapes || []).length > 10 ? `
+                        <div style="text-align: center; padding: 10px; color: #666; font-size: 13px;">
+                            ... and ${(scraper.failed_scrapes || []).length - 10} more failed scrapes
+                        </div>
+                    ` : ''}
+                </div>
+                ` : `
+                <div class="report-section">
+                    <div style="background: #d4edda; padding: 20px; border: 1px solid #28a745; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">🎉</div>
+                        <strong style="color: #155724;">Perfect Scraping!</strong><br>
+                        <span style="color: #155724; font-size: 14px;">All articles were successfully scraped with full content.</span>
+                    </div>
+                </div>
+                `}
+            `;
+            
+            document.getElementById('tab-scraper').innerHTML = html;
         }
 
         function renderOutlineTab(outline) {
@@ -2662,6 +2751,7 @@ Full data in console (F12).`;
             <div class="report-tabs">
                 <button class="report-tab active" onclick="switchReportTab('ingestion')">📥 Ingestion</button>
                 <button class="report-tab" onclick="switchReportTab('ranking')">🎯 Ranking</button>
+                <button class="report-tab" onclick="switchReportTab('scraper')">🕷️ Scraper</button>
                 <button class="report-tab" onclick="switchReportTab('outline')">📋 Outline</button>
                 <button class="report-tab" onclick="switchReportTab('script')">📝 Script</button>
                 <button class="report-tab" onclick="switchReportTab('factcheck')">✅ Fact Check</button>
@@ -2671,6 +2761,7 @@ Full data in console (F12).`;
             <div class="report-body">
                 <div id="tab-ingestion" class="report-tab-content active"></div>
                 <div id="tab-ranking" class="report-tab-content"></div>
+                <div id="tab-scraper" class="report-tab-content"></div>
                 <div id="tab-outline" class="report-tab-content"></div>
                 <div id="tab-script" class="report-tab-content"></div>
                 <div id="tab-factcheck" class="report-tab-content"></div>
