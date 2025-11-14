@@ -126,9 +126,7 @@ export class MemoryAgent extends BaseAgent<MemoryInput, MemoryOutput> {
     // Return default profile
     return {
       topic_weights: {
-        ai: 0.5,
-        vz: 0.3,
-        acn: 0.2,
+        // Empty by default - loaded from dashboard
       },
       preferred_sources: [],
       avoided_sources: [],
