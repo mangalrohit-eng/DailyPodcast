@@ -99,7 +99,10 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               Logger.debug(`Story failed quality filter: ${story.title.substring(0, 50)}...`);
               continue;
             }
-            if (!this.matchesTopic(story, topic.keywords)) {
+            // Skip keyword matching for Google News RSS - it's already topic-filtered
+            const isGoogleNews = sourceUrl.includes('news.google.com');
+            
+            if (!isGoogleNews && !this.matchesTopic(story, topic.keywords)) {
               filteredOut.push({ title: story.title, reason: `No keyword match for ${topic.name}` });
               Logger.debug(`Story doesn't match topic keywords: ${story.title.substring(0, 50)}...`, {
                 keywords: topic.keywords.slice(0, 3),
