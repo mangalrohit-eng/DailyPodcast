@@ -279,22 +279,23 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       items_found: itemsFound,
       stories_after_filter: dedupedStories.length,
       topics_breakdown: topicsBreakdown,
-      google_news_redirect_resolution: {
+      google_news_domain_extraction: {
         attempted: googleNewsRedirectsAttempted,
         successful: googleNewsRedirectsSuccessful,
         failed: googleNewsRedirectsFailed,
         success_rate: googleNewsRedirectsAttempted > 0 
           ? `${((googleNewsRedirectsSuccessful / googleNewsRedirectsAttempted) * 100).toFixed(1)}%`
-          : 'N/A'
+          : 'N/A',
+        method: 'Base64 URL decoding (no HTTP requests)'
       }
     });
     
-    // CRITICAL WARNING if redirect resolution is failing
+    // CRITICAL WARNING if domain extraction is failing
     if (googleNewsRedirectsFailed > 0) {
-      Logger.warn(`⚠️ CRITICAL: ${googleNewsRedirectsFailed} Google News redirects failed to resolve!`, {
+      Logger.warn(`⚠️ WARNING: ${googleNewsRedirectsFailed} Google News URLs failed to decode!`, {
         impact: 'Stories will be grouped under news.google.com domain',
         consequence: 'Deduplication will treat all Google News stories as same domain',
-        action_needed: 'Check logs above for resolution errors'
+        action_needed: 'Check base64 decoding logs above'
       });
     }
     
@@ -318,51 +319,48 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       return null;
     }
     
-    // Resolve Google News redirects to get the actual article URL
-    let actualUrl = item.link;
-    const isGoogleNewsRedirect = item.link.includes('news.google.com/rss/articles/');
+    // Extract domain from Google News URLs by decoding the base64-encoded URL
+    const isGoogleNewsUrl = item.link.includes('news.google.com/rss/articles/');
+    let domain: string;
     
-    if (isGoogleNewsRedirect && tracking) {
+    if (isGoogleNewsUrl && tracking) {
       tracking.attempted++;
-      try {
-        actualUrl = await this.resolveGoogleNewsRedirect(item.link);
-        
-        // Check if resolution actually worked (URL changed and is not Google)
-        if (actualUrl !== item.link && !actualUrl.includes('news.google.com')) {
-          tracking.successful++;
-          Logger.debug(`✅ Resolved Google News redirect`, { 
-            original: item.link.substring(0, 60),
-            resolved: actualUrl.substring(0, 60),
-            domain: extractDomain(actualUrl)
-          });
-        } else {
-          tracking.failed++;
-          Logger.warn(`⚠️ Google News redirect resolution failed - URL unchanged`, { 
-            url: item.link.substring(0, 60)
-          });
-        }
-      } catch (error) {
-        tracking.failed++;
-        Logger.error(`❌ Exception while resolving Google News redirect`, { 
+      
+      const decodedDomain = this.findActualDomain(item.link);
+      
+      if (decodedDomain) {
+        domain = decodedDomain;
+        tracking.successful++;
+        Logger.debug(`✅ Decoded Google News domain`, { 
           url: item.link.substring(0, 60),
-          error: error instanceof Error ? error.message : 'Unknown error'
+          domain: decodedDomain
+        });
+      } else {
+        // Fallback to news.google.com if decoding fails
+        domain = extractDomain(item.link);
+        tracking.failed++;
+        Logger.warn(`⚠️ Failed to decode Google News URL, using fallback`, { 
+          url: item.link.substring(0, 60),
+          fallback_domain: domain
         });
       }
+    } else {
+      // Non-Google News URLs: use regular domain extraction
+      domain = extractDomain(item.link);
     }
     
-    const domain = extractDomain(actualUrl);
     const pubDate = item.pubDate || new Date();
     
     const story: Story = {
-      id: Crypto.sha256(actualUrl).substring(0, 16),
-      url: actualUrl, // Use resolved URL
+      id: Crypto.sha256(item.link).substring(0, 16),
+      url: item.link, // Keep original URL (Google News or direct)
       title: cleanText(item.title),
       source: domain,
       published_at: pubDate,
       summary: item.contentSnippet ? cleanText(item.contentSnippet) : undefined,
       raw: item.content,
-      canonical: item.link, // Keep original for reference
-      domain,
+      canonical: item.link,
+      domain, // Use decoded domain for deduplication
       topic,
     };
     
@@ -370,54 +368,60 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   }
   
   /**
-   * Resolve Google News redirect URL to actual article URL
-   * CRITICAL: This must work or all stories will be grouped under news.google.com domain
+   * Extract actual source domain from a Google News RSS URL by decoding the base64-encoded URL.
+   * Google News RSS URLs contain the actual article URL encoded in the path.
+   * This is MUCH more reliable than following HTTP redirects!
    */
-  private async resolveGoogleNewsRedirect(googleUrl: string): Promise<string> {
+  private findActualDomain(googleNewsUrl: string): string | null {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout (increased)
+      const url = new URL(googleNewsUrl);
+      const parts = url.pathname.split('/');
       
-      // Try GET request (some servers don't respond to HEAD properly)
-      // We won't read the body, just get the final URL after redirects
-      const response = await fetch(googleUrl, {
-        method: 'GET',
-        signal: controller.signal,
-        redirect: 'follow',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml',
-        },
-      });
-      
-      clearTimeout(timeout);
-      
-      // Check if we got redirected
-      const resolvedUrl = response.url;
-      
-      if (resolvedUrl && resolvedUrl !== googleUrl && !resolvedUrl.includes('news.google.com')) {
-        Logger.info(`✅ Successfully resolved Google News redirect`, { 
-          original: googleUrl.substring(0, 80),
-          resolved: resolvedUrl.substring(0, 80),
-          domain: extractDomain(resolvedUrl)
-        });
-        return resolvedUrl;
-      } else {
-        Logger.warn(`⚠️ Redirect resolution returned Google URL or same URL`, { 
-          original: googleUrl.substring(0, 80),
-          resolved: resolvedUrl?.substring(0, 80),
-          will_use: 'Fallback to Google URL - stories will be grouped under news.google.com'
-        });
-        return googleUrl;
+      // Check if the URL structure matches: /rss/articles/[encoded_string]
+      const articlesIndex = parts.indexOf('articles');
+      if (url.hostname !== 'news.google.com' || articlesIndex === -1 || articlesIndex + 1 >= parts.length) {
+        return null;
       }
+      
+      let encodedUrl = parts[articlesIndex + 1];
+      
+      // Extract Base64 String: Remove prefixes like 'CBM', 'CBMi', 'CBA', etc.
+      encodedUrl = encodedUrl.replace(/^(CBMi?|CBA)/, '');
+      
+      // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
+      while (encodedUrl.length % 4 !== 0) {
+        encodedUrl += '=';
+      }
+      
+      // Base64 URL-Safe Decode
+      const decodedBuffer = Buffer.from(encodedUrl, 'base64url');
+      const decodedString = decodedBuffer.toString('utf8');
+      
+      // Extract Actual URL: Look for http/https URL in the decoded string
+      const urlMatch = decodedString.match(/(https?:\/\/[^\s\x00-\x1f\x7f]+)/);
+      
+      if (urlMatch && urlMatch[0]) {
+        const actualUrl = new URL(urlMatch[0]);
+        const hostname = actualUrl.hostname;
+        
+        // Strip 'www.' for cleaner domain
+        const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
+        
+        Logger.debug(`✅ Decoded Google News URL`, { 
+          original: googleNewsUrl.substring(0, 60),
+          decoded_domain: cleanDomain
+        });
+        
+        return cleanDomain;
+      }
+      
+      return null;
     } catch (error) {
-      Logger.error(`❌ CRITICAL: Failed to resolve Google News redirect`, { 
-        url: googleUrl.substring(0, 80),
-        error: error instanceof Error ? error.message : 'Unknown error',
-        impact: 'Story will be grouped under news.google.com domain, may be deduplicated incorrectly'
+      Logger.error(`❌ Failed to decode Google News URL`, { 
+        url: googleNewsUrl.substring(0, 80),
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
-      // If redirect resolution fails, return original URL as last resort
-      return googleUrl;
+      return null;
     }
   }
   
