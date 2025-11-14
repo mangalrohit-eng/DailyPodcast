@@ -16,6 +16,7 @@ import { Config } from '../lib/config';
 import { Logger } from '../lib/utils';
 import { StorageTool } from '../lib/tools/storage';
 import { progressTracker } from '../lib/tools/progress-tracker';
+import { ConfigStorage } from '../lib/tools/config-storage';
 import OpenAI from 'openai';
 
 export default async function handler(
@@ -33,12 +34,14 @@ export default async function handler(
         
         if (action === 'progress') {
           return handleProgress(req, res);
+        } else if (action === 'debug-config') {
+          return handleDebugConfig(req, res);
         } else if (health) {
           return handleHealthCheck(req, res);
         } else if (debug) {
           return handleDebug(req, res);
         } else {
-          return res.status(400).json({ error: 'Use ?health=true, ?debug=true, or ?action=progress' });
+          return res.status(400).json({ error: 'Use ?health=true, ?debug=true, ?action=progress, or ?action=debug-config' });
         }
       }
       
@@ -618,6 +621,54 @@ async function handleIndexEpisodes(req: VercelRequest, res: VercelResponse) {
     
     res.status(500).json({
       error: 'Failed to index episodes',
+      message: (error as Error).message,
+    });
+  }
+}
+
+/**
+ * Debug config - show what's in S3
+ */
+async function handleDebugConfig(req: VercelRequest, res: VercelResponse) {
+  try {
+    Logger.info('🔍 Debug config requested');
+    
+    const configStorage = new ConfigStorage();
+    const config = await configStorage.load();
+    
+    const memoryConfig = {
+      topics: Config.getTopicConfigs().map(t => ({
+        name: t.name,
+        weight: t.weight,
+        sources_count: t.sources.length,
+      })),
+      window_hours: Config.WINDOW_HOURS,
+      target_duration: Config.TARGET_DURATION_SECONDS,
+      rumor_filter: Config.RUMOR_FILTER,
+    };
+    
+    return res.status(200).json({
+      success: true,
+      s3_config: {
+        topics: config.topics?.map((t: any) => ({ label: t.label, weight: t.weight })) || [],
+        window_hours: config.window_hours,
+        target_duration_sec: config.target_duration_sec,
+        rumor_filter: config.rumor_filter,
+        has_podcast_production: !!config.podcast_production,
+        version: config.version,
+        last_updated: config.last_updated,
+      },
+      memory_config: memoryConfig,
+      note: 'S3 config (dashboard) should override memory config when running'
+    });
+  } catch (error) {
+    Logger.error('Failed to debug config', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+    });
+    
+    return res.status(500).json({
+      error: 'Failed to load config',
       message: (error as Error).message,
     });
   }
