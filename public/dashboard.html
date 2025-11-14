@@ -1953,27 +1953,35 @@ Full data in console (F12).`;
 
         async function viewRunDetails(runId) {
             try {
-                console.log('Fetching run details for:', runId);
+                console.log('🔍 Fetching run details for:', runId);
                 
                 const response = await fetch(`${API_BASE}/api/runs?runId=${runId}`, {
                     headers: getAuthHeaders(),
                 });
                 
-                console.log('Response status:', response.status);
+                console.log('📡 Response status:', response.status);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('API error:', errorText);
+                    console.error('❌ API error:', errorText);
                     throw new Error(`API returned ${response.status}: ${errorText}`);
                 }
                 
                 const data = await response.json();
-                console.log('Run data received:', data);
+                console.log('✅ Run data received:', {
+                    has_summary: !!data.summary,
+                    has_manifest: !!data.manifest,
+                    manifest_keys: data.manifest ? Object.keys(data.manifest) : [],
+                    has_pipeline_report: !!data.manifest?.pipeline_report,
+                    pipeline_report_keys: data.manifest?.pipeline_report ? Object.keys(data.manifest.pipeline_report) : [],
+                });
+                console.log('📊 Full manifest:', data.manifest);
+                console.log('📈 Pipeline report:', data.manifest?.pipeline_report);
                 
                 // Show pipeline report modal
                 showPipelineReport(runId, data);
             } catch (error) {
-                console.error('Failed to load run details:', error);
+                console.error('❌ Failed to load run details:', error);
                 showToast(`Failed to load run details: ${error.message}`, 'error');
             }
         }
@@ -1984,13 +1992,26 @@ Full data in console (F12).`;
             
             title.textContent = `📊 Episode Report - ${runId}`;
             
-            console.log('Showing pipeline report, manifest:', data.manifest);
-            console.log('Has pipeline_report:', !!data.manifest?.pipeline_report);
+            console.log('🎨 showPipelineReport called with:', {
+                runId,
+                has_data: !!data,
+                has_manifest: !!data?.manifest,
+                has_pipeline_report: !!data?.manifest?.pipeline_report,
+                manifest: data?.manifest,
+                pipeline_report: data?.manifest?.pipeline_report,
+            });
             
             // Populate tabs with data
             if (data.manifest && data.manifest.pipeline_report) {
                 const report = data.manifest.pipeline_report;
-                console.log('Rendering pipeline report with data:', report);
+                console.log('✅ Pipeline report found! Rendering with data:', {
+                    ingestion: !!report.ingestion,
+                    ranking: !!report.ranking,
+                    outline: !!report.outline,
+                    scriptwriting: !!report.scriptwriting,
+                    factcheck: !!report.factcheck,
+                    safety: !!report.safety,
+                });
                 
                 renderIngestionTab(report.ingestion);
                 renderRankingTab(report.ranking);
@@ -2000,7 +2021,7 @@ Full data in console (F12).`;
                 renderSafetyTab(report.safety);
             } else {
                 // No pipeline report available - show helpful message
-                console.warn('No pipeline report in manifest. Generate a new episode to see the full report.');
+                console.warn('⚠️ No pipeline report found. This episode might be old or manifest is missing.');
                 
                 const noDataMessage = `
                     <div class="no-data">
