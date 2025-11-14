@@ -640,16 +640,18 @@ export class Orchestrator {
       try {
         const partialManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
         
-        // Save partial manifest for debugging
-        await this.storage.saveJson(`episodes/${runId}/manifest.json`, partialManifest);
+        // Save partial manifest for debugging (use same path format as RunsStorage expects)
+        await this.storage.saveJson(`episodes/${runId}_manifest.json`, partialManifest);
         
         Logger.info('Saved partial manifest for failed run', {
           runId,
           completed_agents: Object.keys(agentResults),
+          manifest_path: `episodes/${runId}_manifest.json`,
         });
       } catch (manifestError) {
         Logger.error('Failed to save partial manifest', {
           error: (manifestError as Error).message,
+          stack: (manifestError as Error).stack,
         });
       }
       
