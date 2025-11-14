@@ -159,6 +159,7 @@ Respond with JSON in this exact format:
     const outlineData = JSON.parse(response);
     
     // Map story indices to story IDs with null safety
+    // CRITICAL: Use sortedPicks (not picks) since AI received sorted array
     const sections: OutlineSection[] = outlineData.sections
       .filter((section: any) => section && section.type) // Filter out null/invalid sections
       .map((section: any) => ({
@@ -166,7 +167,7 @@ Respond with JSON in this exact format:
         title: section.title || 'Untitled',
         target_words: section.target_words || 150,
         refs: (section.refs || [])
-          .map((idx: number) => picks[idx]?.story_id)
+          .map((idx: number) => sortedPicks[idx]?.story_id)
           .filter(Boolean),
       }));
     
