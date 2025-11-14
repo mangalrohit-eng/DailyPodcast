@@ -83,9 +83,9 @@ Structure for maximum impact with dense, actionable information. You must respon
       score: pick.score,
     }));
     
-    // Count stories by topic
+    // Count stories by topic (from sorted picks)
     const topicCounts: Record<string, number> = {};
-    picks.forEach(p => {
+    sortedPicks.forEach(p => {
       topicCounts[p.topic] = (topicCounts[p.topic] || 0) + 1;
     });
     

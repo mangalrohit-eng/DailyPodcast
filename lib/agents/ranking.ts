@@ -220,13 +220,19 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     const picks: Pick[] = [];
     const topicCounts = new Map<string, number>();
     
-    // Get unique topics from stories
-    const topics = Array.from(new Set(scoredStories.map(s => s.story.topic)));
+    // Get unique topics from stories, SORTED BY WEIGHT (highest first)
+    const topics = Array.from(new Set(scoredStories.map(s => s.story.topic)))
+      .sort((a, b) => {
+        const weightA = this.topicWeights[a] || 0;
+        const weightB = this.topicWeights[b] || 0;
+        return weightB - weightA; // Descending: highest weight first
+      });
     
     Logger.info('🎯 Enforcing balanced topic distribution', {
       topics,
       targetCount,
       weights: this.topicWeights,
+      sorted_by_weight: 'highest first',
     });
     
     // Calculate target count per topic based on weights

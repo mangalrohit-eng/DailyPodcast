@@ -70,9 +70,6 @@
     "api/runs.ts": {
       "maxDuration": 10
     },
-    "api/logs.ts": {
-      "maxDuration": 60
-    },
     "api/test-run.ts": {
       "maxDuration": 30
     }
