@@ -335,6 +335,16 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     
     // Extract BOTH actual URL and domain from Google News URLs by decoding the base64-encoded URL
     const isGoogleNewsUrl = item.link.includes('news.google.com/rss/articles/');
+    
+    // DEBUG: Log first few URLs to see format
+    if (tracking && tracking.attempted === 0 && item.link.includes('news.google.com')) {
+      Logger.info(`🔍 FIRST Google News URL encountered`, {
+        full_url: item.link,
+        matches_pattern: isGoogleNewsUrl,
+        title: item.title
+      });
+    }
+    
     let storyUrl: string;
     let domain: string;
     

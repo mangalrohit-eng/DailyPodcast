@@ -479,6 +479,7 @@ export class Orchestrator {
           stories_after_filtering: storiesAfterFiltering,
           filtered_out: ingestionReport.filtered_out,
           topics_breakdown: ingestionReport.topics_breakdown,
+          google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
           all_stories_detailed: ingestionReport.all_stories_detailed,
         },
         ranking: rankingResult.output!.detailed_report || {
@@ -851,6 +852,7 @@ export class Orchestrator {
         stories_after_filtering: storiesAfterFiltering,
         filtered_out: ingestionReport.filtered_out || [],
         topics_breakdown: ingestionReport.topics_breakdown || {},
+        google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
         all_stories_detailed: ingestionReport.all_stories_detailed || [],
       };
     }

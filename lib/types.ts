@@ -99,6 +99,12 @@ export interface PipelineReport {
     stories_after_filtering: number;
     filtered_out: Array<{ title: string; reason: string }>;
     topics_breakdown: Record<string, number>;
+    google_news_domain_extraction?: {
+      attempted: number;
+      successful: number;
+      failed: number;
+      success_rate: string;
+    };
     all_stories_detailed?: Array<{ 
       title: string; 
       topic: string; 
