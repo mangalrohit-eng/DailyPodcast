@@ -393,13 +393,26 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       // Check if the URL structure matches: /rss/articles/[encoded_string]
       const articlesIndex = parts.indexOf('articles');
       if (url.hostname !== 'news.google.com' || articlesIndex === -1 || articlesIndex + 1 >= parts.length) {
+        Logger.warn(`⚠️ Not a Google News RSS article URL`, { 
+          url: googleNewsUrl.substring(0, 80),
+          hostname: url.hostname,
+          has_articles: parts.includes('articles')
+        });
         return null;
       }
       
       let encodedUrl = parts[articlesIndex + 1];
+      const originalEncoded = encodedUrl;
       
       // Extract Base64 String: Remove prefixes like 'CBM', 'CBMi', 'CBA', etc.
-      encodedUrl = encodedUrl.replace(/^(CBMi?|CBA)/, '');
+      // Common patterns: CBM, CBMi, CBAi, CBAU, etc.
+      encodedUrl = encodedUrl.replace(/^[A-Z]{2,4}[a-z]?/, '');
+      
+      Logger.debug(`🔍 Decoding Google News URL`, {
+        original_encoded: originalEncoded.substring(0, 40),
+        after_prefix_removal: encodedUrl.substring(0, 40),
+        prefix_removed: originalEncoded.substring(0, originalEncoded.length - encodedUrl.length)
+      });
       
       // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
       while (encodedUrl.length % 4 !== 0) {
@@ -409,6 +422,11 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       // Base64 URL-Safe Decode
       const decodedBuffer = Buffer.from(encodedUrl, 'base64url');
       const decodedString = decodedBuffer.toString('utf8');
+      
+      Logger.debug(`🔍 Decoded string preview`, {
+        decoded_length: decodedString.length,
+        first_100_chars: decodedString.substring(0, 100)
+      });
       
       // Extract Actual URL: Look for http/https URL in the decoded string
       const urlMatch = decodedString.match(/(https?:\/\/[^\s\x00-\x1f\x7f]+)/);
@@ -420,7 +438,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         // Strip 'www.' for cleaner domain
         const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
         
-        Logger.debug(`✅ Decoded Google News URL`, { 
+        Logger.info(`✅ Successfully decoded Google News URL`, { 
           original: googleNewsUrl.substring(0, 60),
           actual_url: actualUrl.substring(0, 60),
           domain: cleanDomain
@@ -429,11 +447,15 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         return { url: actualUrl, domain: cleanDomain };
       }
       
+      Logger.warn(`⚠️ Could not extract URL from decoded string`, {
+        decoded_preview: decodedString.substring(0, 200)
+      });
       return null;
     } catch (error) {
       Logger.error(`❌ Failed to decode Google News URL`, { 
         url: googleNewsUrl.substring(0, 80),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
       });
       return null;
     }
