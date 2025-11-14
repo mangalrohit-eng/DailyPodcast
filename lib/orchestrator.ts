@@ -80,6 +80,9 @@ export class Orchestrator {
     
     // Build run configuration first to get runId
     const runConfig = await this.buildRunConfig(input);
+    // Extract dashboardConfig from runConfig for use in ingestion
+    const dashboardConfig = (runConfig as any).dashboardConfig;
+    
     // Add timestamp to runId to make it unique per run
     const timestamp = Date.now();
     const runId = `${runConfig.date}_${timestamp}`;
@@ -90,6 +93,7 @@ export class Orchestrator {
       timestamp,
       force_overwrite: runConfig.force_overwrite,
       input_received: input,
+      has_dashboard_config: !!dashboardConfig,
     });
     
     // Initialize storage (StructuredLogger removed due to undefined errors)
