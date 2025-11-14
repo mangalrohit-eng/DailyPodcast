@@ -706,5 +706,67 @@ export class Orchestrator {
       },
     };
   }
+  
+  /**
+   * Auto-generate RSS sources for a topic if not provided
+   */
+  private generateSourcesForTopic(topicLabel: string, existingSources?: string[]): string[] {
+    // If dashboard already configured sources, use them
+    if (existingSources && existingSources.length > 0) {
+      return existingSources;
+    }
+    
+    // Otherwise, auto-generate based on topic label
+    const searchQuery = encodeURIComponent(topicLabel);
+    
+    return [
+      // Google News RSS (most reliable)
+      `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
+      
+      // TechCrunch (for tech topics)
+      `https://techcrunch.com/feed/`,
+      
+      // The Verge (for tech/business)
+      `https://www.theverge.com/rss/index.xml`,
+      
+      // Reuters (general news)
+      `https://www.reutersagency.com/feed/`,
+    ];
+  }
+  
+  /**
+   * Auto-generate keywords for a topic if not provided
+   */
+  private generateKeywordsForTopic(topicLabel: string, existingKeywords?: string[]): string[] {
+    // If dashboard already configured keywords, use them
+    if (existingKeywords && existingKeywords.length > 0) {
+      return existingKeywords;
+    }
+    
+    // Otherwise, auto-generate based on topic label
+    const label = topicLabel.toLowerCase();
+    const keywords: string[] = [topicLabel]; // Always include the full label
+    
+    // Add common variations
+    if (label.includes('verizon')) {
+      keywords.push('verizon', 'vz', '5g', 'wireless', 'telecom', 'fios');
+    } else if (label.includes('accenture')) {
+      keywords.push('accenture', 'acn', 'consulting', 'technology consulting');
+    } else if (label.includes('ai') || label.includes('artificial intelligence')) {
+      keywords.push('ai', 'artificial intelligence', 'machine learning', 'ml', 'deep learning', 'neural network', 'gpt', 'llm', 'large language model');
+    } else if (label.includes('tech')) {
+      keywords.push('technology', 'tech', 'software', 'hardware', 'startup');
+    } else if (label.includes('business')) {
+      keywords.push('business', 'enterprise', 'corporate', 'company', 'industry');
+    } else {
+      // Generic: split label into words and add variations
+      const words = topicLabel.split(/\s+/).map(w => w.toLowerCase());
+      keywords.push(...words);
+    }
+    
+    Logger.debug(`Auto-generated keywords for "${topicLabel}"`, { keywords });
+    
+    return keywords;
+  }
 }
 
