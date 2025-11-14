@@ -103,6 +103,7 @@ export interface PipelineReport {
       title: string; 
       topic: string; 
       url: string;
+      domain: string;
       published_at: string;
       status: 'accepted' | 'rejected'; 
       reason?: string;

@@ -33,6 +33,7 @@ export interface IngestionOutput {
       title: string; 
       topic: string; 
       url: string;
+      domain: string;
       published_at: string;
       status: 'accepted' | 'rejected'; 
       reason?: string;
@@ -64,7 +65,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     // Detailed tracking
     const sourcesScanned: Array<{ name: string; url: string; items_found: number; status: string }> = [];
     const filteredOut: Array<{ title: string; reason: string }> = [];
-    const allStoriesDetailed: Array<{ title: string; topic: string; url: string; published_at: string; status: 'accepted' | 'rejected'; reason?: string }> = [];
+    const allStoriesDetailed: Array<{ title: string; topic: string; url: string; domain: string; published_at: string; status: 'accepted' | 'rejected'; reason?: string }> = [];
     
     // Track Google News redirect resolution success/failure
     let googleNewsRedirectsAttempted = 0;
@@ -122,6 +123,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 title: story.title, 
                 topic: topic.name, 
                 url: story.url,
+                domain: story.domain,
                 published_at: story.published_at.toISOString(),
                 status: 'rejected', 
                 reason 
@@ -136,6 +138,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 title: story.title, 
                 topic: topic.name, 
                 url: story.url,
+                domain: story.domain,
                 published_at: story.published_at.toISOString(),
                 status: 'rejected', 
                 reason 
@@ -156,6 +159,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 title: story.title, 
                 topic: topic.name, 
                 url: story.url,
+                domain: story.domain,
                 published_at: story.published_at.toISOString(),
                 status: 'rejected', 
                 reason 
@@ -173,6 +177,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 title: story.title, 
                 topic: topic.name, 
                 url: story.url,
+                domain: story.domain,
                 published_at: story.published_at.toISOString(),
                 status: 'rejected', 
                 reason 
@@ -191,6 +196,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               title: story.title, 
               topic: topic.name, 
               url: story.url,
+              domain: story.domain,
               published_at: story.published_at.toISOString(),
               status: 'accepted'
             });
@@ -254,6 +260,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           title: story.title,
           topic: story.topic || 'General',
           url: story.url,
+          domain: story.domain,
           published_at: story.published_at.toISOString(),
           status: 'rejected',
           reason

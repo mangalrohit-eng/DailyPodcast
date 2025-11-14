@@ -2258,6 +2258,7 @@ Full data in console (F12).`;
                                 <tr>
                                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Status</th>
                                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Topic</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Domain</th>
                                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600; min-width: 300px;">Title</th>
                                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Published</th>
                                     <th style="padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; font-weight: 600;">Reason</th>
@@ -2276,6 +2277,9 @@ Full data in console (F12).`;
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">${statusBadge}</td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">
                                                 <span style="background: #e7f3ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${story.topic}</span>
+                                            </td>
+                                            <td style="padding: 10px; border-bottom: 1px solid #dee2e6; font-size: 13px; font-family: monospace; color: #666;">
+                                                ${story.domain || 'unknown'}
                                             </td>
                                             <td style="padding: 10px; border-bottom: 1px solid #dee2e6;">
                                                 <a href="${story.url}" target="_blank" style="color: #007bff; text-decoration: none;">
