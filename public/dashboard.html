@@ -2155,6 +2155,40 @@ Full data in console (F12).`;
                     </div>
                 </div>
                 
+                ${ingestion.google_news_domain_extraction ? `
+                <div class="report-section">
+                    <h3>🔍 Google News Domain Extraction</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${ingestion.google_news_domain_extraction.attempted}</div>
+                            <div class="stat-label">URLs Attempted</div>
+                        </div>
+                        <div class="stat-card" style="background: ${ingestion.google_news_domain_extraction.successful > 0 ? '#d4edda' : '#f8d7da'};">
+                            <div class="stat-value" style="color: ${ingestion.google_news_domain_extraction.successful > 0 ? '#155724' : '#721c24'};">
+                                ${ingestion.google_news_domain_extraction.successful}
+                            </div>
+                            <div class="stat-label">✅ Successful</div>
+                        </div>
+                        <div class="stat-card" style="background: ${ingestion.google_news_domain_extraction.failed === 0 ? '#d4edda' : '#f8d7da'};">
+                            <div class="stat-value" style="color: ${ingestion.google_news_domain_extraction.failed === 0 ? '#155724' : '#721c24'};">
+                                ${ingestion.google_news_domain_extraction.failed}
+                            </div>
+                            <div class="stat-label">❌ Failed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${ingestion.google_news_domain_extraction.success_rate}</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                    </div>
+                    ${ingestion.google_news_domain_extraction.failed > 0 ? `
+                        <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            <strong style="color: #856404;">⚠️ Warning:</strong>
+                            <span style="color: #856404;"> ${ingestion.google_news_domain_extraction.failed} Google News URLs failed to decode. These stories will be grouped under "news.google.com" domain, affecting deduplication.</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ` : ''}
+                
                 <div class="report-section">
                     <h3>📰 Sources Scanned</h3>
                     ${(ingestion.sources_scanned || []).map(source => `

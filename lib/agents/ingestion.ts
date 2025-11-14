@@ -29,6 +29,12 @@ export interface IngestionOutput {
     total_items_before_filter: number;
     filtered_out: Array<{ title: string; reason: string }>;
     topics_breakdown: Record<string, number>;
+    google_news_domain_extraction?: {
+      attempted: number;
+      successful: number;
+      failed: number;
+      success_rate: string;
+    };
     all_stories_detailed: Array<{ 
       title: string; 
       topic: string; 
@@ -309,6 +315,14 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         total_items_before_filter: itemsFound,
         filtered_out: filteredOut,
         topics_breakdown: topicsBreakdown,
+        google_news_domain_extraction: {
+          attempted: googleNewsRedirectsAttempted,
+          successful: googleNewsRedirectsSuccessful,
+          failed: googleNewsRedirectsFailed,
+          success_rate: googleNewsRedirectsAttempted > 0 
+            ? `${((googleNewsRedirectsSuccessful / googleNewsRedirectsAttempted) * 100).toFixed(1)}%`
+            : 'N/A'
+        },
         all_stories_detailed: allStoriesDetailed,
       },
     };
