@@ -99,6 +99,14 @@ export interface PipelineReport {
     stories_after_filtering: number;
     filtered_out: Array<{ title: string; reason: string }>;
     topics_breakdown: Record<string, number>;
+    all_stories_detailed?: Array<{ 
+      title: string; 
+      topic: string; 
+      url: string;
+      published_at: string;
+      status: 'accepted' | 'rejected'; 
+      reason?: string;
+    }>;
   };
   ranking: {
     stories_ranked: number;

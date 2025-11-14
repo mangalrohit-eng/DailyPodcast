@@ -477,6 +477,7 @@ export class Orchestrator {
           stories_after_filtering: storiesAfterFiltering,
           filtered_out: ingestionReport.filtered_out,
           topics_breakdown: ingestionReport.topics_breakdown,
+          all_stories_detailed: ingestionReport.all_stories_detailed,
         },
         ranking: rankingResult.output!.detailed_report || {
           stories_ranked: 0,
@@ -848,6 +849,7 @@ export class Orchestrator {
         stories_after_filtering: storiesAfterFiltering,
         filtered_out: ingestionReport.filtered_out || [],
         topics_breakdown: ingestionReport.topics_breakdown || {},
+        all_stories_detailed: ingestionReport.all_stories_detailed || [],
       };
     }
 
