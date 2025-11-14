@@ -86,6 +86,17 @@ class ProgressTracker {
       return allRuns[0] || null; // Return most recent
     }
     
+    // Support date-only format (e.g., "2025-11-14") - find most recent run for that date
+    // This handles old dashboard code that uses date instead of full runId
+    if (runId.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Get all runs for this date sorted by start time (most recent first)
+      const dateRuns = Array.from(this.runs.values())
+        .filter(run => run.runId.startsWith(runId))
+        .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+      
+      return dateRuns[0] || null; // Return most recent for this date
+    }
+    
     return this.runs.get(runId) || null;
   }
   
