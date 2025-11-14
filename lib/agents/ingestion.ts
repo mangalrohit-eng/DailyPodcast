@@ -350,11 +350,23 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     
     if (isGoogleNewsUrl) {
       // ALWAYS extract for Google News URLs (tracking is optional)
+      Logger.info(`🚀 ENTERING Google News extraction logic`, {
+        url: item.link.substring(0, 80),
+        title: item.title.substring(0, 50),
+        has_tracking: !!tracking
+      });
+      
       if (tracking) {
         tracking.attempted++;
       }
       
       const extracted = this.extractFromGoogleNewsUrl(item.link);
+      
+      Logger.info(`🔍 Extraction result`, {
+        success: !!extracted,
+        extracted_domain: extracted?.domain,
+        extracted_url: extracted?.url.substring(0, 60)
+      });
       
       if (extracted) {
         storyUrl = extracted.url;  // Use actual article URL for scraping!
