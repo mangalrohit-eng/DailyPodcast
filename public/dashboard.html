@@ -1963,6 +1963,7 @@ Full data in console (F12).`;
                     safety: !!report.safety,
                 });
                 
+                renderSummaryTab(report);
                 renderIngestionTab(report.ingestion);
                 renderRankingTab(report.ranking);
                 renderScraperTab(report.scraper);
@@ -2021,6 +2022,161 @@ Full data in console (F12).`;
                 content.classList.remove('active');
             });
             document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function renderSummaryTab(report) {
+            if (!report) {
+                document.getElementById('tab-summary').innerHTML = '<div class="no-data">No pipeline data available</div>';
+                return;
+            }
+            
+            // Extract metrics from each stage
+            const ingestion = report.ingestion || {};
+            const ranking = report.ranking || {};
+            const scraper = report.scraper || {};
+            const outline = report.outline || {};
+            const scriptwriting = report.scriptwriting || {};
+            
+            const totalFound = ingestion.total_stories_found || 0;
+            const filtered = (ingestion.filtered_out || []).length;
+            const sentToRanking = ingestion.stories_after_filtering || 0;
+            const selectedByRanking = (ranking.top_picks || []).length;
+            const sentToScraper = scraper.total_articles || 0;
+            const successfullyScrpaed = scraper.successful_scrapes || 0;
+            const sectionsCreated = (outline.sections || []).length;
+            const scriptWordCount = scriptwriting.total_word_count || 0;
+            
+            // Calculate percentages
+            const filterRate = totalFound > 0 ? ((filtered / totalFound) * 100).toFixed(1) : 0;
+            const rankingRate = sentToRanking > 0 ? ((selectedByRanking / sentToRanking) * 100).toFixed(1) : 0;
+            const scrapeRate = sentToScraper > 0 ? ((successfullyScrpaed / sentToScraper) * 100).toFixed(1) : 0;
+            
+            const html = `
+                <div class="report-section">
+                    <h3>📊 Pipeline Overview</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Story flow through the entire podcast generation pipeline</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Stage 1: Ingestion -->
+                        <div style="background: linear-gradient(to right, #f8f9fa, white); padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #007bff;">📥 Ingestion</div>
+                                    <div style="color: #666; font-size: 14px; margin-top: 5px;">Fetching news from RSS sources</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #007bff;">${totalFound}</div>
+                                    <div style="color: #666; font-size: 13px;">stories found</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 20px;">
+                                <div>
+                                    <span style="color: #dc3545; font-weight: 600;">${filtered}</span>
+                                    <span style="color: #666; font-size: 13px;"> filtered (${filterRate}%)</span>
+                                </div>
+                                <div>
+                                    <span style="color: #28a745; font-weight: 600;">${sentToRanking}</span>
+                                    <span style="color: #666; font-size: 13px;"> passed to ranking</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Arrow -->
+                        <div style="text-align: center; color: #999; font-size: 24px;">↓</div>
+                        
+                        <!-- Stage 2: Ranking -->
+                        <div style="background: linear-gradient(to right, #f8f9fa, white); padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #28a745;">🎯 Ranking</div>
+                                    <div style="color: #666; font-size: 14px; margin-top: 5px;">Selecting best stories by relevance</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #28a745;">${selectedByRanking}</div>
+                                    <div style="color: #666; font-size: 13px;">stories selected</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                                <span style="color: #666; font-size: 13px;">Selection rate: </span>
+                                <span style="color: #28a745; font-weight: 600;">${rankingRate}%</span>
+                                <span style="color: #666; font-size: 13px;"> of candidates chosen</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Arrow -->
+                        <div style="text-align: center; color: #999; font-size: 24px;">↓</div>
+                        
+                        <!-- Stage 3: Scraper -->
+                        <div style="background: linear-gradient(to right, #f8f9fa, white); padding: 20px; border-radius: 8px; border-left: 4px solid #6f42c1;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #6f42c1;">🕷️ Scraper</div>
+                                    <div style="color: #666; font-size: 14px; margin-top: 5px;">Fetching full article content</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #6f42c1;">${successfullyScrpaed}</div>
+                                    <div style="color: #666; font-size: 13px;">articles scraped</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0; display: flex; gap: 20px;">
+                                <div>
+                                    <span style="color: #666; font-size: 13px;">Attempted: </span>
+                                    <span style="font-weight: 600;">${sentToScraper}</span>
+                                </div>
+                                <div>
+                                    <span style="color: #666; font-size: 13px;">Success rate: </span>
+                                    <span style="color: #6f42c1; font-weight: 600;">${scrapeRate}%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Arrow -->
+                        <div style="text-align: center; color: #999; font-size: 24px;">↓</div>
+                        
+                        <!-- Stage 4: Outline & Script -->
+                        <div style="background: linear-gradient(to right, #f8f9fa, white); padding: 20px; border-radius: 8px; border-left: 4px solid #fd7e14;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 18px; font-weight: 600; color: #fd7e14;">📝 Outline & Script</div>
+                                    <div style="color: #666; font-size: 14px; margin-top: 5px;">Generating podcast content</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 32px; font-weight: 700; color: #fd7e14;">${sectionsCreated}</div>
+                                    <div style="color: #666; font-size: 13px;">sections created</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                                <span style="color: #666; font-size: 13px;">Script length: </span>
+                                <span style="color: #fd7e14; font-weight: 600;">${scriptWordCount.toLocaleString()} words</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="report-section">
+                    <h3>📈 Key Metrics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-value">${totalFound}</div>
+                            <div class="stat-label">Total Stories Found</div>
+                        </div>
+                        <div class="stat-card" style="background: #fff3cd;">
+                            <div class="stat-value">${filtered}</div>
+                            <div class="stat-label">Stories Filtered Out</div>
+                        </div>
+                        <div class="stat-card" style="background: #d4edda;">
+                            <div class="stat-value">${selectedByRanking}</div>
+                            <div class="stat-label">Stories Selected</div>
+                        </div>
+                        <div class="stat-card" style="background: #e7f3ff;">
+                            <div class="stat-value">${successfullyScrpaed}</div>
+                            <div class="stat-label">Articles Scraped</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('tab-summary').innerHTML = html;
         }
 
         function renderIngestionTab(ingestion) {
@@ -2919,7 +3075,8 @@ Full data in console (F12).`;
             </div>
             
             <div class="report-tabs">
-                <button class="report-tab active" onclick="switchReportTab('ingestion')">📥 Ingestion</button>
+                <button class="report-tab active" onclick="switchReportTab('summary')">📊 Summary</button>
+                <button class="report-tab" onclick="switchReportTab('ingestion')">📥 Ingestion</button>
                 <button class="report-tab" onclick="switchReportTab('ranking')">🎯 Ranking</button>
                 <button class="report-tab" onclick="switchReportTab('scraper')">🕷️ Scraper</button>
                 <button class="report-tab" onclick="switchReportTab('outline')">📋 Outline</button>
@@ -2929,7 +3086,8 @@ Full data in console (F12).`;
             </div>
             
             <div class="report-body">
-                <div id="tab-ingestion" class="report-tab-content active"></div>
+                <div id="tab-summary" class="report-tab-content active"></div>
+                <div id="tab-ingestion" class="report-tab-content"></div>
                 <div id="tab-ranking" class="report-tab-content"></div>
                 <div id="tab-scraper" class="report-tab-content"></div>
                 <div id="tab-outline" class="report-tab-content"></div>
