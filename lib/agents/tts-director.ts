@@ -161,5 +161,41 @@ You must respond with valid JSON only.`,
     const words = text.split(/\s+/).length;
     return Math.ceil(words / 2.5); // 150 wpm = 2.5 words per second
   }
+  
+  /**
+   * Add emotional cues to make TTS more engaging
+   */
+  private addEmotionalCues(text: string, sectionType: string): { text: string; speed: number } {
+    let emotionalText = text;
+    let speed = 0.95; // Default speed
+    
+    // Detect exciting content (growth, innovation, breakthrough, launch)
+    const excitingKeywords = /\b(growth|innovation|breakthrough|launch|record|milestone|revolutionary|transform|disrupt)/gi;
+    if (excitingKeywords.test(text)) {
+      speed = 1.0; // Slightly faster for exciting news
+      // Add emphasis punctuation
+      emotionalText = emotionalText.replace(/(!|\?)/g, '$1!');
+    }
+    
+    // Detect serious/concerning content (decline, warning, concern, risk)
+    const seriousKeywords = /\b(decline|warning|concern|risk|threat|challenge|crisis|fail)/gi;
+    if (seriousKeywords.test(text)) {
+      speed = 0.90; // Slower for serious topics
+      // Add pauses after concerning statements
+      emotionalText = emotionalText.replace(/\./g, '...');
+    }
+    
+    // Intro/outro should be warm and welcoming
+    if (sectionType === 'intro') {
+      speed = 0.95;
+      emotionalText = emotionalText.replace(/\./g, '. '); // Add space for natural pauses
+    }
+    
+    if (sectionType === 'outro') {
+      speed = 0.93; // Slightly slower, more reflective
+    }
+    
+    return { text: emotionalText, speed };
+  }
 }
 

@@ -90,7 +90,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               continue;
             }
             if (story.published_at < cutoff_date) {
-              filteredOut.push({ title: story.title, reason: `Too old (${Clock.formatDate(story.published_at)})` });
+              filteredOut.push({ title: story.title, reason: `Too old (${story.published_at.toISOString()})` });
               Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()})`);
               continue;
             }

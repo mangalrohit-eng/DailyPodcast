@@ -182,10 +182,10 @@ export class Orchestrator {
         });
       
       Logger.info('🎯 Ingestion will fetch from topics', { 
-        enabled_topics: enabledTopicConfigs.map(t => t.name),
+        enabled_topics: enabledTopicConfigs.map((t: any) => t.name),
         dashboard_topics_count: dashboardConfig?.topics?.length || 0,
         enabled_count: enabledTopicConfigs.length,
-        full_config: enabledTopicConfigs.map(t => ({
+        full_config: enabledTopicConfigs.map((t: any) => ({
           name: t.name,
           weight: t.weight,
           sources_count: t.sources.length,
@@ -197,7 +197,7 @@ export class Orchestrator {
         phase: 'Ingestion',
         status: 'running',
         message: 'Fetching news from RSS feeds',
-        details: { topics: enabledTopicConfigs.map(t => t.name) },
+        details: { topics: enabledTopicConfigs.map((t: any) => t.name) },
       });
       const ingestionStart = Date.now();
       const ingestionResult = await this.ingestionAgent.execute(runId, {

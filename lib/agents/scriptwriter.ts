@@ -109,8 +109,8 @@ You must respond with valid JSON only.`,
     // Collect all citations used
     const allCitations = new Set<number>();
     sections.forEach(section => {
-      if (section.citations) {
-        section.citations.forEach(c => allCitations.add(c));
+      if ((section as any).citations) {
+        (section as any).citations.forEach((c: number) => allCitations.add(c));
       }
     });
     
@@ -181,7 +181,7 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
     }).join('\n\n');
 
     const allSources = Array.from(sourceMap.values())
-      .map((source, idx) => `[${idx + 1}] ${source.title} - ${source.url}`)
+      .map((source, idx) => `[${idx + 1}] ${(source as any).title} - ${(source as any).url}`)
       .join('\n');
 
     // Build style guidance based on dashboard settings

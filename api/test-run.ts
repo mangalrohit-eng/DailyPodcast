@@ -10,7 +10,6 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { AuthMiddleware } from '../lib/middleware/auth';
-import { StructuredLogger } from '../lib/tools/logs-storage';
 import { RunsStorage } from '../lib/tools/runs-storage';
 import { Config } from '../lib/config';
 import { Logger } from '../lib/utils';
@@ -56,53 +55,51 @@ export default async function handler(
       }
       
       const testRunId = `test-${new Date().toISOString().split('T')[0]}-${Date.now()}`;
-      const logger = new StructuredLogger(testRunId);
       
       try {
-      await logger.info('🧪 Test run started', { testRunId });
       Logger.info('Test run started', { testRunId });
       
       // Test 1: Check OpenAI API key
-      await logger.info('✓ Checking OpenAI API key...');
+      Logger.info('✓ Checking OpenAI API key...');
       const hasOpenAI = !!Config.OPENAI_API_KEY;
-      await logger.info(hasOpenAI ? '✓ OpenAI API key configured' : '✗ OpenAI API key missing', {
+      Logger.info(hasOpenAI ? '✓ OpenAI API key configured' : '✗ OpenAI API key missing', {
         configured: hasOpenAI,
       });
       
       // Test 2: Check storage
-      await logger.info('✓ Checking storage...');
+      Logger.info('✓ Checking storage...');
       const hasStorage = !!Config.BLOB_READ_WRITE_TOKEN;
-      await logger.info(hasStorage ? '✓ Blob storage configured' : '✗ Blob storage not configured', {
+      Logger.info(hasStorage ? '✓ Blob storage configured' : '✗ Blob storage not configured', {
         configured: hasStorage,
       });
       
       // Test 3: Check topic config
-      await logger.info('✓ Checking topics...');
+      Logger.info('✓ Checking topics...');
       const topics = Config.getTopicConfigs();
-      await logger.info(`✓ Found ${topics.length} topics`, {
+      Logger.info(`✓ Found ${topics.length} topics`, {
         topics: topics.map(t => ({ name: t.name, weight: t.weight, sources: t.sources.length })),
       });
       
       // Test 4: Check runs storage
-      await logger.info('✓ Testing runs storage...');
+      Logger.info('✓ Testing runs storage...');
       const runsStorage = new RunsStorage();
       const activeRun = RunsStorage.getActiveRunId();
-      await logger.info(activeRun ? `⚠️ Active run detected: ${activeRun}` : '✓ No active runs', {
+      Logger.info(activeRun ? `⚠️ Active run detected: ${activeRun}` : '✓ No active runs', {
         activeRun,
       });
       
       // Test 5: Check window hours and duration
-      await logger.info('✓ Checking config values...');
-      await logger.info('Config loaded', {
+      Logger.info('✓ Checking config values...');
+      Logger.info('Config loaded', {
         window_hours: Config.WINDOW_HOURS,
         target_duration: Config.TARGET_DURATION_SECONDS,
         rumor_filter: Config.RUMOR_FILTER,
       });
       
       // Test 6: Try a small OpenAI API call (just to test quota/rate limits)
-      await logger.info('✓ Testing OpenAI API access with retry logic...');
+      Logger.info('✓ Testing OpenAI API access with retry logic...');
       if (!Config.OPENAI_API_KEY) {
-        await logger.warn('⚠️ OpenAI API key not configured, skipping API test');
+        Logger.warn('⚠️ OpenAI API key not configured, skipping API test');
       } else {
         try {
           const { createChatCompletion } = await import('../lib/utils/openai-helper');
@@ -125,7 +122,7 @@ export default async function handler(
             }
           );
           
-          await logger.info('✓ OpenAI API call successful', {
+          Logger.info('✓ OpenAI API call successful', {
             model: response.model,
             usage: response.usage,
           });
@@ -134,7 +131,7 @@ export default async function handler(
           const errorCode = openaiError.code || openaiError.type;
           const errorStatus = openaiError.status;
           
-          await logger.error('✗ OpenAI API call failed after retries', {
+          Logger.error('✗ OpenAI API call failed after retries', {
             error: errorMsg,
             code: errorCode,
             status: errorStatus,
@@ -143,7 +140,7 @@ export default async function handler(
           
           // Check for rate limit errors
           if (errorStatus === 429 || errorCode === 'rate_limit_exceeded' || errorMsg.includes('rate limit')) {
-            await logger.error('⏱️ RATE LIMIT: OpenAI API rate limit exceeded', {
+            Logger.error('⏱️ RATE LIMIT: OpenAI API rate limit exceeded', {
               solution1: 'Requests are being retried automatically with exponential backoff',
               solution2: 'If persistent, wait 60 seconds and try again',
               solution3: 'Check rate limits at https://platform.openai.com/account/limits',
@@ -154,7 +151,7 @@ export default async function handler(
           // Check for quota/billing errors
           if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || 
               errorMsg.includes('billing') || errorCode === 'insufficient_quota') {
-            await logger.error('💳 QUOTA ERROR: OpenAI API quota exceeded or billing issue detected', {
+            Logger.error('💳 QUOTA ERROR: OpenAI API quota exceeded or billing issue detected', {
               solution1: 'Add payment method at https://platform.openai.com/account/billing',
               solution2: 'Check usage at https://platform.openai.com/usage',
               solution3: 'Verify API key has credits',
@@ -164,9 +161,7 @@ export default async function handler(
       }
       
       // Flush logs
-      await logger.flush();
-      await logger.info('✓ Test run completed');
-      await logger.flush();
+      Logger.info('✓ Test run completed');
       
       Logger.info('Test run completed', { testRunId });
       
@@ -190,7 +185,7 @@ export default async function handler(
       const errorMsg = (error as Error).message;
       const errorCode = error.code || error.type;
       
-      await logger.error('✗ Test run failed', {
+      Logger.error('✗ Test run failed', {
         error: errorMsg,
         code: errorCode,
         stack: (error as Error).stack,
@@ -199,14 +194,13 @@ export default async function handler(
       // Special handling for quota errors
       if (errorMsg.includes('quota') || errorMsg.includes('insufficient_quota') || 
           errorMsg.includes('billing') || errorCode === 'insufficient_quota') {
-        await logger.error('💳 CRITICAL: OpenAI quota/billing issue detected', {
+        Logger.error('💳 CRITICAL: OpenAI quota/billing issue detected', {
           error: errorMsg,
           action_required: 'Add payment method or wait for quota reset',
           billing_url: 'https://platform.openai.com/account/billing',
         });
       }
       
-      await logger.flush();
       
       Logger.error('Test run failed', {
         testRunId,
@@ -482,9 +476,9 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
         // Get all runs, find the most recent one
         const allRuns = await runsStorage.list();
         
-        if (allRuns.length > 0) {
+        if (allRuns.runs.length > 0) {
           // Sort by run_id (which includes timestamp) to get the most recent
-          const sortedRuns = allRuns.sort((a, b) => {
+          const sortedRuns = allRuns.runs.sort((a, b) => {
             return b.run_id.localeCompare(a.run_id);
           });
           
@@ -494,22 +488,21 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
           progress = {
             runId: latestRun.run_id,
             status: latestRun.status as 'running' | 'completed' | 'failed',
-            progress: latestRun.status === 'completed' ? 100 : latestRun.status === 'failed' ? 0 : 50,
-            currentPhase: latestRun.status === 'completed' ? 'Complete' : latestRun.status === 'failed' ? 'Failed' : 'Processing',
+            progress: latestRun.status === 'success' ? 100 : latestRun.status === 'failed' ? 0 : 50,
+            currentPhase: latestRun.status === 'success' ? 'Complete' : latestRun.status === 'failed' ? 'Failed' : 'Processing',
             startedAt: new Date(latestRun.date).toISOString(),
             updates: [
               {
-                phase: latestRun.status === 'completed' ? 'Complete' : 'Processing',
+                phase: latestRun.status === 'success' ? 'Complete' : 'Processing',
                 status: latestRun.status as any,
-                message: latestRun.status === 'completed' 
+                message: latestRun.status === 'success' 
                   ? `Episode generated successfully! ${latestRun.stories_count || 0} stories, ${Math.round((latestRun.duration_ms || 0) / 1000)}s`
                   : latestRun.status === 'failed'
                   ? 'Episode generation failed'
                   : 'Episode is being generated in the background (Vercel timeout after 10s)',
                 timestamp: new Date().toISOString(),
-                details: latestRun.status === 'completed' ? {
+                details: latestRun.status === 'success' ? {
                   episode_url: latestRun.episode_url,
-                  feed_url: latestRun.feed_url,
                 } : undefined,
               },
             ],
@@ -528,22 +521,21 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
           progress = {
             runId: runSummary.run_id,
             status: runSummary.status as 'running' | 'completed' | 'failed',
-            progress: runSummary.status === 'completed' ? 100 : runSummary.status === 'failed' ? 0 : 50,
-            currentPhase: runSummary.status === 'completed' ? 'Complete' : runSummary.status === 'failed' ? 'Failed' : 'Processing',
+            progress: runSummary.status === 'success' ? 100 : runSummary.status === 'failed' ? 0 : 50,
+            currentPhase: runSummary.status === 'success' ? 'Complete' : runSummary.status === 'failed' ? 'Failed' : 'Processing',
             startedAt: new Date(runSummary.date).toISOString(),
             updates: [
               {
-                phase: runSummary.status === 'completed' ? 'Complete' : 'Processing',
+                phase: runSummary.status === 'success' ? 'Complete' : 'Processing',
                 status: runSummary.status as any,
-                message: runSummary.status === 'completed' 
+                message: runSummary.status === 'success' 
                   ? `Episode generated successfully! ${runSummary.stories_count || 0} stories, ${Math.round((runSummary.duration_ms || 0) / 1000)}s`
                   : runSummary.status === 'failed'
                   ? 'Episode generation failed'
                   : 'Episode is being generated in the background',
                 timestamp: new Date().toISOString(),
-                details: runSummary.status === 'completed' ? {
+                details: runSummary.status === 'success' ? {
                   episode_url: runSummary.episode_url,
-                  feed_url: runSummary.feed_url,
                 } : undefined,
               },
             ],
@@ -750,7 +742,6 @@ async function handleDebugConfig(req: VercelRequest, res: VercelResponse) {
         rumor_filter: config.rumor_filter,
         has_podcast_production: !!config.podcast_production,
         version: config.version,
-        last_updated: config.last_updated,
       },
       memory_config: memoryConfig,
       note: 'S3 config (dashboard) should override memory config when running'
