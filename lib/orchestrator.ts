@@ -281,6 +281,7 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
         date: runConfig.date,
         target_duration_sec: runConfig.target_duration_sec,
+        topic_weights: runConfig.weights, // Pass weights to order stories by priority
         podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['outline'] = Date.now() - outlineStart;

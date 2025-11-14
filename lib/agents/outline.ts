@@ -10,6 +10,7 @@ export interface OutlineInput {
   picks: Pick[];
   date: string;
   target_duration_sec: number;
+  topic_weights?: Record<string, number>; // For ordering stories by topic priority
   podcast_production?: {
     num_stories_min: number;
     num_stories_max: number;
@@ -38,7 +39,7 @@ Structure for maximum impact with dense, actionable information. You must respon
   }
   
   protected async process(input: OutlineInput): Promise<OutlineOutput> {
-    const { picks, date, target_duration_sec, podcast_production } = input;
+    const { picks, date, target_duration_sec, topic_weights, podcast_production } = input;
     
     // Use dashboard settings or defaults
     const numStoriesMin = podcast_production?.num_stories_min || 3;
@@ -53,15 +54,26 @@ Structure for maximum impact with dense, actionable information. You must respon
     const introOutroTimeSec = Math.max(15, Math.floor(contentTimeSec * 0.1)); // 10% for intro/outro, min 15s each
     const storyTimeSec = Math.floor((contentTimeSec - (introOutroTimeSec * 2)) / ((numStoriesMin + numStoriesMax) / 2));
     
+    // Sort picks by topic weight (highest weight first) to order stories by priority
+    const sortedPicks = topic_weights
+      ? [...picks].sort((a, b) => {
+          const weightA = topic_weights[a.topic] || 0;
+          const weightB = topic_weights[b.topic] || 0;
+          // Sort descending: higher weight first
+          return weightB - weightA;
+        })
+      : picks;
+    
     Logger.info('Creating outline', { 
-      picks: picks.length, 
+      picks: sortedPicks.length, 
       target_duration_sec,
       num_stories: `${numStoriesMin}-${numStoriesMax}`,
       story_duration_sec: storyTimeSec,
+      story_order: sortedPicks.map(p => `${p.topic} (${topic_weights?.[p.topic]?.toFixed(2) || 'N/A'})`),
     });
     
-    // Prepare story summaries for the prompt
-    const storySummaries = picks.map((pick, idx) => ({
+    // Prepare story summaries for the prompt (using sorted picks)
+    const storySummaries = sortedPicks.map((pick, idx) => ({
       index: idx,
       id: pick.story_id,
       topic: pick.topic,
