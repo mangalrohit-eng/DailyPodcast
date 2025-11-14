@@ -69,7 +69,7 @@ async function handleListRuns(req: VercelRequest, res: VercelResponse) {
 
 async function handleGetRun(req: VercelRequest, res: VercelResponse, runId: string) {
   try {
-    Logger.info('Getting run details', { runId });
+    Logger.info('📊 API: Getting run details', { runId });
     
     const runsStorage = new RunsStorage();
     
@@ -77,21 +77,35 @@ async function handleGetRun(req: VercelRequest, res: VercelResponse, runId: stri
     const summary = await runsStorage.get(runId);
     
     if (!summary) {
-      Logger.warn('Run not found', { runId });
+      Logger.warn('❌ Run not found in index', { runId });
       return res.status(404).json({ error: 'Run not found' });
     }
+    
+    Logger.info('✅ Run summary found', { 
+      runId, 
+      status: summary.status,
+      episode_url: summary.episode_url 
+    });
     
     // Get full manifest if available
     const manifest = await runsStorage.getManifest(runId);
     
-    Logger.info('Run details retrieved', { runId });
+    if (manifest) {
+      Logger.info('✅ Manifest loaded', { 
+        runId,
+        has_pipeline_report: !!manifest.pipeline_report,
+        pipeline_report_keys: manifest.pipeline_report ? Object.keys(manifest.pipeline_report) : [],
+      });
+    } else {
+      Logger.warn('⚠️ No manifest found', { runId });
+    }
     
     res.status(200).json({
       summary,
       manifest,
     });
   } catch (error) {
-    Logger.error('Failed to get run details', {
+    Logger.error('❌ Failed to get run details', {
       runId,
       error: (error as Error).message,
       stack: (error as Error).stack,

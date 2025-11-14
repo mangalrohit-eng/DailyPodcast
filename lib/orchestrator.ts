@@ -578,13 +578,17 @@ export class Orchestrator {
     const configStorage = new ConfigStorage();
     let dashboardConfig;
     try {
+      Logger.info('🔍 ATTEMPTING TO LOAD DASHBOARD CONFIG...');
       dashboardConfig = await configStorage.load();
-      Logger.info('Loaded dashboard configuration', {
+      Logger.info('✅ DASHBOARD CONFIG LOADED SUCCESSFULLY', {
+        topics_count: dashboardConfig.topics.length,
+        topics: dashboardConfig.topics.map((t: any) => ({ label: t.label, weight: t.weight })),
         has_production_settings: !!dashboardConfig.podcast_production,
       });
     } catch (error) {
-      Logger.warn('Failed to load dashboard config, using defaults', {
+      Logger.error('❌ FAILED TO LOAD DASHBOARD CONFIG', {
         error: (error as Error).message,
+        stack: (error as Error).stack,
       });
       dashboardConfig = null;
     }
@@ -593,33 +597,53 @@ export class Orchestrator {
     let weights = input.weights || Config.parseTopicWeights();
     let topics = input.topics || ['AI', 'Verizon', 'Accenture'];
     
+    Logger.info('🎯 BEFORE DASHBOARD CONFIG CHECK', {
+      input_weights: input.weights,
+      input_topics: input.topics,
+      has_dashboard_config: !!dashboardConfig,
+      initial_weights: weights,
+      initial_topics: topics,
+    });
+    
     if (!input.weights && dashboardConfig) {
       // Use topic weights from dashboard config
       const topicWeights: Record<string, number> = {};
       const enabledTopics: string[] = [];
+      
+      Logger.info('🔧 PROCESSING DASHBOARD TOPICS', {
+        raw_topics: dashboardConfig.topics,
+      });
       
       dashboardConfig.topics.forEach((t: any) => {
         topicWeights[t.label.toLowerCase()] = t.weight;
         // Only include topics with non-zero weight
         if (t.weight > 0) {
           enabledTopics.push(t.label);
+          Logger.info(`  ✅ Topic ENABLED: ${t.label} (weight: ${t.weight})`);
+        } else {
+          Logger.info(`  ❌ Topic DISABLED: ${t.label} (weight: ${t.weight})`);
         }
       });
       
       weights = topicWeights;
       topics = enabledTopics.length > 0 ? enabledTopics : ['AI', 'Verizon', 'Accenture'];
       
-      Logger.info('✅ Using dashboard configuration', { 
-        topics: topics,
-        weights: topicWeights 
+      Logger.info('✅ FINAL DASHBOARD CONFIGURATION', { 
+        enabled_topics: topics,
+        topic_weights: topicWeights,
+        fallback_used: enabledTopics.length === 0,
       });
     } else if (!input.weights) {
+      Logger.info('⚠️ NO DASHBOARD CONFIG - using memory or defaults');
       try {
         const profile = await this.memoryAgent.getProfile();
         weights = profile.topic_weights;
+        Logger.info('Using memory profile weights', { weights });
       } catch {
-        // Use defaults
+        Logger.info('Using default weights from Config');
       }
+    } else {
+      Logger.info('⚠️ Using input.weights (not dashboard)', { weights: input.weights });
     }
     
     return {

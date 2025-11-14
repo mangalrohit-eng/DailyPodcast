@@ -48,13 +48,25 @@ export class PublisherAgent extends BaseAgent<PublisherInput, PublisherOutput> {
     
     // Store manifest (use run_id to match what RunsStorage expects)
     const manifestPath = `episodes/${manifest.run_id}_manifest.json`;
+    const manifestJson = JSON.stringify(manifest, null, 2);
+    
+    Logger.info('📝 SAVING MANIFEST', { 
+      path: manifestPath,
+      has_pipeline_report: !!manifest.pipeline_report,
+      manifest_size: manifestJson.length,
+      run_id: manifest.run_id,
+    });
+    
     await this.storage.put(
       manifestPath,
-      JSON.stringify(manifest, null, 2),
+      manifestJson,
       'application/json'
     );
     
-    Logger.info('Manifest saved', { path: manifestPath });
+    Logger.info('✅ MANIFEST SAVED SUCCESSFULLY', { 
+      path: manifestPath,
+      url: `https://s3.amazonaws.com/.../` + manifestPath 
+    });
     
     // Update feed.xml
     await this.updateFeed(manifest, podcast_config);
