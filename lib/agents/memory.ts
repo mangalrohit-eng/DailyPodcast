@@ -133,8 +133,7 @@ export class MemoryAgent extends BaseAgent<MemoryInput, MemoryOutput> {
       preferred_sources: [],
       avoided_sources: [],
       pronunciation_glossary: {
-        'Verizon': 'ver-EYE-zon',
-        'Accenture': 'ak-SEN-chur',
+        // Pronunciation guide loaded from dashboard settings
         'AI': 'A I',
         'GPT': 'G P T',
         'API': 'A P I',

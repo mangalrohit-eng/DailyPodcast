@@ -200,36 +200,17 @@ export class ConfigStorage {
       updated_by: 'system',
       
       topics: [
-        {
-          label: 'AI',
-          weight: 0.5,
-          sources: [
-            'https://openai.com/blog/rss.xml',
-            'https://blog.google/technology/ai/rss/',
-            'https://www.anthropic.com/news/rss.xml',
-            'https://ai.meta.com/blog/rss/',
-            'https://news.google.com/rss/search?q=artificial+intelligence+OR+machine+learning+OR+AI&hl=en-US&gl=US&ceid=US:en',
-          ],
-          keywords: ['AI', 'artificial intelligence', 'machine learning', 'deep learning', 'LLM', 'ChatGPT', 'GPT', 'neural network'],
-        },
-        {
-          label: 'Verizon',
-          weight: 0.3,
-          sources: [
-            'https://www.verizon.com/about/rss/news',
-            'https://news.google.com/rss/search?q=Verizon&hl=en-US&gl=US&ceid=US:en',
-          ],
-          keywords: ['Verizon', 'VZ', 'telecom', '5G', 'wireless', 'fiber'],
-        },
-        {
-          label: 'Accenture',
-          weight: 0.2,
-          sources: [
-            'https://newsroom.accenture.com/news/rss.xml',
-            'https://news.google.com/rss/search?q=Accenture&hl=en-US&gl=US&ceid=US:en',
-          ],
-          keywords: ['Accenture', 'ACN', 'consulting', 'digital transformation'],
-        },
+        // Empty by default - user must configure topics in dashboard
+        // Example topic structure:
+        // {
+        //   label: 'Your Topic Name',
+        //   weight: 1.0,
+        //   sources: [
+        //     'https://example.com/rss',
+        //     'https://news.google.com/rss/search?q=YourTopic',
+        //   ],
+        //   keywords: ['keyword1', 'keyword2', 'keyword3'],
+        // },
       ],
       
       timezone: process.env.TIMEZONE || 'America/New_York',
@@ -253,7 +234,7 @@ export class ConfigStorage {
       
       podcast_title: process.env.PODCAST_TITLE || "Rohit's Daily AI & Corporate News Brief",
       podcast_description: process.env.PODCAST_DESCRIPTION || 
-        'Your personalized 15-minute morning brief on AI, Verizon, and Accenture news. AI-generated narration powered by OpenAI.',
+        'Your personalized daily news brief. AI-generated narration powered by OpenAI.',
       podcast_author: process.env.PODCAST_AUTHOR || 'Rohit',
       podcast_email: process.env.PODCAST_EMAIL || 'podcast@example.com',
       podcast_language: process.env.PODCAST_LANGUAGE || 'en-us',
@@ -265,7 +246,7 @@ export class ConfigStorage {
       force_overwrite: process.env.FORCE_OVERWRITE === 'true',
       
       podcast_production: {
-        intro_text: 'This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we\'ll cover:',
+        intro_text: 'This is your daily podcast to recap recent news. Today we\'ll cover:',
         outro_text: 'That\'s your executive brief. Stay informed, stay ahead.',
         enable_intro_music: true,
         enable_outro_music: true,

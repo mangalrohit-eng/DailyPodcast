@@ -63,7 +63,7 @@ ${JSON.stringify(storySummaries, null, 2)}
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - Select 3-5 most impactful stories
-- **CRITICAL: MUST include at least one story from EACH topic (AI, Verizon, Accenture)**
+- **CRITICAL: MUST include at least one story from EACH configured topic**
 - Prioritize business implications and strategic context
 - Balance coverage across all topics
 - NO small talk, greetings, or filler - executive audience

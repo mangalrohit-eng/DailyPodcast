@@ -1,7 +1,7 @@
 # Daily Personal News Podcast
 
 > **Production-ready AI-powered daily morning news podcast generator**  
-> Personalized 15-minute audio briefs on AI, Verizon, and Accenture news  
+> Personalized daily audio briefs on any topics you configure  
 > Built with an agentic architecture on Vercel with OpenAI
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/daily-personal-news-podcast)
@@ -214,7 +214,7 @@ Health check endpoint.
 ## Agent Details
 
 ### 1. Ingestion Agent
-- Fetches from RSS feeds (OpenAI, Google, Anthropic, Meta, Verizon, Accenture)
+- Fetches from RSS feeds you configure (any company, topic, or industry)
 - Normalizes content to `Story` objects
 - Filters by language, quality, and relevance
 - Deduplicates by domain

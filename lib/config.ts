@@ -21,7 +21,7 @@ export class Config {
   static PODCAST_BASE_URL = process.env.PODCAST_BASE_URL || 'http://localhost:3000';
   static PODCAST_TITLE = process.env.PODCAST_TITLE || "Rohit's Daily AI & Corporate News Brief";
   static PODCAST_DESCRIPTION = process.env.PODCAST_DESCRIPTION || 
-    'Your personalized 15-minute morning brief on AI, Verizon, and Accenture news. AI-generated narration powered by OpenAI.';
+    'Your personalized daily news brief. AI-generated narration powered by OpenAI.';
   static PODCAST_AUTHOR = process.env.PODCAST_AUTHOR || 'Rohit';
   static PODCAST_EMAIL = process.env.PODCAST_EMAIL || 'podcast@example.com';
   static PODCAST_LANGUAGE = process.env.PODCAST_LANGUAGE || 'en-us';
@@ -37,8 +37,8 @@ export class Config {
   
   // Operational
   static FORCE_OVERWRITE = process.env.FORCE_OVERWRITE === 'true';
-  static WINDOW_HOURS = parseInt(process.env.WINDOW_HOURS || '24', 10);
-  static TARGET_DURATION_SECONDS = parseInt(process.env.TARGET_DURATION_SECONDS || '300', 10);
+  static WINDOW_HOURS = parseInt(process.env.WINDOW_HOURS || '72', 10);
+  static TARGET_DURATION_SECONDS = parseInt(process.env.TARGET_DURATION_SECONDS || '900', 10);
   
   static parseTopicWeights(): Record<string, number> {
     const weightsStr = process.env.TOPIC_WEIGHTS || 'ai:0.5,vz:0.3,acn:0.2';
@@ -52,39 +52,15 @@ export class Config {
     return weights;
   }
   
+  /**
+   * This method is DEPRECATED and should not be used.
+   * Topics should be loaded from ConfigStorage (dashboard settings) instead.
+   * This is kept only as an emergency fallback.
+   */
   static getTopicConfigs(): TopicConfig[] {
-    return [
-      {
-        name: 'AI',
-        weight: Config.parseTopicWeights()['ai'] || 0.5,
-        sources: [
-          'https://openai.com/blog/rss.xml',
-          'https://blog.google/technology/ai/rss/',
-          'https://www.anthropic.com/news/rss.xml',
-          'https://ai.meta.com/blog/rss/',
-          'https://news.google.com/rss/search?q=artificial+intelligence+OR+machine+learning+OR+AI&hl=en-US&gl=US&ceid=US:en',
-        ],
-        keywords: ['AI', 'artificial intelligence', 'machine learning', 'deep learning', 'LLM', 'ChatGPT', 'GPT', 'neural network'],
-      },
-      {
-        name: 'Verizon',
-        weight: Config.parseTopicWeights()['vz'] || 0.3,
-        sources: [
-          'https://www.verizon.com/about/rss/news',
-          'https://news.google.com/rss/search?q=Verizon&hl=en-US&gl=US&ceid=US:en',
-        ],
-        keywords: ['Verizon', 'VZ', 'telecom', '5G', 'wireless', 'fiber'],
-      },
-      {
-        name: 'Accenture',
-        weight: Config.parseTopicWeights()['acn'] || 0.2,
-        sources: [
-          'https://newsroom.accenture.com/news/rss.xml',
-          'https://news.google.com/rss/search?q=Accenture&hl=en-US&gl=US&ceid=US:en',
-        ],
-        keywords: ['Accenture', 'ACN', 'consulting', 'digital transformation'],
-      },
-    ];
+    // Return empty array - force loading from dashboard
+    // If dashboard config doesn't exist, orchestrator will fail early with clear error
+    return [];
   }
   
   static getPodcastConfig(): PodcastConfig {

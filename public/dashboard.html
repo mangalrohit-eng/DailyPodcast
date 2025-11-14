@@ -1627,7 +1627,7 @@ Full data in console (F12).`;
             
             // Podcast Metadata
             document.getElementById('podcastTitle').value = config.podcast_title || "Rohit's Daily AI & Corporate News Brief";
-            document.getElementById('podcastDescription').value = config.podcast_description || 'Your personalized daily brief on AI, Verizon, and Accenture news.';
+            document.getElementById('podcastDescription').value = config.podcast_description || 'Your personalized daily news brief.';
             document.getElementById('podcastAuthor').value = config.podcast_author || 'Rohit';
             document.getElementById('podcastEmail').value = config.podcast_email || 'podcast@example.com';
             document.getElementById('podcastLanguage').value = config.podcast_language || 'en-us';
@@ -1639,7 +1639,7 @@ Full data in console (F12).`;
             document.getElementById('podcastStyle').value = prod.style || 'executive';
             document.getElementById('numStoriesMin').value = prod.num_stories_min || 3;
             document.getElementById('numStoriesMax').value = prod.num_stories_max || 5;
-            document.getElementById('introText').value = prod.intro_text || 'This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we\'ll cover:';
+            document.getElementById('introText').value = prod.intro_text || 'This is your daily podcast to recap recent news. Today we\'ll cover:';
             document.getElementById('outroText').value = prod.outro_text || 'That\'s your executive brief. Stay informed, stay ahead.';
             document.getElementById('enableIntroMusic').checked = prod.enable_intro_music !== false;
             document.getElementById('introMusicDuration').value = (prod.intro_music_duration_ms || 3000) / 1000;

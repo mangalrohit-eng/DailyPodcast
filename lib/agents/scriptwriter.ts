@@ -41,12 +41,12 @@ Executive Brief Style:
 - Cite sources inline using [1], [2], etc.
 
 Structure Rules:
-- Intro: Use "This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we'll cover:" followed by a brief list of topics (3-5 topics, one line each)
+- Intro: Open with a professional greeting and briefly list the topics to be covered (3-5 topics, one line each)
 - Story segments: Lead with the business impact, then details
 - Outro: Brief upbeat summary like "That's your executive brief. Stay informed, stay ahead."
 
 Content Requirements:
-- ALWAYS mention specific company names (Accenture, Verizon, etc.)
+- ALWAYS mention specific company names, products, and people from the stories
 - Include specific numbers, dollar amounts, percentages
 - Name specific products, services, or technologies
 - Reference specific executives, organizations, locations
@@ -54,7 +54,7 @@ Content Requirements:
 - Use the FULL story summary - extract all key facts
 
 Required Language:
-- Intro MUST start: "This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we'll cover:"
+- Intro: Professional opening that lists topics to be covered
 - Outro MUST end with upbeat message like: "That's your executive brief. Stay informed, stay ahead."
 
 Prohibited Language:

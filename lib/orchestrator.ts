@@ -150,16 +150,22 @@ export class Orchestrator {
       // 1. INGESTION
       Logger.info('Phase 1: Ingestion');
       
-      // Filter topic configs to only enabled topics from dashboard
-      const allTopicConfigs = Config.getTopicConfigs();
-      const enabledTopicConfigs = allTopicConfigs.filter(tc => 
-        runConfig.topics.includes(tc.name)
-      );
+      // Build TopicConfig array from dashboard settings
+      // Dashboard topics have: { label, weight, sources, keywords }
+      // We need TopicConfig: { name, weight, sources, keywords }
+      const enabledTopicConfigs = (dashboardConfig?.topics || [])
+        .filter((t: any) => runConfig.topics.includes(t.label))
+        .map((t: any) => ({
+          name: t.label,
+          weight: t.weight,
+          sources: t.sources || [],
+          keywords: t.keywords || [],
+        }));
       
       Logger.info('🎯 Ingestion will fetch from topics', { 
         enabled_topics: enabledTopicConfigs.map(t => t.name),
-        all_available: allTopicConfigs.map(t => t.name),
-        filtered_out: allTopicConfigs.filter(tc => !runConfig.topics.includes(tc.name)).map(t => t.name)
+        dashboard_topics_count: dashboardConfig?.topics?.length || 0,
+        enabled_count: enabledTopicConfigs.length,
       });
       
       progressTracker.addUpdate(runId, {
@@ -571,7 +577,7 @@ export class Orchestrator {
     }
   }
   
-  private async buildRunConfig(input: OrchestratorInput): Promise<RunConfig & { podcast_production?: any }> {
+  private async buildRunConfig(input: OrchestratorInput): Promise<RunConfig & { podcast_production?: any; dashboardConfig?: any }> {
     const date = input.date || Clock.toDateString(Clock.nowUtc());
     
     // Load configuration from ConfigStorage (dashboard settings)
@@ -595,7 +601,7 @@ export class Orchestrator {
     
     // Get weights and topics from dashboard config or memory profile
     let weights = input.weights || Config.parseTopicWeights();
-    let topics = input.topics || ['AI', 'Verizon', 'Accenture'];
+    let topics = input.topics || [];
     
     Logger.info('🎯 BEFORE DASHBOARD CONFIG CHECK', {
       input_weights: input.weights,
@@ -626,13 +632,20 @@ export class Orchestrator {
       });
       
       weights = topicWeights;
-      topics = enabledTopics.length > 0 ? enabledTopics : ['AI', 'Verizon', 'Accenture'];
+      topics = enabledTopics.length > 0 ? enabledTopics : [];
       
-      Logger.info('✅ FINAL DASHBOARD CONFIGURATION', { 
-        enabled_topics: topics,
-        topic_weights: topicWeights,
-        fallback_used: enabledTopics.length === 0,
-      });
+    Logger.info('✅ FINAL DASHBOARD CONFIGURATION', { 
+      enabled_topics: topics,
+      topic_weights: topicWeights,
+      fallback_used: enabledTopics.length === 0,
+    });
+    
+    // Validate that we have at least one topic configured
+    if (!topics || topics.length === 0) {
+      throw new Error(
+        '❌ NO TOPICS CONFIGURED! Please go to Dashboard Settings and configure at least one topic with weight > 0.'
+      );
+    }
     } else if (!input.weights) {
       Logger.info('⚠️ NO DASHBOARD CONFIG - using memory or defaults');
       try {
@@ -654,8 +667,9 @@ export class Orchestrator {
       force_overwrite: input.force_overwrite || Config.FORCE_OVERWRITE,
       rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : (dashboardConfig?.rumor_filter ?? Config.RUMOR_FILTER),
       target_duration_sec: dashboardConfig?.target_duration_sec || Config.TARGET_DURATION_SECONDS,
+      dashboardConfig, // Pass dashboard config to run() so it can build TopicConfig array
       podcast_production: dashboardConfig?.podcast_production || {
-        intro_text: 'This is your daily podcast to recap all that happened recently for Verizon, Accenture, and AI in general. Today we\'ll cover:',
+        intro_text: 'This is your daily podcast to recap recent news. Today we\'ll cover:',
         outro_text: 'That\'s your executive brief. Stay informed, stay ahead.',
         enable_intro_music: true,
         enable_outro_music: true,

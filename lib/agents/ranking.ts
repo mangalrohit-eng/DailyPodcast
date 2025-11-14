@@ -188,8 +188,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
       'google.com',
       'meta.com',
       'microsoft.com',
-      'verizon.com',
-      'accenture.com',
+      // No hardcoded preferred domains - all domains treated equally
       'reuters.com',
       'bloomberg.com',
       'wsj.com',

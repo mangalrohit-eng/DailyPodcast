@@ -1,7 +1,7 @@
 {
   "name": "daily-personal-news-podcast",
   "version": "1.0.0",
-  "description": "AI-powered daily morning news podcast for Rohit - focused on AI, Verizon, and Accenture",
+  "description": "AI-powered daily morning news podcast with configurable topics",
   "private": true,
   "scripts": {
     "dev": "tsx watch api/run.ts",

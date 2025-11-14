@@ -128,7 +128,7 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
   <channel>
     <title>Daily Rohit News</title>
     <link>${baseUrl}</link>
-    <description>Your personalized daily news brief covering AI, Verizon, and Accenture</description>
+    <description>Your personalized daily news brief</description>
     <language>en-us</language>
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
