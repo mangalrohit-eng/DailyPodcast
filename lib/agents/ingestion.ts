@@ -68,6 +68,14 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
           const items = await this.feedTool.parseFeed(sourceUrl);
           itemsFound += items.length;
           
+          // Log date distribution for debugging
+          if (items.length > 0) {
+            const dates = items.map(item => item.pubDate?.toISOString().split('T')[0] || 'no-date');
+            const dateCount: Record<string, number> = {};
+            dates.forEach(d => dateCount[d] = (dateCount[d] || 0) + 1);
+            Logger.info(`📅 Date distribution for ${topic.name} from ${sourceUrl.substring(0, 60)}`, { dateCount });
+          }
+          
           sourcesScanned.push({
             name: topic.name,
             url: sourceUrl,
@@ -90,8 +98,9 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               continue;
             }
             if (story.published_at < cutoff_date) {
-              filteredOut.push({ title: story.title, reason: `Too old (${story.published_at.toISOString()})` });
-              Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()})`);
+              const hoursOld = Math.round((Date.now() - story.published_at.getTime()) / (1000 * 60 * 60));
+              filteredOut.push({ title: story.title, reason: `Too old (${story.published_at.toISOString()}, ${hoursOld}hrs old, cutoff: ${input.window_hours}hrs)` });
+              Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()}, ${hoursOld}hrs old)`);
               continue;
             }
             
