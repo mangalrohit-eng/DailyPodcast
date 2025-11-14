@@ -76,17 +76,18 @@ You must respond with valid JSON only.`,
   }
   
   private async prepareTtsSegments(section: any): Promise<SynthesisPlan[]> {
-    // Determine voice based on section type
+    // Determine voice and emotion based on section type and content
     const role = this.getRoleForSection(section.type);
+    const { text: emotionalText, speed } = this.addEmotionalCues(section.text, section.type);
     const voice = this.voices[role];
     
-    // Clean text for TTS
-    let text = section.text;
+    // Clean text for TTS and apply emotionalText enhancements
+    let text = emotionalText;
     
     // Remove stage directions in parentheses
     text = text.replace(/\([^)]*\)/g, '');
     
-    // Convert pause markers to ellipsis
+    // Convert pause markers to ellipsis (creates natural pauses)
     text = text.replace(/\[beat \d+ms\]/g, '...');
     text = text.replace(/\[pause\]/gi, '...');
     
@@ -104,6 +105,7 @@ You must respond with valid JSON only.`,
         voice,
         text_with_cues: text,
         expected_sec: this.estimateSegmentDuration(text),
+        speed, // Dynamic speed for emotional delivery
       });
     } else {
       // Split at sentence boundaries
@@ -118,6 +120,7 @@ You must respond with valid JSON only.`,
             voice,
             text_with_cues: currentSegment.trim(),
             expected_sec: this.estimateSegmentDuration(currentSegment),
+            speed, // Dynamic speed for emotional delivery
           });
           currentSegment = sentence;
         } else {
@@ -132,6 +135,7 @@ You must respond with valid JSON only.`,
           voice,
           text_with_cues: currentSegment.trim(),
           expected_sec: this.estimateSegmentDuration(currentSegment),
+          speed, // Dynamic speed for emotional delivery
         });
       }
     }
@@ -156,6 +160,93 @@ You must respond with valid JSON only.`,
   private estimateSegmentDuration(text: string): number {
     const words = text.split(/\s+/).length;
     return Math.ceil(words / 2.5); // 150 wpm = 2.5 words per second
+  }
+  
+  /**
+   * Add emotional cues to make TTS more engaging
+   * OpenAI TTS responds well to punctuation and word choice
+   */
+  private addEmotionalCues(text: string, sectionType: string): { text: string; speed: number } {
+    let enhancedText = text;
+    let speed = 0.95; // Default from dashboard
+    
+    // Detect content tone from keywords
+    const lowerText = text.toLowerCase();
+    const isExciting = /breakthrough|revolutionary|unprecedented|major deal|record|surge|soar|jump|explode|announce|launch|unveil|winner|success|achievement/i.test(text);
+    const isSerious = /concern|risk|challenge|crisis|decline|loss|warning|threat|investigation|lawsuit|failure|layoff/i.test(text);
+    const isPositive = /growth|expand|increase|improve|better|positive|gain|profit|win|innovation|advance/i.test(text);
+    
+    // Intro/outro should be warm and welcoming
+    if (sectionType === 'intro' || sectionType === 'cold-open') {
+      speed = 0.98; // Slightly faster for energy
+      // Add warmth with greeting enhancement
+      enhancedText = enhancedText.replace(/^(\w+)/, '$1!'); // Add exclamation to first word sometimes
+    }
+    
+    // Exciting news: faster pace, more exclamation marks
+    if (isExciting) {
+      speed = 1.0; // Faster for excitement
+      // Enhance with exclamation marks at key moments
+      enhancedText = enhancedText.replace(/(\.|!)( [A-Z])/g, (match, punct, nextPart) => {
+        // Randomly convert some periods to exclamation marks in exciting context
+        return Math.random() > 0.7 ? '!' + nextPart : match;
+      });
+    }
+    
+    // Serious news: slower, more deliberate
+    if (isSerious) {
+      speed = 0.90; // Slower for gravity
+      // Add ellipses for dramatic pauses
+      enhancedText = enhancedText.replace(/\. ([A-Z])/g, '... $1');
+    }
+    
+    // Positive news: warm and upbeat
+    if (isPositive && !isSerious) {
+      speed = 0.97; // Slightly upbeat pace
+    }
+    
+    // Outro should be upbeat and energetic
+    if (sectionType === 'outro' || sectionType === 'sign-off') {
+      speed = 1.0; // Energetic finish
+      // Ensure ending has enthusiasm
+      enhancedText = enhancedText.replace(/\.$/, '!');
+    }
+    
+    // Add emphasis to key phrases with caps (sparingly)
+    // OpenAI TTS responds to capitalization
+    const keyPhrases = [
+      'breaking news',
+      'just announced',
+      'major development',
+      'important update',
+      'significant',
+      'critical',
+      'unprecedented'
+    ];
+    
+    keyPhrases.forEach(phrase => {
+      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
+      enhancedText = enhancedText.replace(regex, (match) => {
+        // Capitalize first letter of each word
+        return match.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      });
+    });
+    
+    // Add comma pauses for better pacing
+    // "The company announced X" -> "The company announced, X"
+    enhancedText = enhancedText.replace(/(\bannounced?|\brevealed?|\bunveiled?|\blaunched?|\breported?)( [a-z])/gi, '$1,$2');
+    
+    Logger.debug('Enhanced text with emotional cues', {
+      sectionType,
+      speed,
+      isExciting,
+      isSerious,
+      isPositive,
+      originalLength: text.length,
+      enhancedLength: enhancedText.length,
+    });
+    
+    return { text: enhancedText, speed };
   }
 }
 

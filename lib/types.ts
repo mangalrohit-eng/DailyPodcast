@@ -61,6 +61,7 @@ export interface SynthesisPlan {
   voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
   text_with_cues: string;
   expected_sec: number;
+  speed?: number; // Dynamic speed for emotional delivery (0.25 - 4.0, default: 0.95)
 }
 
 export interface Chapter {

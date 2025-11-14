@@ -47,6 +47,7 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
         segment_id: plan.segment_id,
         voice: plan.voice,
         text_length: plan.text_with_cues.length,
+        speed: plan.speed || 0.95,
       });
       
       try {
@@ -54,7 +55,7 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
           voice: plan.voice,
           text: plan.text_with_cues,
           format: 'mp3',
-          speed: 1.0,
+          speed: plan.speed || 0.95, // Use dynamic speed from TTS Director
         });
         
         audioSegments.push(audio);
