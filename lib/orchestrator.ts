@@ -874,14 +874,24 @@ export class Orchestrator {
       return existingSources;
     }
     
-    // Simple: just use Google News RSS with the topic name
-    const searchQuery = encodeURIComponent(topicLabel);
+    // Add date filtering to Google News search query
+    // Google News RSS caches results, so we add "after:" to force recent results
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dateStr = sevenDaysAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Include date filter in search query: "Verizon after:2025-11-07"
+    const searchWithDate = `${topicLabel} after:${dateStr}`;
+    const searchQuery = encodeURIComponent(searchWithDate);
     
     const sources: string[] = [
       `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
     ];
     
-    Logger.debug(`Generated sources for "${topicLabel}"`, { sources });
+    Logger.info(`Generated sources for "${topicLabel}" with date filter`, { 
+      search_query: searchWithDate,
+      sources 
+    });
     
     return sources;
   }
