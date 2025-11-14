@@ -166,23 +166,25 @@ export class Orchestrator {
       const enabledTopicConfigs = (dashboardConfig?.topics || [])
         .filter((t: any) => runConfig.topics.includes(t.label))
         .map((t: any) => {
-          // Auto-generate sources and keywords if not provided by dashboard
-          const autoSources = this.generateSourcesForTopic(t.label, t.sources, runConfig.window_hours);
+          // Always use Google News as base, then add custom sources from dashboard
+          const customSources = this.parseCustomSources(t.custom_sources);
+          const allSources = this.generateSourcesForTopic(t.label, customSources, runConfig.window_hours);
           const autoKeywords = this.generateKeywordsForTopic(t.label, t.keywords);
           
           Logger.info(`🔍 Topic config for "${t.label}"`, {
             label: t.label,
             weight: t.weight,
-            sources_count: autoSources.length,
+            sources_count: allSources.length,
+            custom_sources_count: customSources.length,
             keywords_count: autoKeywords.length,
-            sources_sample: autoSources.slice(0, 2),
+            sources_sample: allSources.slice(0, 2),
             keywords_sample: autoKeywords.slice(0, 5),
           });
           
           return {
             name: t.label,
             weight: t.weight,
-            sources: autoSources,
+            sources: allSources,
             keywords: autoKeywords,
           };
         });
@@ -868,18 +870,10 @@ export class Orchestrator {
   }
 
   /**
-   * Auto-generate RSS sources for a topic if not provided
+   * Generate RSS sources for a topic
+   * Always includes Google News as the base, then adds custom sources
    */
-    private generateSourcesForTopic(topicLabel: string, existingSources?: string[], windowHours?: number): string[] {
-        // If dashboard already configured sources AND they include date filtering, use them
-        // Otherwise regenerate with date filter
-        const hasDateFilter = existingSources?.some(src => src.includes('after:'));
-        if (existingSources && existingSources.length > 0 && hasDateFilter) {
-            return existingSources;
-        }
-        
-        // Regenerate sources with date filter (either no existing sources, or old sources without date filter)
-        
+    private generateSourcesForTopic(topicLabel: string, customSources?: string[], windowHours?: number): string[] {
         // Add date filtering to Google News search query
         // Google News RSS caches results, so we add "after:" to force recent results
         // IMPORTANT: Use the SAME cutoff as ingestion quality filter (window_hours)
@@ -892,18 +886,40 @@ export class Orchestrator {
         const searchWithDate = `${topicLabel} after:${dateStr}`;
         const searchQuery = encodeURIComponent(searchWithDate);
         
+        // ALWAYS start with Google News as the base source
         const sources: string[] = [
             `https://news.google.com/rss/search?q=${searchQuery}&hl=en-US&gl=US&ceid=US:en`,
         ];
         
-        Logger.info(`Generated sources for "${topicLabel}" with date filter`, { 
+        // Add custom sources from dashboard if provided
+        if (customSources && customSources.length > 0) {
+            sources.push(...customSources);
+        }
+        
+        Logger.info(`Generated sources for "${topicLabel}"`, { 
             search_query: searchWithDate,
             cutoff_hours: cutoffHours,
             cutoff_date: cutoffDate.toISOString(),
-            sources 
+            google_news: sources[0],
+            custom_sources_count: customSources?.length || 0,
+            total_sources: sources.length
         });
         
         return sources;
+    }
+    
+  /**
+   * Parse comma-separated custom sources string into array
+   */
+    private parseCustomSources(customSourcesStr?: string): string[] {
+        if (!customSourcesStr || customSourcesStr.trim() === '') {
+            return [];
+        }
+        
+        return customSourcesStr
+            .split(',')
+            .map(src => src.trim())
+            .filter(src => src.length > 0 && src.startsWith('http')); // Only valid HTTP(S) URLs
     }
   
   /**

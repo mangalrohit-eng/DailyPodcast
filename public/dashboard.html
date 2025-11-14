@@ -1563,9 +1563,21 @@ Full data in console (F12).`;
             topics.forEach((topic, index) => {
                 const div = document.createElement('div');
                 div.className = 'topic-item';
+                div.style.display = 'grid';
+                div.style.gridTemplateColumns = '2fr 1fr auto';
+                div.style.gap = '10px';
+                div.style.alignItems = 'start';
                 div.innerHTML = `
-                    <input type="text" placeholder="Topic name" value="${topic.label}" 
-                           onchange="updateTopic(${index}, 'label', this.value)">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <input type="text" placeholder="Topic name (e.g., Verizon)" value="${topic.label}" 
+                               onchange="updateTopic(${index}, 'label', this.value)"
+                               style="width: 100%;">
+                        <input type="text" placeholder="Custom RSS feeds (comma-separated, optional)" 
+                               value="${topic.custom_sources || ''}" 
+                               onchange="updateTopic(${index}, 'custom_sources', this.value)"
+                               style="width: 100%; font-size: 12px; color: #666;">
+                        <small style="color: #888; font-size: 11px;">📰 Google News is always included. Add custom RSS feeds above if needed.</small>
+                    </div>
                     <input type="number" step="0.01" min="0" max="1" placeholder="Weight" value="${topic.weight}" 
                            onchange="updateTopic(${index}, 'weight', parseFloat(this.value))">
                     <button class="btn btn-danger" onclick="removeTopic(${index})">✕</button>
@@ -1584,7 +1596,7 @@ Full data in console (F12).`;
 
         function addTopic() {
             if (!currentConfig) return;
-            currentConfig.topics.push({ label: 'New Topic', weight: 0.1 });
+            currentConfig.topics.push({ label: 'New Topic', weight: 0.1, custom_sources: '' });
             renderTopics(currentConfig.topics);
         }
 
