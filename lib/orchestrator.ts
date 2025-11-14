@@ -869,10 +869,14 @@ export class Orchestrator {
    * Auto-generate RSS sources for a topic if not provided
    */
   private generateSourcesForTopic(topicLabel: string, existingSources?: string[]): string[] {
-    // If dashboard already configured sources, use them
-    if (existingSources && existingSources.length > 0) {
+    // If dashboard already configured sources AND they include date filtering, use them
+    // Otherwise regenerate with date filter
+    const hasDateFilter = existingSources?.some(src => src.includes('after:'));
+    if (existingSources && existingSources.length > 0 && hasDateFilter) {
       return existingSources;
     }
+    
+    // Regenerate sources with date filter (either no existing sources, or old sources without date filter)
     
     // Add date filtering to Google News search query
     // Google News RSS caches results, so we add "after:" to force recent results
