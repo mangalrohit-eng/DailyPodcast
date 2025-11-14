@@ -418,9 +418,15 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       let encodedUrl = parts[articlesIndex + 1];
       const originalEncoded = encodedUrl;
       
-      // Extract Base64 String: Remove prefixes like 'CBM', 'CBMi', 'CBA', etc.
-      // Common patterns: CBM, CBMi, CBAi, CBAU, etc.
-      encodedUrl = encodedUrl.replace(/^[A-Z]{2,4}[a-z]?/, '');
+      // Remove query parameters if present
+      if (encodedUrl.includes('?')) {
+        encodedUrl = encodedUrl.split('?')[0];
+      }
+      
+      // Extract Base64 String: Remove Google News prefixes
+      // Pattern: Starts with CBM, CBA, or similar, optionally followed by lowercase letter
+      // Examples: CBM, CBMi, CBAi, CBAU
+      encodedUrl = encodedUrl.replace(/^(CBM[a-z]?|CBA[a-z]?)/, '');
       
       Logger.debug(`🔍 Decoding Google News URL`, {
         original_encoded: originalEncoded.substring(0, 40),
@@ -428,13 +434,18 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         prefix_removed: originalEncoded.substring(0, originalEncoded.length - encodedUrl.length)
       });
       
+      // Convert URL-safe base64 to standard base64
+      // URL-safe: - and _ 
+      // Standard: + and /
+      let base64 = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
+      
       // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
-      while (encodedUrl.length % 4 !== 0) {
-        encodedUrl += '=';
+      while (base64.length % 4 !== 0) {
+        base64 += '=';
       }
       
-      // Base64 URL-Safe Decode
-      const decodedBuffer = Buffer.from(encodedUrl, 'base64url');
+      // Base64 Decode (standard)
+      const decodedBuffer = Buffer.from(base64, 'base64');
       const decodedString = decodedBuffer.toString('utf8');
       
       Logger.debug(`🔍 Decoded string preview`, {
