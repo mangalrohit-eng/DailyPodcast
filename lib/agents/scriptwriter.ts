@@ -11,6 +11,12 @@ export interface ScriptwriterInput {
   picks: Pick[];
   date: string;
   listener_name: string;
+  target_duration_sec?: number;
+  podcast_production?: {
+    intro_text: string;
+    outro_text: string;
+    style: 'executive' | 'casual' | 'technical';
+  };
 }
 
 export interface ScriptwriterOutput {
@@ -27,48 +33,11 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
   constructor() {
     super({
       name: 'ScriptwriterAgent',
-      systemPrompt: `You are an executive news briefing writer for C-suite and senior leadership.
+      // System prompt is now built dynamically in process() method
+      // to include actual target duration and word count from dashboard
+      systemPrompt: `You are a professional news briefing writer.
 
 CRITICAL: Use SPECIFIC DETAILS from the story summaries provided. Mention company names, product names, numbers, dates, and key facts. DO NOT write generic summaries.
-
-Executive Brief Style:
-- Direct, authoritative tone - professional but engaging
-- No filler words: "actually," "basically," "you know," "kind of," "sort of"
-- No rhetorical questions or conversational fluff
-- State facts with conviction - avoid hedging unless genuinely uncertain
-- Target 600-700 words total (~4 minutes)
-- Dense information - every sentence adds value
-- Cite sources inline using [1], [2], etc.
-
-Structure Rules:
-- Intro: Open with a professional greeting and briefly list the topics to be covered (3-5 topics, one line each)
-- Story segments: Lead with the business impact, then details
-- Outro: Brief upbeat summary like "That's your executive brief. Stay informed, stay ahead."
-
-Content Requirements:
-- ALWAYS mention specific company names, products, and people from the stories
-- Include specific numbers, dollar amounts, percentages
-- Name specific products, services, or technologies
-- Reference specific executives, organizations, locations
-- Focus on business implications and strategic context
-- Use the FULL story summary - extract all key facts
-
-Required Language:
-- Intro: Professional opening that lists topics to be covered
-- Outro MUST end with upbeat message like: "That's your executive brief. Stay informed, stay ahead."
-
-Prohibited Language:
-- NO: "Hey there," "How's it going" (intro is an exception with the required opening)
-- NO: "Let's dive in," "Let's talk about," "Moving on"
-- NO: "Exciting news," "Interesting development," "Pretty significant"
-- NO: Filler transitions like "Now, speaking of..."
-
-Technical Requirements:
-- Every factual claim must reference a source with [n]
-- Smooth transitions without conversational markers
-- Include minimal pauses - executives prefer fast pace
-- No speculation beyond what sources report
-- Keep it brief, dense, and actionable
 
 You must respond with valid JSON only.`,
       temperature: 0.8,
@@ -77,9 +46,22 @@ You must respond with valid JSON only.`,
   }
   
   protected async process(input: ScriptwriterInput): Promise<ScriptwriterOutput> {
-    const { outline, picks, date, listener_name } = input;
+    const { outline, picks, date, listener_name, target_duration_sec, podcast_production } = input;
     
-    Logger.info('Writing script', { sections: outline.sections.length });
+    // Calculate target word count (assume ~150 words per minute for professional speaking)
+    const durationMin = (target_duration_sec || 900) / 60;
+    const targetWordCount = Math.round(durationMin * 150);
+    const wordCountRange = `${Math.floor(targetWordCount * 0.9)}-${Math.ceil(targetWordCount * 1.1)}`;
+    
+    // Get style from dashboard settings
+    const style = podcast_production?.style || 'executive';
+    
+    Logger.info('Writing script', { 
+      sections: outline.sections.length,
+      target_duration_min: durationMin.toFixed(1),
+      target_word_count: targetWordCount,
+      style,
+    });
     
     // Build source map
     const sourceMap = new Map<string, Pick>();
@@ -109,7 +91,9 @@ You must respond with valid JSON only.`,
       sourceMap,
       storyToSourceId,
       date,
-      listener_name
+      listener_name,
+      wordCountRange,
+      style
     );
     
     // Calculate total word count
@@ -161,7 +145,9 @@ You must respond with valid JSON only.`,
     sourceMap: Map<string, Pick>,  // Fixed: This is actually a map of Pick objects
     storyToSourceId: Map<string, number>,  // Fixed: Source IDs are numbers
     date: string,
-    listenerName: string
+    listenerName: string,
+    wordCountRange?: string,
+    style?: string
   ): Promise<ScriptSection[]> {
     // Build comprehensive prompt for all sections with FULL story content
     const sectionsPrompt = outlineSections.map((section, idx) => {
@@ -198,9 +184,16 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
       .map((source, idx) => `[${idx + 1}] ${source.title} - ${source.url}`)
       .join('\n');
 
-    const userPrompt = `Generate an executive news briefing for ${listenerName} on ${date}.
+    // Build style guidance based on dashboard settings
+    const styleGuidance = style === 'executive' 
+      ? '- EXECUTIVE TONE: Direct, authoritative, no hedging\n- NO FILLER: Eliminate "actually," "basically," "pretty," "kind of"\n- NO SMALL TALK: Skip "Good morning," "Let\'s talk about," "Moving on"\n- Dense information - every word counts\n- Fast-paced - minimal pauses'
+      : style === 'technical'
+      ? '- TECHNICAL TONE: Detailed, analytical, precise\n- Include technical terminology and specifications\n- Explain mechanisms and processes\n- Focus on how things work, not just what happened'
+      : '- CONVERSATIONAL TONE: Friendly, engaging, relatable\n- Use natural language and examples\n- Explain context and implications\n- Make complex topics accessible';
+    
+    const userPrompt = `Generate a news briefing for ${listenerName} on ${date}.
 
-CRITICAL: This is for EXECUTIVE AUDIENCE - skip small talk, no filler, brief and impactful.
+${wordCountRange ? `TARGET WORD COUNT: ${wordCountRange} words total` : 'Keep it concise and impactful.'}
 
 SOURCES WITH FULL DETAILS:
 ${allSources}
@@ -213,7 +206,7 @@ Respond with a JSON object:
   "sections": [
     {
       "type": "cold-open" | "story" | "sign-off",
-      "text": "Direct, fact-dense text with [citations] - NO SMALL TALK OR FILLER",
+      "text": "Direct, fact-dense text with [citations]",
       "duration_estimate_sec": 50,
       "word_count": 120
     }
@@ -221,16 +214,12 @@ Respond with a JSON object:
 }
 
 Each section MUST:
-- COLD-OPEN: Skip greetings - start with top story impact immediately
-- STORY: Lead with business implication, then specific details
-- SIGN-OFF: Brief summary of key takeaways - no pleasantries
+- COLD-OPEN: Strong opening that immediately engages
+- STORY: Lead with impact, then specific details
+- SIGN-OFF: Brief summary of key takeaways
 - Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
 - Cite sources inline using [1], [2], etc.
-- EXECUTIVE TONE: Direct, authoritative, no hedging
-- NO FILLER: Eliminate "actually," "basically," "pretty," "kind of"
-- NO SMALL TALK: Skip "Good morning," "Let's talk about," "Moving on"
-- Dense information - every word counts
-- Fast-paced - minimal pauses`;
+${styleGuidance}`;
 
     const response = await this.callOpenAI(
       [
