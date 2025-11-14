@@ -571,7 +571,11 @@ export class Orchestrator {
       
       // Save manifest directly (since publisher is disabled)
       Logger.info('Saving manifest without audio');
-      await this.storage.saveJson(`episodes/${runId}_manifest.json`, manifest);
+      await this.storage.put(
+        `episodes/${runId}_manifest.json`,
+        JSON.stringify(manifest, null, 2),
+        'application/json'
+      );
       
       const totalTime = Date.now() - startTime;
       
@@ -665,7 +669,11 @@ export class Orchestrator {
         const partialManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
         
         // Save partial manifest for debugging (use same path format as RunsStorage expects)
-        await this.storage.saveJson(`episodes/${runId}_manifest.json`, partialManifest);
+        await this.storage.put(
+          `episodes/${runId}_manifest.json`,
+          JSON.stringify(partialManifest, null, 2),
+          'application/json'
+        );
         
         Logger.info('Saved partial manifest for failed run', {
           runId,
