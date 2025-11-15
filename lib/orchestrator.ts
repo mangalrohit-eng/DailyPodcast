@@ -572,10 +572,19 @@ export class Orchestrator {
           google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
           all_stories_detailed: ingestionReport.all_stories_detailed,
         },
-        ranking: rankingResult.output!.detailed_report || {
-          stories_ranked: 0,
-          top_picks: [],
-          rejected_stories: [],
+        ranking: {
+          ...(rankingResult.output!.detailed_report || {
+            stories_ranked: 0,
+            top_picks: [],
+            rejected_stories: [],
+          }),
+          // Add dynamic ranking stats
+          dynamic_selection: {
+            base_target: baseTargetCount,
+            historical_scraping_rate: historicalScrapeRate,
+            adjusted_target: adjustedTargetCount,
+            actually_selected: rankingResult.output.picks.length,
+          },
         },
         scraper: scraperResult.output!.scraping_report,
         outline: {

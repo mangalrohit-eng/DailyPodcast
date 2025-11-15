@@ -2927,11 +2927,41 @@ Full data in console (F12).`;
                                     <div style="color: #666; font-size: 13px;">stories selected</div>
                                 </div>
                             </div>
+                            ${ranking.dynamic_selection ? `
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                                <div style="display: flex; gap: 25px; flex-wrap: wrap;">
+                                    <div>
+                                        <span style="color: #666; font-size: 13px;">Target: </span>
+                                        <span style="color: #28a745; font-weight: 600;">${ranking.dynamic_selection.base_target}</span>
+                                        <span style="color: #999; font-size: 12px;"> final</span>
+                                    </div>
+                                    ${ranking.dynamic_selection.historical_scraping_rate !== null ? `
+                                    <div>
+                                        <span style="color: #666; font-size: 13px;">Scraping rate: </span>
+                                        <span style="color: #ff9800; font-weight: 600;">${Math.round(ranking.dynamic_selection.historical_scraping_rate * 100)}%</span>
+                                        <span style="color: #999; font-size: 12px;"> historical</span>
+                                    </div>
+                                    <div>
+                                        <span style="color: #666; font-size: 13px;">Identified: </span>
+                                        <span style="color: #28a745; font-weight: 600;">${ranking.dynamic_selection.adjusted_target}</span>
+                                        <span style="color: #999; font-size: 12px;"> stories</span>
+                                    </div>
+                                    ` : `
+                                    <div>
+                                        <span style="color: #666; font-size: 13px;">Scraping rate: </span>
+                                        <span style="color: #999; font-weight: 600;">N/A</span>
+                                        <span style="color: #999; font-size: 12px;"> (first run)</span>
+                                    </div>
+                                    `}
+                                </div>
+                            </div>
+                            ` : `
                             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
                                 <span style="color: #666; font-size: 13px;">Selection rate: </span>
                                 <span style="color: #28a745; font-weight: 600;">${rankingRate}%</span>
                                 <span style="color: #666; font-size: 13px;"> of candidates chosen</span>
                             </div>
+                            `}
                         </div>
                         
                         <!-- Arrow -->
@@ -3230,6 +3260,51 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${ranking.dynamic_selection ? `
+                <div class="report-section" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #0369a1;">📊 Dynamic Story Selection</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 15px;">
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #bae6fd;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Base Target</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #0369a1;">${ranking.dynamic_selection.base_target}</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 3px;">Final stories needed</div>
+                        </div>
+                        ${ranking.dynamic_selection.historical_scraping_rate !== null ? `
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #fed7aa;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Historical Scraping Rate</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #ea580c;">${Math.round(ranking.dynamic_selection.historical_scraping_rate * 100)}%</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 3px;">From last 5 runs</div>
+                        </div>
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Adjusted Target</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #16a34a;">${ranking.dynamic_selection.adjusted_target}</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 3px;">Stories requested</div>
+                        </div>
+                        ` : `
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Scraping Rate</div>
+                            <div style="font-size: 20px; font-weight: 600; color: #9ca3af;">N/A</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 3px;">First run - collecting data</div>
+                        </div>
+                        `}
+                        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #c4b5fd;">
+                            <div style="color: #666; font-size: 13px; margin-bottom: 5px;">Actually Selected</div>
+                            <div style="font-size: 28px; font-weight: 700; color: #7c3aed;">${ranking.dynamic_selection.actually_selected}</div>
+                            <div style="color: #666; font-size: 12px; margin-top: 3px;">Stories chosen</div>
+                        </div>
+                    </div>
+                    ${ranking.dynamic_selection.historical_scraping_rate !== null ? `
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; font-size: 13px; color: #374151;">
+                        <strong>💡 Logic:</strong> Requested ${ranking.dynamic_selection.adjusted_target} stories (${ranking.dynamic_selection.base_target} / ${(ranking.dynamic_selection.historical_scraping_rate * 100).toFixed(0)}%) expecting ~${Math.round(ranking.dynamic_selection.adjusted_target * ranking.dynamic_selection.historical_scraping_rate)} to succeed after scraping
+                    </div>
+                    ` : `
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; font-size: 13px; color: #374151;">
+                        <strong>💡 Note:</strong> First run - using base target of ${ranking.dynamic_selection.base_target} stories. Future runs will adjust based on scraping success rates.
+                    </div>
+                    `}
+                </div>
+                ` : ''}
+                
                 <div class="report-section">
                     <h3>✅ Selected Stories</h3>
                     ${(ranking.top_picks || []).length === 0 
