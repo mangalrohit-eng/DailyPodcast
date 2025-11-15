@@ -326,6 +326,10 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
 
       const html = await response.text();
       
+      if (!html) {
+        throw new Error('Empty response body');
+      }
+      
       // Extract main content using simple heuristics
       const content = this.extractMainContent(html);
 
@@ -352,6 +356,11 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
    * This is a lightweight approach without external dependencies
    */
   private extractMainContent(html: string): string {
+    // Safety check
+    if (!html || typeof html !== 'string') {
+      return '';
+    }
+    
     // Remove script and style tags
     let text = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
