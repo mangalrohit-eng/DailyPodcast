@@ -1192,82 +1192,123 @@ export class Orchestrator {
   }
   
   /**
-   * Extract key themes from story titles by analyzing actual content
+   * Extract key themes from story titles - focusing on WHAT HAPPENED, not just WHO
    */
   private extractKeyThemes(picks: any[]): string[] {
-    // Common words to ignore
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
-      'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-      'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
-      'could', 'may', 'might', 'must', 'can', 'after', 'before', 'new', 'first',
-      'says', 'announces', 'launches', 'releases', 'unveils', 'reveals', 'plans',
-      'its', 'their', 'how', 'what', 'why', 'when', 'where', 'this', 'that',
-      'these', 'those', 'now', 'just', 'more', 'over', 'about', 'into', 'through'
+    // Action words that make titles more descriptive
+    const actionWords = new Set([
+      'layoffs', 'layoff', 'cuts', 'cutting', 'fired', 'fires',
+      'acquisition', 'acquires', 'acquired', 'buys', 'bought', 'purchase',
+      'raises', 'raised', 'funding', 'investment', 'invests',
+      'valuation', 'valued', 'worth',
+      'lawsuit', 'sues', 'sued', 'legal', 'court',
+      'breach', 'hack', 'hacked', 'attack', 'attacked',
+      'launches', 'launch', 'released', 'announces', 'unveiled',
+      'earnings', 'revenue', 'profit', 'loss', 'quarterly',
+      'merger', 'merges', 'partnership', 'partners',
+      'ipo', 'public', 'listing',
+      'bankruptcy', 'bankrupt', 'shutdown', 'closes',
+      'expansion', 'expands', 'growing', 'growth'
     ]);
     
-    // Extract important words from all story titles
-    const wordFrequency: Record<string, number> = {};
-    const companyNames: Set<string> = new Set(); // Track likely company names
+    // Extract key phrases from story titles (entity + action)
+    const keyPhrases: Array<{ phrase: string; score: number }> = [];
     
     for (const pick of picks) {
       const title = pick.story.title || '';
-      // Split on word boundaries and clean
-      const words = title.split(/\s+|[,;:\-()]/);
+      const titleLower = title.toLowerCase();
       
-      for (let word of words) {
-        word = word.trim().replace(/[^a-zA-Z0-9&]/g, '');
-        if (word.length < 3) continue; // Skip very short words
+      // Look for action words in the title
+      const foundActions: string[] = [];
+      for (const action of actionWords) {
+        if (titleLower.includes(action)) {
+          foundActions.push(action);
+        }
+      }
+      
+      // If we found actions, try to extract meaningful phrases
+      if (foundActions.length > 0) {
+        // Try to get company/entity name from title (usually first capitalized word)
+        const words = title.split(/\s+/);
+        let entity = '';
         
-        const lowerWord = word.toLowerCase();
-        if (stopWords.has(lowerWord)) continue;
-        
-        // Track capitalized words (likely proper nouns/companies)
-        if (word[0] === word[0].toUpperCase() && word.length > 3) {
-          companyNames.add(word);
+        for (const word of words) {
+          const cleaned = word.replace(/[^a-zA-Z0-9]/g, '');
+          // Look for capitalized word longer than 3 chars
+          if (cleaned.length > 3 && cleaned[0] === cleaned[0].toUpperCase()) {
+            entity = cleaned;
+            break;
+          }
         }
         
-        // Count word frequency (use lowercase for counting)
-        wordFrequency[lowerWord] = (wordFrequency[lowerWord] || 0) + 1;
+        // For each action found, create a phrase
+        for (const action of foundActions) {
+          let phrase = '';
+          
+          // Check for number + action patterns (e.g., "15,000 layoffs")
+          const numberMatch = title.match(/(\d+[,\d]*)\s+(\w+)/);
+          if (numberMatch && actionWords.has(numberMatch[2].toLowerCase())) {
+            phrase = `${numberMatch[1]} ${this.capitalizeWord(numberMatch[2])}`;
+          }
+          // Check for entity + action patterns
+          else if (entity) {
+            phrase = `${entity} ${this.capitalizeWord(action)}`;
+          }
+          // Just use the action word alone
+          else {
+            phrase = this.capitalizeWord(action);
+          }
+          
+          if (phrase) {
+            // Check if we already have this phrase
+            const existing = keyPhrases.find(p => p.phrase.toLowerCase() === phrase.toLowerCase());
+            if (existing) {
+              existing.score += 2; // Boost if mentioned multiple times
+            } else {
+              keyPhrases.push({ phrase, score: 5 }); // High initial score for action phrases
+            }
+          }
+        }
       }
     }
     
-    // Prioritize company names and high-frequency terms
-    const themes: Array<{ word: string; score: number; isProperNoun: boolean }> = [];
+    // Also extract company names as fallback
+    const companyNames: Set<string> = new Set();
+    for (const pick of picks) {
+      const title = pick.story.title || '';
+      const words = title.split(/\s+/);
+      
+      for (const word of words) {
+        const cleaned = word.replace(/[^a-zA-Z0-9&]/g, '');
+        if (cleaned.length > 3 && cleaned[0] === cleaned[0].toUpperCase()) {
+          // Skip generic words
+          if (!['News', 'Tech', 'Report', 'Today', 'Breaking'].includes(cleaned)) {
+            companyNames.add(cleaned);
+          }
+        }
+      }
+    }
     
-    // Add company names with high priority
+    // Add company names with lower priority than action phrases
     for (const company of companyNames) {
-      const freq = wordFrequency[company.toLowerCase()] || 1;
-      themes.push({ 
-        word: company, 
-        score: freq * 3, // 3x multiplier for proper nouns
-        isProperNoun: true 
-      });
-    }
-    
-    // Add other high-frequency words
-    for (const [word, freq] of Object.entries(wordFrequency)) {
-      // Skip if already added as company name
-      if (Array.from(companyNames).some(c => c.toLowerCase() === word)) {
-        continue;
-      }
-      // Only include words appearing 2+ times or significant terms
-      if (freq >= 2 || this.isSignificantTerm(word)) {
-        // Capitalize first letter for display
-        const displayWord = word.charAt(0).toUpperCase() + word.slice(1);
-        themes.push({ 
-          word: displayWord, 
-          score: freq + (this.isSignificantTerm(word) ? 2 : 0),
-          isProperNoun: false 
-        });
+      const existing = keyPhrases.find(p => p.phrase === company);
+      if (!existing) {
+        keyPhrases.push({ phrase: company, score: 2 }); // Lower score for just company names
       }
     }
     
-    // Sort by score (proper nouns and frequency)
-    themes.sort((a, b) => b.score - a.score);
+    // Sort by score
+    keyPhrases.sort((a, b) => b.score - a.score);
     
-    // Return top 3 themes
-    return themes.slice(0, 3).map(t => t.word);
+    // Return top 3 phrases
+    return keyPhrases.slice(0, 3).map(p => p.phrase);
+  }
+  
+  /**
+   * Capitalize first letter of a word
+   */
+  private capitalizeWord(word: string): string {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
   }
   
   /**
