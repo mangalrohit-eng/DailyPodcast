@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Podcast Studio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -12,99 +13,113 @@
         }
 
         body {
-            font-family: 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #ffffff;
-            color: #121212;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
             line-height: 1.6;
+            padding-top: 70px;
         }
 
-        .container {
-            max-width: 1280px;
+        /* Top Navigation Bar */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e5e7;
+            z-index: 1000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .nav-container {
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 48px 24px;
-        }
-
-        header {
-            background: #000000;
-            color: white;
-            padding: 48px 0;
-            margin: 0 0 64px 0;
-        }
-
-        header h1 {
-            font-size: 48px;
-            font-weight: 900;
-            margin-bottom: 12px;
-            letter-spacing: -0.04em;
-        }
-        
-        header .subtitle {
-            font-size: 18px;
-            color: #b3b3b3;
-            font-weight: 400;
-        }
-
-        .header-links {
+            padding: 0 24px;
             display: flex;
-            gap: 16px;
-            margin-top: 32px;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
         }
 
-        .header-link {
-            background: transparent;
-            padding: 8px 16px;
-            border-radius: 500px;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 14px;
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
             font-weight: 700;
+            color: #1d1d1f;
+        }
+
+        .nav-logo i {
+            font-size: 24px;
+            color: #1DB954;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            color: #6e6e73;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
             transition: all 0.2s ease;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             gap: 8px;
-            border: 1px solid #727272;
+        }
+
+        .nav-tab i {
+            font-size: 16px;
+        }
+
+        .nav-tab:hover {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .nav-tab.active {
+            background: #1DB954;
+            color: #ffffff;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .header-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            color: #6e6e73;
+            background: transparent;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 18px;
         }
 
         .header-link:hover {
-            border-color: #ffffff;
-            transform: scale(1.04);
-        }
-
-        .header-link svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 32px;
-            margin-bottom: 48px;
-            border-bottom: 1px solid #d9dadc;
-            padding-bottom: 0;
-        }
-
-        .tab {
-            padding: 16px 0;
-            background: none;
-            border: none;
-            color: #6a6a6a;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 700;
-            transition: all 0.2s ease;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            letter-spacing: -0.01em;
-        }
-
-        .tab:hover {
-            color: #121212;
-        }
-
-        .tab.active {
-            color: #121212;
-            border-bottom-color: #1DB954;
+            background: #f5f5f7;
+            color: #1d1d1f;
         }
 
         .tab-content {
@@ -123,19 +138,19 @@
 
         .card {
             background: #ffffff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             margin-bottom: 24px;
-            border: 1px solid #d9dadc;
+            border: 1px solid #e5e5e7;
         }
 
         .card h2 {
-            font-size: 32px;
-            margin-bottom: 24px;
-            color: #121212;
-            font-weight: 900;
-            letter-spacing: -0.04em;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+            font-weight: 700;
+            letter-spacing: -0.01em;
         }
 
         .form-group {
@@ -829,30 +844,45 @@
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>AI Podcast Studio</h1>
-            <p class="subtitle">Powerful tools to create, manage, and grow your AI-powered podcast</p>
-            <div class="header-links" id="headerLinks">
-                <a href="#" class="header-link" id="feedLink">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
-                    RSS Feed
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-podcast"></i>
+                <span>AI Podcast Studio</span>
+            </div>
+            
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('runs')">
+                    <i class="fas fa-list"></i>
+                    <span>Runs</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('urls')">
+                    <i class="fas fa-link"></i>
+                    <span>URLs</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('podcast-settings')">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Settings</span>
+                </button>
+                <button class="nav-tab" onclick="switchTab('health')">
+                    <i class="fas fa-heartbeat"></i>
+                    <span>Health</span>
+                </button>
+            </div>
+            
+            <div class="nav-actions">
+                <a href="#" class="header-link" id="feedLink" title="RSS Feed">
+                    <i class="fas fa-rss"></i>
                 </a>
-                <a href="#" class="header-link" id="latestEpisodeLink">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Latest Episode
+                <a href="#" class="header-link" id="latestEpisodeLink" title="Latest Episode">
+                    <i class="fas fa-play-circle"></i>
                 </a>
             </div>
         </div>
-    </header>
+    </nav>
 
     <div class="container">
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('runs')">▶️ Runs</button>
-            <button class="tab" onclick="switchTab('urls')">🔗 URLs</button>
-            <button class="tab" onclick="switchTab('podcast-settings')">🎙️ Podcast Settings</button>
-            <button class="tab" onclick="switchTab('health')">🏥 Health & Maintenance</button>
-        </div>
 
         <!-- Runs Tab -->
         <div id="runs" class="tab-content active">
@@ -860,7 +890,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Recent Runs</h2>
                     <button class="btn btn-success" onclick="runNow()" id="runNowBtn">
-                        ▶️ Run Now
+                        <i class="fas fa-play"></i> Run Now
                     </button>
                 </div>
                 <div id="activeRunStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 20px;">
@@ -1256,11 +1286,11 @@
 
         // Tab switching
         function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(tab => {
+            // Update tab buttons (both old .tab and new .nav-tab)
+            document.querySelectorAll('.tab, .nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            event.target.classList.add('active');
+            event.target.closest('.tab, .nav-tab').classList.add('active');
 
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -1822,9 +1852,9 @@ Full data in console (F12).`;
                         <td>${run.stories_count || '-'}</td>
                         <td>${run.duration_ms ? Math.round(run.duration_ms / 1000) + 's' : '-'}</td>
                         <td>
-                            ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;">▶️ Play</a>` : ''}
-                            <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')">Details</button>
-                            <button class="btn btn-danger" style="font-size: 12px; margin-left: 5px;" onclick="deleteRun('${run.run_id}')" title="Delete this episode">🗑️</button>
+                            ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;"><i class="fas fa-play"></i> Play</a>` : ''}
+                            <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')"><i class="fas fa-chart-bar"></i> Details</button>
+                            <button class="btn btn-danger" style="font-size: 12px; margin-left: 5px;" onclick="deleteRun('${run.run_id}')" title="Delete this episode"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
@@ -1909,7 +1939,7 @@ Full data in console (F12).`;
                 console.error('Error:', error);
                 showToast('Failed to start run: ' + error.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '▶️ Run Now';
+                btn.innerHTML = '<i class="fas fa-play"></i> Run Now';
                 document.getElementById('currentPhase').textContent = '❌ Error';
                 document.getElementById('currentMessage').innerHTML = 
                     `Failed to start: ${error.message}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
