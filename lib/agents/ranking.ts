@@ -187,30 +187,68 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
   }
   
   private getAuthorityScore(domain: string): number {
-    // Simple authority scoring based on known sources
-    const highAuthority = [
-      'openai.com',
-      'anthropic.com',
-      'google.com',
-      'meta.com',
-      'microsoft.com',
-      // No hardcoded preferred domains - all domains treated equally
-      'reuters.com',
-      'bloomberg.com',
-      'wsj.com',
-      'nytimes.com',
-      'techcrunch.com',
+    // Tiered authority scoring based on source reputation
+    // Scores are multiplied by 0.2 in calculateScore, so these affect final ranking
+    
+    const domainLower = domain.toLowerCase();
+    
+    // TIER 1: Highest Authority (1.0) - Major news organizations & wire services
+    const tier1 = [
+      'reuters.com', 'bloomberg.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com',
+      'ft.com', 'economist.com', 'bbc.com', 'theguardian.com', 'apnews.com',
+      'cnbc.com', 'cnn.com', 'abcnews.go.com', 'cbsnews.com', 'nbcnews.com',
+      'npr.org', 'pbs.org', 'usatoday', // usatoday is extracted without .com from titles
     ];
     
-    if (highAuthority.some(auth => domain.includes(auth))) {
+    if (tier1.some(auth => domainLower.includes(auth))) {
       return 1.0;
     }
     
-    if (domain.includes('news.google.com')) {
-      return 0.7;
+    // TIER 2: High Authority (0.85) - Tech publications & business news
+    const tier2 = [
+      'techcrunch.com', 'theverge.com', 'wired.com', 'arstechnica.com',
+      'venturebeat.com', 'zdnet.com', 'cnet.com', 'engadget.com',
+      'forbes.com', 'fortune.com', 'businessinsider.com', 'marketwatch.com',
+      'seekingalpha.com', 'barrons.com', 'yahoo', // yahoo finance extracted without .com
+      'cnbc', // Often appears as just 'cnbc' from title extraction
+    ];
+    
+    if (tier2.some(auth => domainLower.includes(auth))) {
+      return 0.85;
     }
     
-    return 0.5;
+    // TIER 3: Medium Authority (0.70) - Industry publications & regional news
+    const tier3 = [
+      'axios.com', 'politico.com', 'thehill.com', 'latimes.com', 'chicagotribune.com',
+      'sfgate.com', 'mercurynews.com', 'boston.com', 'philly.com',
+      'industryweek.com', 'manufacturing.net', 'sdxcentral.com',
+      'pymnts.com', 'americanbazaar', // These appear from title extraction
+      'pr newswire', 'business wire', 'globe newswire', // Press release services
+    ];
+    
+    if (tier3.some(auth => domainLower.includes(auth))) {
+      return 0.70;
+    }
+    
+    // TIER 4: Company/Corporate Sources (0.55) - Official company announcements
+    const tier4 = [
+      'microsoft.com', 'google.com', 'meta.com', 'apple.com', 'amazon.com',
+      'openai.com', 'anthropic.com', 'nvidia.com', 'intel.com', 'amd.com',
+      'ibm.com', 'oracle.com', 'salesforce.com', 'sap.com',
+      'verizon.com', 'accenture.com', 't-mobile.com', 'att.com',
+    ];
+    
+    if (tier4.some(auth => domainLower.includes(auth))) {
+      return 0.55;
+    }
+    
+    // Google News aggregator (often appears when extraction fails)
+    if (domainLower.includes('news.google.com')) {
+      return 0.40;
+    }
+    
+    // TIER 5: Unknown/Lower Authority (0.50) - Default for everything else
+    return 0.50;
   }
   
   private diversifySelectionWithTracking(

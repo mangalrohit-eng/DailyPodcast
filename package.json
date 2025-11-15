@@ -12,30 +12,30 @@
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
-    "@vercel/blob": "^0.23.4",
     "@aws-sdk/client-s3": "^3.679.0",
-    "openai": "^4.63.0",
-    "rss-parser": "^3.13.0",
-    "fast-xml-parser": "^4.5.0",
-    "node-fetch": "^3.3.2",
+    "@vercel/blob": "^0.23.4",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
-    "zod": "^3.23.8",
-    "uuid": "^9.0.1"
+    "fast-xml-parser": "^4.5.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.63.0",
+    "rss-parser": "^3.13.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
     "@vercel/node": "^3.0.0",
+    "eslint": "^8.55.0",
+    "puppeteer": "^24.30.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.0.4",
-    "eslint": "^8.55.0",
-    "@typescript-eslint/eslint-plugin": "^6.14.0",
-    "@typescript-eslint/parser": "^6.14.0"
+    "vitest": "^1.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-

@@ -251,8 +251,7 @@ export class Orchestrator {
         message: '✅ Ingestion complete! Check the details tab for Google News extraction results.',
       });
       
-      /*
-      // 2. RANKING (DISABLED)
+      // 2. RANKING
       Logger.info('Phase 2: Ranking');
       progressTracker.addUpdate(runId, {
         phase: 'Ranking',
@@ -762,7 +761,6 @@ export class Orchestrator {
           agent_times: agentTimes,
         },
       };
-      */
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
