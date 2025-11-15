@@ -669,24 +669,53 @@ export class Orchestrator {
         },
       });
       
-      // Build PARTIAL manifest from completed agents
+      // Update existing partial manifest with failure status (don't overwrite good data!)
       try {
-        const partialManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
+        const manifestPath = `episodes/${runId}_manifest.json`;
         
-        // Save partial manifest for debugging (use same path format as RunsStorage expects)
-        await this.storage.put(
-          `episodes/${runId}_manifest.json`,
-          JSON.stringify(partialManifest, null, 2),
-          'application/json'
-        );
+        // Try to load existing manifest first (from real-time saves)
+        let existingManifest = null;
+        try {
+          const existingData = await this.storage.get(manifestPath);
+          existingManifest = JSON.parse(existingData.toString('utf-8'));
+          Logger.info('Found existing manifest to update with failure status', { runId });
+        } catch (e) {
+          Logger.info('No existing manifest found, building new partial manifest', { runId });
+        }
         
-        Logger.info('Saved partial manifest for failed run', {
-          runId,
-          completed_agents: Object.keys(agentResults),
-          manifest_path: `episodes/${runId}_manifest.json`,
-        });
+        if (existingManifest) {
+          // Update existing manifest with failure status and error message
+          existingManifest.status = 'failed';
+          existingManifest.error = (error as Error).message;
+          existingManifest.completed_at = new Date().toISOString();
+          
+          await this.storage.put(
+            manifestPath,
+            JSON.stringify(existingManifest, null, 2),
+            'application/json'
+          );
+          
+          Logger.info('Updated existing manifest with failure status', {
+            runId,
+            preserved_data: Object.keys(existingManifest.pipeline_report || {}),
+          });
+        } else {
+          // Build new partial manifest if no existing one found
+          const partialManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
+          
+          await this.storage.put(
+            manifestPath,
+            JSON.stringify(partialManifest, null, 2),
+            'application/json'
+          );
+          
+          Logger.info('Saved new partial manifest for failed run', {
+            runId,
+            completed_agents: Object.keys(agentResults),
+          });
+        }
       } catch (manifestError) {
-        Logger.error('Failed to save partial manifest', {
+        Logger.error('Failed to save/update partial manifest', {
           error: (manifestError as Error).message,
           stack: (manifestError as Error).stack,
         });
