@@ -335,6 +335,27 @@ export class Orchestrator {
         },
       });
       
+      // Filter out picks where scraping failed - only use successfully scraped stories
+      const successfullyScrapedPicks = scraperResult.output.enriched_picks.filter(pick => {
+        // A pick is successfully scraped if it has meaningful raw content (>500 chars)
+        return pick.story.raw && pick.story.raw.length > 500;
+      });
+      
+      const filteredCount = scraperResult.output.enriched_picks.length - successfullyScrapedPicks.length;
+      
+      if (filteredCount > 0) {
+        Logger.info(`Filtered out ${filteredCount} stories with failed scrapes`, {
+          original_count: scraperResult.output.enriched_picks.length,
+          successfully_scraped: successfullyScrapedPicks.length,
+          filtered_out: filteredCount,
+        });
+      }
+      
+      // Check if we have enough stories after filtering
+      if (successfullyScrapedPicks.length === 0) {
+        throw new Error('No stories successfully scraped - cannot create episode without content');
+      }
+      
       // 4. OUTLINE
       Logger.info('Phase 4: Outline');
       progressTracker.addUpdate(runId, {
@@ -344,7 +365,7 @@ export class Orchestrator {
       });
       const outlineStart = Date.now();
       const outlineResult = await this.outlineAgent.execute(runId, {
-        picks: scraperResult.output.enriched_picks, // Use enriched picks with full content!
+        picks: successfullyScrapedPicks, // Use ONLY successfully scraped picks with full content!
         date: runConfig.date,
         target_duration_sec: runConfig.target_duration_sec,
         topic_weights: runConfig.weights, // Pass weights to order stories by priority
