@@ -460,31 +460,44 @@ export class Orchestrator {
           google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
           all_stories_detailed: ingestionReport.all_stories_detailed,
         },
-        ranking: { status: 'disabled' } as any,
-        scraper: { status: 'disabled' } as any,
-        outline: { status: 'disabled' } as any,
-        scriptwriting: { status: 'disabled' } as any,
-        factcheck: { status: 'disabled' } as any,
-        safety: { status: 'disabled' } as any,
+        ranking: rankingResult.output?.detailed_report || {
+          stories_ranked: 0,
+          top_picks: [],
+          rejected_stories: [],
+        },
+        scraper: scraperResult.output?.scraping_report || { status: 'disabled' } as any,
+        outline: {
+          sections: outlineResult.output?.outline.sections.map((s: any) => ({
+            type: s.type,
+            title: s.title,
+            target_words: s.target_words || 0,
+            story_count: (s.refs || []).length,
+          })) || [],
+          total_duration_target: runConfig.target_duration_sec,
+        },
+        scriptwriting: scriptResult.output?.detailed_report || { status: 'disabled' } as any,
+        factcheck: factCheckResult.output?.detailed_report || { status: 'disabled' } as any,
+        safety: safetyResult.output?.detailed_report || { status: 'disabled' } as any,
       };
       
       const manifest: EpisodeManifest = {
         run_id: runId,
         date: runConfig.date,
-        title: `Daily News Briefing - ${runConfig.date} (Ingestion Test)`,
-        description: 'Ingestion-only test run to verify Google News URL extraction',
+        title: `Daily News Briefing - ${runConfig.date}`,
+        description: 'Podcast script generated from news sources',
+        picks: rankingResult.output?.picks || [],
         mp3_url: '',
         duration_sec: 0,
-        word_count: 0,
-        sections: [],
-        sources: ingestionResult.output.stories.map(s => ({
-          title: s.title,
-          url: s.url,
-        })),
+        word_count: scriptResult.output?.script.word_count || 0,
+        sections: scriptResult.output?.script.sections || [],
+        sources: rankingResult.output?.picks.map(p => ({
+          title: p.story.title,
+          url: p.story.url,
+        })) || [],
         metrics: {
           ingestion_time_ms: agentTimes['ingestion'] || 0,
-          ranking_time_ms: 0,
-          scripting_time_ms: 0,
+          ranking_time_ms: agentTimes['ranking'] || 0,
+          scripting_time_ms: agentTimes['scriptwriter'] || 0,
           tts_time_ms: 0,
           total_time_ms: Date.now() - startTime,
           openai_tokens: 0,
@@ -493,7 +506,7 @@ export class Orchestrator {
       };
       
       // Save manifest
-      Logger.info('Saving ingestion-only manifest');
+      Logger.info('Saving episode manifest');
       await this.storage.put(
         `episodes/${runId}_manifest.json`,
         JSON.stringify(manifest, null, 2),
@@ -502,20 +515,22 @@ export class Orchestrator {
       
       const totalTime = Date.now() - startTime;
       
-      Logger.info('Ingestion test complete', {
+      Logger.info('Pipeline complete', {
         runId,
         total_time_ms: totalTime,
         stories_found: ingestionResult.output.stories.length,
-        google_news_extraction: ingestionReport.google_news_domain_extraction,
+        stories_ranked: rankingResult.output?.picks.length || 0,
+        script_generated: !!scriptResult.output,
       });
       
       progressTracker.addUpdate(runId, {
         phase: 'Complete',
         status: 'completed',
-        message: `Ingestion test complete (${Math.floor(totalTime / 1000)}s) - Check Details tab for URL extraction results`,
+        message: `Script generated (${Math.floor(totalTime / 1000)}s) - Audio disabled`,
         details: {
           stories_found: ingestionResult.output.stories.length,
-          google_news_extraction: ingestionReport.google_news_domain_extraction,
+          stories_ranked: rankingResult.output?.picks.length || 0,
+          script_words: scriptResult.output?.script.word_count || 0,
         },
       });
       
