@@ -57,10 +57,52 @@ You must respond with valid JSON only.`,
     Logger.info('Creating TTS plan', { sections: script.sections.length });
     
     const synthesisPlan: SynthesisPlan[] = [];
+    let previousVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | null = null;
+    let previousRole: 'host' | 'analyst' | 'stinger' | 'urgent' | 'tech' | 'expressive' | 'neutral' | null = null;
     
-    for (const section of script.sections) {
+    for (let i = 0; i < script.sections.length; i++) {
+      const section = script.sections[i];
+      
+      // Determine voice for this section
+      const currentVoice = this.selectVoiceForContent(section.text, section.type);
+      const currentRole = this.getRole(currentVoice);
+      
+      // Add transition if voice is changing (skip for first section and cold-open/outro)
+      if (
+        i > 0 && 
+        previousVoice && 
+        currentVoice !== previousVoice &&
+        section.type !== 'cold-open' &&
+        section.type !== 'sign-off'
+      ) {
+        const transitionText = this.generateTransition(previousRole!, currentRole, section.type);
+        
+        // Transition is spoken by the PREVIOUS voice handing off
+        synthesisPlan.push({
+          segment_id: Crypto.uuid(),
+          role: previousRole!,
+          voice: previousVoice,
+          text_with_cues: transitionText,
+          expected_sec: this.estimateSegmentDuration(transitionText),
+          speed: 0.95,
+        });
+        
+        Logger.debug('Added voice transition', {
+          from_voice: previousVoice,
+          to_voice: currentVoice,
+          from_role: previousRole,
+          to_role: currentRole,
+          transition: transitionText,
+        });
+      }
+      
+      // Process the actual section
       const segments = await this.prepareTtsSegments(section);
       synthesisPlan.push(...segments);
+      
+      // Track for next iteration
+      previousVoice = currentVoice;
+      previousRole = currentRole;
     }
     
     // Estimate duration (rough: 150 words per minute = 2.5 words per second)
@@ -185,7 +227,7 @@ You must respond with valid JSON only.`,
   /**
    * Intelligently select voice based on content analysis
    */
-  private selectVoiceForContent(text: string, sectionType: string): string {
+  private selectVoiceForContent(text: string, sectionType: string): 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' {
     // Opening/Closing = warm host voice
     if (sectionType === 'cold-open' || sectionType === 'sign-off') {
       return this.voices.host; // Warm, welcoming
@@ -223,11 +265,72 @@ You must respond with valid JSON only.`,
   /**
    * Get role name from voice for logging
    */
-  private getRole(voice: string): string {
+  private getRole(voice: string): 'host' | 'analyst' | 'stinger' | 'urgent' | 'tech' | 'expressive' | 'neutral' {
     for (const [role, voiceName] of Object.entries(this.voices)) {
-      if (voiceName === voice) return role;
+      if (voiceName === voice) {
+        return role as 'host' | 'analyst' | 'stinger' | 'urgent' | 'tech' | 'expressive' | 'neutral';
+      }
     }
     return 'host';
+  }
+  
+  /**
+   * Generate natural conversational transition when voice changes
+   */
+  private generateTransition(fromRole: string, toRole: string, sectionType: string): string {
+    // Variety of natural transitions based on role combinations
+    const transitions: Record<string, string[]> = {
+      'host->analyst': [
+        'Let me bring in our analyst for more on this.',
+        'Over to you for the deep dive.',
+        'What\'s your take on this?',
+      ],
+      'analyst->host': [
+        'Back to you.',
+        'Handing it back.',
+        'That\'s my analysis. Back to you.',
+      ],
+      'host->tech': [
+        'Let\'s get into the tech side of this.',
+        'More on the innovation angle.',
+      ],
+      'tech->host': [
+        'Back to you for the next story.',
+        'That\'s the tech perspective. Back to you.',
+      ],
+      'host->urgent': [
+        'This one\'s breaking.',
+        'Here\'s the urgent update.',
+      ],
+      'urgent->host': [
+        'Back to our regular coverage.',
+        'Now back to you.',
+      ],
+      'analyst->tech': [
+        'Let me hand this to our tech specialist.',
+        'Over to you on the technology side.',
+      ],
+      'tech->analyst': [
+        'Back to you for analysis.',
+        'Your take?',
+      ],
+      'host->expressive': [
+        'This story is remarkable.',
+        'This one\'s dramatic.',
+      ],
+      'expressive->host': [
+        'Back to you.',
+        'That\'s the story. Back to you.',
+      ],
+    };
+    
+    const key = `${fromRole}->${toRole}`;
+    const options = transitions[key] || ['Let me hand this over.', 'Over to you.'];
+    
+    // Randomly select a transition for variety
+    const selected = options[Math.floor(Math.random() * options.length)];
+    
+    return selected;
   }
   
   private getRoleForSection(sectionType: string): 'host' | 'analyst' | 'stinger' {
