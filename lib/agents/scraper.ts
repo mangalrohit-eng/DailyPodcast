@@ -10,7 +10,8 @@
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import * as puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 // Node 18+ has fetch built-in globally (no import needed)
 
@@ -46,20 +47,29 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
       systemPrompt: `You are a web scraping agent that enriches stories with full article content.`,
       retries: 1, // Don't retry too much - some sites will always block
     });
+    
+    // Add stealth plugin to avoid detection
+    puppeteer.use(StealthPlugin());
   }
   
   /**
    * Launch Puppeteer browser instance (reused across all scrapes)
    */
-  private async launchBrowser(): Promise<puppeteer.Browser> {
+  private async launchBrowser(): Promise<any> {
     if (!this.browser) {
-      Logger.info('Launching Puppeteer browser for URL resolution');
+      Logger.info('Launching Puppeteer browser with stealth mode for URL resolution');
+      
       this.browser = await puppeteer.launch({
         headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-blink-features=AutomationControlled',
+          '--disable-dev-shm-usage', // Overcome limited resource problems
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu',
         ],
       });
     }
@@ -89,38 +99,99 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
    */
   private async resolveGoogleNewsUrl(googleNewsUrl: string): Promise<string> {
     const browser = await this.launchBrowser();
-    const page = await browser.newPage();
+    let page: any = null;
     
     try {
+      page = await browser.newPage();
+      
+      // Set realistic viewport
+      await page.setViewport({ width: 1920, height: 1080 });
+      
       // Set realistic user agent
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      
+      // Intercept navigation to capture redirects (HTML documents only)
+      let redirectedUrl: string | null = null;
+      
+      page.on('response', async (response: any) => {
+        const url = response.url();
+        const contentType = response.headers()['content-type'] || '';
+        
+        // Only capture HTML documents, not CSS/JS/images
+        if (!url.includes('news.google.com') && 
+            !url.includes('googleapis.com') &&
+            !url.includes('googleusercontent.com') &&
+            !url.includes('gstatic.com') &&
+            contentType.includes('text/html') &&
+            (url.startsWith('http://') || url.startsWith('https://'))) {
+          if (!redirectedUrl) {
+            redirectedUrl = url;
+            Logger.debug(`📍 Captured HTML redirect to: ${url.substring(0, 60)}...`);
+          }
+        }
+      });
       
       // Navigate to Google News URL
       await page.goto(googleNewsUrl, { 
         waitUntil: 'domcontentloaded',
-        timeout: 10000 
+        timeout: 8000 
       });
       
-      // Wait for JavaScript redirect (Google News redirects via JS)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Give time for JavaScript redirects
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
+      // Check if URL changed
       const finalUrl = page.url();
-      await page.close();
       
-      // Check if we actually got redirected away from Google News
-      if (finalUrl.includes('news.google.com')) {
-        throw new Error('Failed to resolve - stayed on Google News');
+      // If we captured a redirect during navigation, use that
+      if (redirectedUrl && !redirectedUrl.includes('news.google.com')) {
+        Logger.debug(`✅ Resolved Google News URL via redirect capture`, {
+          original: googleNewsUrl.substring(0, 60),
+          resolved: redirectedUrl.substring(0, 60),
+        });
+        return redirectedUrl;
       }
       
-      Logger.debug(`✅ Resolved Google News URL`, {
-        original: googleNewsUrl.substring(0, 60),
-        resolved: finalUrl.substring(0, 60),
-      });
+      // If page URL changed and it's not Google News, use that
+      if (!finalUrl.includes('news.google.com')) {
+        Logger.debug(`✅ Resolved Google News URL via page navigation`, {
+          original: googleNewsUrl.substring(0, 60),
+          resolved: finalUrl.substring(0, 60),
+        });
+        return finalUrl;
+      }
       
-      return finalUrl;
+      // Last resort: Try to find article link in the page
+      try {
+        const articleLink = await page.evaluate(() => {
+          // Look for main article link
+          const link = document.querySelector('a[href*="http"]') as HTMLAnchorElement;
+          return link ? link.href : null;
+        });
+        
+        if (articleLink && !articleLink.includes('news.google.com')) {
+          Logger.debug(`✅ Resolved Google News URL via link extraction`, {
+            original: googleNewsUrl.substring(0, 60),
+            resolved: articleLink.substring(0, 60),
+          });
+          return articleLink;
+        }
+      } catch (evalError) {
+        Logger.debug('Failed to extract link from page', { error: evalError });
+      }
+      
+      throw new Error('Failed to resolve - stayed on Google News');
     } catch (error) {
-      await page.close();
       throw new Error(`Failed to resolve Google News URL: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      // Always close page in finally block
+      if (page && !page.isClosed()) {
+        try {
+          await page.close();
+        } catch (closeError) {
+          Logger.warn('Failed to close page', { error: closeError });
+        }
+      }
     }
   }
 
@@ -144,7 +215,7 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
       let totalContentLength = 0;
       let successfulScrapes = 0;
 
-      // Scrape each article sequentially to avoid overwhelming the browser
+      // Scrape each article sequentially
       for (const pick of picks) {
         try {
           const enrichedStory = await this.scrapeArticle(pick.story);
