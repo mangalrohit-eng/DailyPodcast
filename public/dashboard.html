@@ -1327,7 +1327,7 @@
                     <table class="runs-table" id="runsTable">
                         <thead>
                             <tr>
-                                <th>Date & Time</th>
+                                <th>Episode</th>
                                 <th>Status</th>
                                 <th>Stories</th>
                                 <th>Duration</th>
@@ -1503,32 +1503,26 @@
             </div>
 
             <div class="card">
-                <h2>Voice & Style</h2>
-                <div class="form-group">
-                    <label>Host Voice</label>
-                    <select id="voiceHost">
-                        <option value="alloy">Alloy</option>
-                        <option value="echo">Echo</option>
-                        <option value="fable">Fable</option>
-                        <option value="onyx">Onyx</option>
-                        <option value="nova">Nova</option>
-                        <option value="shimmer">Shimmer</option>
-                    </select>
+                <h2>Voice & Pronunciation</h2>
+                <div style="color: #666; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 6px;">
+                    <i class="fas fa-info-circle" style="color: #0ea5e9;"></i> <strong>Intelligent Voice Selection</strong>
+                    <p style="margin: 10px 0 0 0; line-height: 1.6;">
+                        Voices are automatically selected based on content type for a more natural, dynamic podcast experience:
+                    </p>
+                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li><strong>Shimmer</strong> - Warm host voice for openings, closings, and general content</li>
+                        <li><strong>Echo</strong> - Professional analyst voice for business and financial analysis</li>
+                        <li><strong>Nova</strong> - Energetic tech voice for AI and technology stories</li>
+                        <li><strong>Onyx</strong> - Authoritative voice for breaking news and urgent updates</li>
+                        <li><strong>Fable</strong> - Expressive voice for dramatic or surprising stories</li>
+                    </ul>
                 </div>
                 <div class="form-group">
-                    <label>Analyst Voice</label>
-                    <select id="voiceAnalyst">
-                        <option value="alloy">Alloy</option>
-                        <option value="echo">Echo</option>
-                        <option value="fable">Fable</option>
-                        <option value="onyx">Onyx</option>
-                        <option value="nova">Nova</option>
-                        <option value="shimmer">Shimmer</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Pronunciation Glossary (key=value per line)</label>
-                    <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;GPT=G P T&#10;ML=M L"></textarea>
+                    <label>Pronunciation Glossary</label>
+                    <small style="color: #666; display: block; margin-bottom: 8px;">
+                        Define custom pronunciations (key=value, one per line). Example: AI=A I
+                    </small>
+                    <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;CEO=C E O&#10;GPT=G P T"></textarea>
                 </div>
             </div>
 
@@ -2021,11 +2015,7 @@ Full data in console (F12).`;
             document.getElementById('bannedDomains').value = (config.banned_domains || []).join('\n');
             document.getElementById('windowHours').value = config.window_hours || 36;
 
-            // Voices
-            document.getElementById('voiceHost').value = config.voices?.host || 'alloy';
-            document.getElementById('voiceAnalyst').value = config.voices?.analyst || 'nova';
-
-            // Pronunciation
+            // Pronunciation (voices are auto-selected based on content)
             const glossary = config.pronunciation_glossary || {};
             document.getElementById('pronunciationGlossary').value = 
                 Object.entries(glossary).map(([k, v]) => `${k}=${v}`).join('\n');
@@ -2162,8 +2152,8 @@ Full data in console (F12).`;
                     .filter(d => d),
                 window_hours: parseInt(document.getElementById('windowHours').value),
                 voices: {
-                    host: document.getElementById('voiceHost').value,
-                    analyst: document.getElementById('voiceAnalyst').value,
+                    host: 'shimmer', // Hardcoded - voices are auto-selected based on content
+                    analyst: 'echo',
                     stinger: 'shimmer',
                 },
                 pronunciation_glossary: Object.fromEntries(
@@ -2298,9 +2288,16 @@ Full data in console (F12).`;
                     }
                 }
                 
+                // Display episode title if available, otherwise show date
+                const episodeTitle = run.title || `Daily Brief - ${run.date}`;
+                const episodeDisplay = `
+                    <div style="font-weight: 600; color: #1d1d1f;">${episodeTitle}</div>
+                    <div style="font-size: 12px; color: #6e6e73; margin-top: 2px;">${displayDate}</div>
+                `;
+                
                 return `
                     <tr>
-                        <td>${displayDate}</td>
+                        <td>${episodeDisplay}</td>
                         <td><span class="status-badge status-${run.status}">${run.status.toUpperCase()}</span></td>
                         <td>${run.stories_count || '-'}</td>
                         <td>${run.duration_ms ? Math.round(run.duration_ms / 1000) + 's' : '-'}</td>
@@ -3575,11 +3572,13 @@ Full data in console (F12).`;
 
                 container.innerHTML = '<ul class="url-list">' + episodes.map(ep => {
                     const url = `${API_BASE}/podcast/episodes/${ep.date}.mp3`;
+                    const episodeTitle = ep.title || `Daily Brief - ${ep.date}`;
                     return `
                         <li class="url-item">
                             <div>
-                                <strong>${ep.date}</strong><br>
-                                <code>${url}</code>
+                                <strong style="font-size: 15px; color: #1d1d1f;">${episodeTitle}</strong><br>
+                                <small style="color: #6e6e73; margin-top: 4px; display: block;">${ep.date}</small>
+                                <code style="font-size: 12px; display: block; margin-top: 8px;">${url}</code>
                             </div>
                             <div>
                                 <a href="${url}" class="btn btn-secondary copy-btn" target="_blank">Play</a>
