@@ -72,6 +72,18 @@
     },
     "api/test-run.ts": {
       "maxDuration": 30
+    },
+    "api/external/trigger-run.ts": {
+      "maxDuration": 300
+    },
+    "api/external/run-status.ts": {
+      "maxDuration": 10
+    },
+    "api/external/run-logs.ts": {
+      "maxDuration": 10
+    },
+    "api/external/run-errors.ts": {
+      "maxDuration": 10
     }
   }
 }

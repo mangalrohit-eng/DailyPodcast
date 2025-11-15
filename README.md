@@ -21,6 +21,7 @@ This system automatically generates a personalized daily morning news podcast us
 - **⏰ Automated Daily**: Vercel Cron runs at 12:00 UTC
 - **💾 Flexible Storage**: Vercel Blob or S3-compatible
 - **🔒 Safety First**: Fact-checking and content safety agents
+- **🌐 External API**: Programmatic access for AI agents to trigger and monitor runs
 
 ## Architecture
 
@@ -530,6 +531,45 @@ The dashboard uses these authenticated API endpoints:
    - Use "Run Now" to test configuration changes
    - Wait for active runs to complete
    - Check run details for story selections
+
+## 🌐 External API
+
+The system provides an external API for AI agents and automation tools to programmatically interact with the podcast system.
+
+### Setup
+
+1. Set the `EXTERNAL_API_KEY` environment variable:
+   ```bash
+   vercel env add EXTERNAL_API_KEY
+   # Generate a secure key: openssl rand -hex 32
+   ```
+
+### Available Endpoints
+
+- **POST** `/api/external/trigger-run` - Trigger a new podcast run
+- **GET** `/api/external/run-status?runId={id}` - Get run status and progress
+- **GET** `/api/external/run-logs?runId={id}` - Retrieve agent execution logs
+- **GET** `/api/external/run-errors?runId={id}` - Get all errors from a run
+
+### Authentication
+
+All requests require the `X-API-Key` header:
+
+```bash
+curl -X POST https://your-domain.vercel.app/api/external/trigger-run \
+  -H "X-API-Key: your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"force_overwrite": false}'
+```
+
+### Use Cases
+
+- **Autonomous monitoring**: AI agents can monitor runs and detect issues
+- **Automated retries**: Trigger re-runs when errors are detected
+- **Integration testing**: Programmatically test the pipeline
+- **Analytics**: Collect performance metrics across runs
+
+📖 **Full documentation**: See [EXTERNAL_API_GUIDE.md](./EXTERNAL_API_GUIDE.md) for complete API reference, examples, and AI agent integration patterns.
 
 ## Contributing
 
