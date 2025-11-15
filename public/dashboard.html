@@ -842,51 +842,92 @@
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Latest Episode
                 </a>
-                <a href="/upload-music.html" class="header-link" target="_blank">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
-                    🎵 Upload Music
-                </a>
             </div>
         </div>
     </header>
 
     <div class="container">
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('settings')">⚙️ Settings</button>
-            <button class="tab" onclick="switchTab('runs')">▶️ Runs</button>
+            <button class="tab active" onclick="switchTab('runs')">▶️ Runs</button>
             <button class="tab" onclick="switchTab('urls')">🔗 URLs</button>
+            <button class="tab" onclick="switchTab('podcast-settings')">🎙️ Podcast Settings</button>
+            <button class="tab" onclick="switchTab('health')">🏥 Health & Maintenance</button>
         </div>
 
-        <!-- Settings Tab -->
-        <div id="settings" class="tab-content active">
+        <!-- Runs Tab -->
+        <div id="runs" class="tab-content active">
             <div class="card">
-                <h2>System Health</h2>
-                <button class="btn btn-primary" onclick="runFullHealthCheck()" style="margin-bottom: 15px;">🏥 Run Full System Check</button>
-                <div class="health-status" id="healthStatus">
-                    <div style="color: #666;">Click "Run Full System Check" to diagnose all components</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Recent Runs</h2>
+                    <button class="btn btn-success" onclick="runNow()" id="runNowBtn">
+                        ▶️ Run Now
+                    </button>
+                </div>
+                <div id="activeRunStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 20px;">
+                    <strong>Run in progress:</strong> <span id="activeRunId"></span>
+                    <div style="margin-top: 10px;">
+                        <div class="spinner" style="margin-right: 10px;"></div>
+                        <span id="activeRunPhase">Starting...</span>
+                    </div>
+                </div>
+                <table class="runs-table" id="runsTable">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Status</th>
+                            <th>Stories</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px;">
+                                <div class="spinner"></div> Loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- URLs Tab -->
+        <div id="urls" class="tab-content">
+            <div class="card">
+                <h2>Podcast URLs</h2>
+                <ul class="url-list">
+                    <li class="url-item">
+                        <div>
+                            <strong>RSS Feed</strong><br>
+                            <code id="urlFeed">Loading...</code>
+                        </div>
+                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlFeed')">Copy</button>
+                    </li>
+                    <li class="url-item">
+                        <div>
+                            <strong>Latest Episode</strong><br>
+                            <code id="urlLatestEpisode">Loading...</code>
+                        </div>
+                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlLatestEpisode')">Copy</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">All Episodes</h2>
+                    <button class="btn btn-secondary" onclick="loadEpisodes()">🔄 Refresh</button>
+                </div>
+                <div id="episodesList">
+                    <div style="text-align: center; padding: 20px;">
+                        <div class="spinner"></div> Loading episodes...
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="card">
-                <h2>Maintenance</h2>
-                <p style="color: #666; margin-bottom: 15px;">Index existing episodes that were created before the dashboard was set up.</p>
-                <button class="btn btn-secondary" onclick="indexExistingEpisodes()">🔄 Index Existing Episodes</button>
-                <p style="color: #666; margin-top: 10px; font-size: 13px;">
-                    This will scan your storage for episodes and add them to the dashboard. 
-                    Only needed once if you have pre-dashboard episodes.
-                </p>
-            </div>
-
-            <div class="card">
-                <h2>Diagnostics</h2>
-                <p style="color: #666; margin-bottom: 15px;">Run a quick test to verify system configuration and logging.</p>
-                <button class="btn btn-secondary" onclick="runDiagnostic()">🧪 Run System Test</button>
-                <button class="btn btn-secondary" onclick="viewDebugInfo()" style="margin-left: 10px;">🔍 Debug Storage</button>
-                <p style="color: #666; margin-top: 10px; font-size: 13px;">
-                    System test runs in &lt;5 seconds and writes test logs. Debug shows storage state.
-                </p>
-            </div>
-
+        <!-- Podcast Settings Tab -->
+        <div id="podcast-settings" class="tab-content">
             <div class="card">
                 <h2>Topics & Weights</h2>
                 <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
@@ -1106,78 +1147,45 @@
                 </div>
             </div>
 
+            <div class="card">
+                <h2>🎵 Upload Music</h2>
+                <p style="color: #666; margin-bottom: 15px;">Add custom intro and outro music to your podcast episodes.</p>
+                <a href="/upload-music.html" target="_blank" class="btn btn-primary">
+                    🎵 Upload Intro/Outro Music
+                </a>
+            </div>
+
             <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
         </div>
 
-        <!-- Runs Tab -->
-        <div id="runs" class="tab-content">
+        <!-- Health & Maintenance Tab -->
+        <div id="health" class="tab-content">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>Recent Runs</h2>
-                    <button class="btn btn-success" onclick="runNow()" id="runNowBtn">
-                        ▶️ Run Now
-                    </button>
+                <h2>System Health</h2>
+                <button class="btn btn-primary" onclick="runFullHealthCheck()" style="margin-bottom: 15px;">🏥 Run Full System Check</button>
+                <div class="health-status" id="healthStatus">
+                    <div style="color: #666;">Click "Run Full System Check" to diagnose all components</div>
                 </div>
-                <div id="activeRunStatus" style="display: none; padding: 15px; background: #fff3cd; border-radius: 6px; margin-bottom: 20px;">
-                    <strong>Run in progress:</strong> <span id="activeRunId"></span>
-                    <div style="margin-top: 10px;">
-                        <div class="spinner" style="margin-right: 10px;"></div>
-                        <span id="activeRunPhase">Starting...</span>
-                    </div>
-                </div>
-                <table class="runs-table" id="runsTable">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Status</th>
-                            <th>Stories</th>
-                            <th>Duration</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px;">
-                                <div class="spinner"></div> Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
-        </div>
 
-        <!-- URLs Tab -->
-        <div id="urls" class="tab-content">
             <div class="card">
-                <h2>Podcast URLs</h2>
-                <ul class="url-list">
-                    <li class="url-item">
-                        <div>
-                            <strong>RSS Feed</strong><br>
-                            <code id="urlFeed">Loading...</code>
-                        </div>
-                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlFeed')">Copy</button>
-                    </li>
-                    <li class="url-item">
-                        <div>
-                            <strong>Latest Episode</strong><br>
-                            <code id="urlLatestEpisode">Loading...</code>
-                        </div>
-                        <button class="btn btn-secondary copy-btn" onclick="copyUrl('urlLatestEpisode')">Copy</button>
-                    </li>
-                </ul>
+                <h2>Maintenance</h2>
+                <p style="color: #666; margin-bottom: 15px;">Index existing episodes that were created before the dashboard was set up.</p>
+                <button class="btn btn-secondary" onclick="indexExistingEpisodes()">🔄 Index Existing Episodes</button>
+                <p style="color: #666; margin-top: 10px; font-size: 13px;">
+                    This will scan your storage for episodes and add them to the dashboard. 
+                    Only needed once if you have pre-dashboard episodes.
+                </p>
             </div>
-            
+
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2 style="margin: 0;">All Episodes</h2>
-                    <button class="btn btn-secondary" onclick="loadEpisodes()">🔄 Refresh</button>
-                </div>
-                <div id="episodesList">
-                    <div style="text-align: center; padding: 20px;">
-                        <div class="spinner"></div> Loading episodes...
-                    </div>
-                </div>
+                <h2>Diagnostics</h2>
+                <p style="color: #666; margin-bottom: 15px;">Run a quick test to verify system configuration and logging.</p>
+                <button class="btn btn-secondary" onclick="runDiagnostic()">🧪 Run System Test</button>
+                <button class="btn btn-secondary" onclick="viewDebugInfo()" style="margin-left: 10px;">🔍 Debug Storage</button>
+                <p style="color: #666; margin-top: 10px; font-size: 13px;">
+                    System test runs in &lt;5 seconds and writes test logs. Debug shows storage state.
+                </p>
             </div>
         </div>
     </div>
