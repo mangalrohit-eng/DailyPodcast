@@ -291,8 +291,8 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     const topics = Array.from(new Set(scoredStories.map(s => s.story.topic)))
       .filter((t): t is string => !!t) // Filter out undefined/empty topics
       .sort((a, b) => {
-        const weightA = this.topicWeights[a] || 0;
-        const weightB = this.topicWeights[b] || 0;
+        const weightA = this.topicWeights[a.toLowerCase()] || 0;
+        const weightB = this.topicWeights[b.toLowerCase()] || 0;
         return weightB - weightA; // Descending: highest weight first
       });
     
@@ -306,7 +306,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     // Calculate target count per topic based on weights
     const topicTargets = new Map<string, number>();
     for (const topic of topics) {
-      const weight = this.topicWeights[topic] || 1.0 / topics.length;
+      const weight = this.topicWeights[topic.toLowerCase()] || 1.0 / topics.length;
       const target = Math.max(1, Math.round(targetCount * weight)); // At least 1 per topic
       topicTargets.set(topic, target);
       Logger.info(`📊 Topic target: ${topic}`, { weight, target_stories: target });
@@ -318,7 +318,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
       const diff = targetCount - totalTargets;
       // Distribute the difference to the topic with the highest weight
       const maxWeightTopic = topics.reduce((max, t) => 
-        (this.topicWeights[t] || 0) > (this.topicWeights[max] || 0) ? t : max
+        (this.topicWeights[t.toLowerCase()] || 0) > (this.topicWeights[max.toLowerCase()] || 0) ? t : max
       );
       topicTargets.set(maxWeightTopic, (topicTargets.get(maxWeightTopic) || 1) + diff);
       Logger.info(`⚖️ Adjusted ${maxWeightTopic} target by ${diff} to match total`, {
@@ -358,7 +358,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
         
         if (isDiverse) {
           const pick = this.createPick(candidate.story, candidate.score, picks.length);
-          pick.rationale = `${topic} story #${selected + 1}/${target} (score: ${candidate.score.toFixed(3)}) - proportional topic coverage (weight: ${this.topicWeights[topic]?.toFixed(2) || 'N/A'})`;
+          pick.rationale = `${topic} story #${selected + 1}/${target} (score: ${candidate.score.toFixed(3)}) - proportional topic coverage (weight: ${this.topicWeights[topic.toLowerCase()]?.toFixed(2) || 'N/A'})`;
           picks.push(pick);
           topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
           selected++;
