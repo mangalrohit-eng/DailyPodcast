@@ -1156,54 +1156,142 @@ export class Orchestrator {
   }
   
   /**
-   * Generate dynamic episode title based on content
+   * Generate dynamic episode title based on actual story content
    */
   private generateEpisodeTitle(picks: any[], date: string): string {
-    // Get unique topics from picks
-    const topicCounts: Record<string, number> = {};
-    for (const pick of picks) {
-      topicCounts[pick.topic] = (topicCounts[pick.topic] || 0) + 1;
-    }
+    // Extract key themes from story titles (not just topic labels)
+    const keyThemes = this.extractKeyThemes(picks);
     
-    // Sort topics by count
-    const sortedTopics = Object.entries(topicCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([topic]) => topic);
+    Logger.info('Generated episode title themes', {
+      story_count: picks.length,
+      story_titles: picks.map(p => p.story.title).slice(0, 3),
+      extracted_themes: keyThemes,
+    });
     
-    // Format date (e.g., "Nov 15" or "November 15")
+    // Format date (e.g., "Nov 15")
     const dateObj = new Date(date);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const formattedDate = `${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}`;
     
-    // Create title based on number of topics
-    if (sortedTopics.length === 1) {
-      return `${sortedTopics[0]} - ${formattedDate}`;
-    } else if (sortedTopics.length === 2) {
-      return `${sortedTopics[0]} & ${sortedTopics[1]} - ${formattedDate}`;
-    } else if (sortedTopics.length >= 3) {
-      // Take top 3 topics
-      const topThree = sortedTopics.slice(0, 3);
-      return `${topThree[0]}, ${topThree[1]} & ${topThree[2]} - ${formattedDate}`;
+    // Create title based on extracted themes
+    let title: string;
+    if (keyThemes.length === 0) {
+      title = `Daily Brief - ${formattedDate}`;
+    } else if (keyThemes.length === 1) {
+      title = `${keyThemes[0]} - ${formattedDate}`;
+    } else if (keyThemes.length === 2) {
+      title = `${keyThemes[0]} & ${keyThemes[1]} - ${formattedDate}`;
+    } else {
+      // Take top 3 themes
+      const topThree = keyThemes.slice(0, 3);
+      title = `${topThree[0]}, ${topThree[1]} & ${topThree[2]} - ${formattedDate}`;
     }
     
-    // Fallback
-    return `Daily Brief - ${formattedDate}`;
+    Logger.info('Final episode title', { title });
+    return title;
   }
   
   /**
-   * Generate dynamic episode description based on content
+   * Extract key themes from story titles by analyzing actual content
    */
-  private generateEpisodeDescription(picks: any[], date: string): string {
-    const topicCounts: Record<string, number> = {};
+  private extractKeyThemes(picks: any[]): string[] {
+    // Common words to ignore
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
+      'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
+      'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
+      'could', 'may', 'might', 'must', 'can', 'after', 'before', 'new', 'first',
+      'says', 'announces', 'launches', 'releases', 'unveils', 'reveals', 'plans',
+      'its', 'their', 'how', 'what', 'why', 'when', 'where', 'this', 'that',
+      'these', 'those', 'now', 'just', 'more', 'over', 'about', 'into', 'through'
+    ]);
+    
+    // Extract important words from all story titles
+    const wordFrequency: Record<string, number> = {};
+    const companyNames: Set<string> = new Set(); // Track likely company names
     
     for (const pick of picks) {
-      topicCounts[pick.topic] = (topicCounts[pick.topic] || 0) + 1;
+      const title = pick.story.title || '';
+      // Split on word boundaries and clean
+      const words = title.split(/\s+|[,;:\-()]/);
+      
+      for (let word of words) {
+        word = word.trim().replace(/[^a-zA-Z0-9&]/g, '');
+        if (word.length < 3) continue; // Skip very short words
+        
+        const lowerWord = word.toLowerCase();
+        if (stopWords.has(lowerWord)) continue;
+        
+        // Track capitalized words (likely proper nouns/companies)
+        if (word[0] === word[0].toUpperCase() && word.length > 3) {
+          companyNames.add(word);
+        }
+        
+        // Count word frequency (use lowercase for counting)
+        wordFrequency[lowerWord] = (wordFrequency[lowerWord] || 0) + 1;
+      }
     }
     
-    const topicSummary = Object.entries(topicCounts)
-      .map(([topic, count]) => `${count} ${topic.toLowerCase()}`)
-      .join(', ');
+    // Prioritize company names and high-frequency terms
+    const themes: Array<{ word: string; score: number; isProperNoun: boolean }> = [];
     
+    // Add company names with high priority
+    for (const company of companyNames) {
+      const freq = wordFrequency[company.toLowerCase()] || 1;
+      themes.push({ 
+        word: company, 
+        score: freq * 3, // 3x multiplier for proper nouns
+        isProperNoun: true 
+      });
+    }
+    
+    // Add other high-frequency words
+    for (const [word, freq] of Object.entries(wordFrequency)) {
+      // Skip if already added as company name
+      if (Array.from(companyNames).some(c => c.toLowerCase() === word)) {
+        continue;
+      }
+      // Only include words appearing 2+ times or significant terms
+      if (freq >= 2 || this.isSignificantTerm(word)) {
+        // Capitalize first letter for display
+        const displayWord = word.charAt(0).toUpperCase() + word.slice(1);
+        themes.push({ 
+          word: displayWord, 
+          score: freq + (this.isSignificantTerm(word) ? 2 : 0),
+          isProperNoun: false 
+        });
+      }
+    }
+    
+    // Sort by score (proper nouns and frequency)
+    themes.sort((a, b) => b.score - a.score);
+    
+    // Return top 3 themes
+    return themes.slice(0, 3).map(t => t.word);
+  }
+  
+  /**
+   * Check if a word is a significant tech/business term
+   */
+  private isSignificantTerm(word: string): boolean {
+    const significantTerms = [
+      'ai', 'artificial', 'intelligence', 'openai', 'chatgpt', 'gpt',
+      'tech', 'technology', 'cloud', 'data', 'software', 'hardware',
+      'market', 'stock', 'billion', 'million', 'revenue', 'profit',
+      'layoffs', 'hiring', 'acquisition', 'merger', 'ipo', 'funding',
+      'security', 'privacy', 'breach', 'hack', 'cyber',
+      'regulation', 'lawsuit', 'court', 'fda', 'fcc', 'sec',
+      'crypto', 'bitcoin', 'blockchain', 'web3', 'metaverse',
+      'electric', 'autonomous', 'quantum', 'semiconductor',
+      'healthcare', 'medicine', 'pharmaceutical', 'vaccine'
+    ];
+    return significantTerms.includes(word.toLowerCase());
+  }
+  
+  /**
+   * Generate dynamic episode description based on actual content
+   */
+  private generateEpisodeDescription(picks: any[], date: string): string {
     const storyCount = picks.length;
     const dateObj = new Date(date);
     const formattedDate = dateObj.toLocaleDateString('en-US', { 
@@ -1213,7 +1301,21 @@ export class Orchestrator {
       year: 'numeric' 
     });
     
-    return `Your daily news brief for ${formattedDate}. ${storyCount} stories covering ${topicSummary}. AI-generated podcast powered by OpenAI.`;
+    // Extract key themes from story content
+    const keyThemes = this.extractKeyThemes(picks);
+    
+    // Build story previews (first 2-3 stories)
+    const storyPreviews = picks
+      .slice(0, 3)
+      .map(p => p.story.title)
+      .join('; ');
+    
+    // Create rich description
+    if (keyThemes.length > 0) {
+      return `Your daily news brief for ${formattedDate}. Today's ${storyCount} stories focus on ${keyThemes.join(', ')}. Topics include: ${storyPreviews}`;
+    } else {
+      return `Your daily news brief for ${formattedDate}. ${storyCount} stories covering today's key developments.`;
+    }
   }
 }
 
