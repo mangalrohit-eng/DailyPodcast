@@ -106,7 +106,12 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
     Logger.info('Loaded runs index', { totalRuns: index.runs?.length || 0 });
     
     // Get episodes (runs with episode URLs)
-    const episodes = index.runs.filter((r: any) => r.episode_url && r.status === 'success');
+    const episodes = index.runs.filter((r: any) => {
+      // Must have URL, status success, and URL must be valid
+      return r.episode_url && 
+             r.status === 'success' && 
+             r.episode_url.startsWith('http');
+    });
     
     Logger.info('Filtered episodes', { 
       totalRuns: index.runs?.length || 0,
@@ -120,12 +125,23 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
     });
     
     if (episodes.length === 0) {
-      Logger.warn('No episodes with URLs found in index');
+      Logger.warn('No episodes with valid URLs found in index');
       return null;
     }
     
     const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
     const now = new Date().toUTCString();
+    
+    // Helper to escape XML special characters
+    const escapeXml = (str: string): string => {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    };
     
     // Generate RSS feed XML
     const feedXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -146,15 +162,23 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
     <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
     <itunes:category text="News"/>
     <itunes:explicit>no</itunes:explicit>
-${episodes.map((ep: any) => `    <item>
-      <title>Daily News - ${ep.date}</title>
-      <description>Your daily news brief for ${ep.date}</description>
-      <pubDate>${new Date(ep.completed_at).toUTCString()}</pubDate>
-      <enclosure url="${ep.episode_url}" length="${ep.file_size || 5000000}" type="audio/mpeg"/>
-      <guid isPermaLink="false">${ep.run_id}</guid>
-      <itunes:duration>${ep.duration_ms ? Math.round(ep.duration_ms / 1000) : 900}</itunes:duration>
+${episodes.map((ep: any) => {
+      const episodeDate = escapeXml(ep.date || 'Unknown Date');
+      const episodeUrl = ep.episode_url; // URLs don't need escaping in XML
+      const fileSize = ep.file_size || 5000000;
+      const duration = ep.duration_ms ? Math.round(ep.duration_ms / 1000) : 900;
+      const pubDate = ep.completed_at ? new Date(ep.completed_at).toUTCString() : now;
+      
+      return `    <item>
+      <title>Daily News - ${episodeDate}</title>
+      <description>Your daily news brief for ${episodeDate}</description>
+      <pubDate>${pubDate}</pubDate>
+      <enclosure url="${episodeUrl}" length="${fileSize}" type="audio/mpeg"/>
+      <guid isPermaLink="false">${escapeXml(ep.run_id)}</guid>
+      <itunes:duration>${duration}</itunes:duration>
       <itunes:explicit>no</itunes:explicit>
-    </item>`).join('\n')}
+    </item>`;
+    }).join('\n')}
   </channel>
 </rss>`;
     
