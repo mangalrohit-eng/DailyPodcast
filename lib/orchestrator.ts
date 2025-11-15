@@ -215,6 +215,7 @@ export class Orchestrator {
       });
       agentTimes['ingestion'] = Date.now() - ingestionStart;
       agentResults.ingestion = ingestionResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       if (!ingestionResult.output || ingestionResult.output.stories.length === 0) {
         throw new Error('No stories found during ingestion');
@@ -274,6 +275,7 @@ export class Orchestrator {
       });
       agentTimes['ranking'] = Date.now() - rankingStart;
       agentResults.ranking = rankingResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       if (!rankingResult.output || rankingResult.output.picks.length === 0) {
         throw new Error('No stories ranked');
@@ -312,6 +314,7 @@ export class Orchestrator {
       });
       agentTimes['scraper'] = Date.now() - scraperStart;
       agentResults.scraper = scraperResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       Logger.info('Scraping complete', {
         successful: scraperResult.output.scraping_report.successful_scrapes,
@@ -349,6 +352,7 @@ export class Orchestrator {
       });
       agentTimes['outline'] = Date.now() - outlineStart;
       agentResults.outline = outlineResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       progressTracker.addUpdate(runId, {
         phase: 'Outline',
@@ -815,6 +819,37 @@ export class Orchestrator {
     };
   }
   
+  /**
+   * Save partial manifest to S3 (for real-time streaming)
+   */
+  private async savePartialManifest(
+    runId: string,
+    runConfig: any,
+    agentResults: any,
+    agentTimes: Record<string, number>
+  ): Promise<void> {
+    try {
+      const partial = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, 'In progress...');
+      partial.status = 'running'; // Override status to 'running' for in-progress saves
+      
+      await this.storage.put(
+        `episodes/${runId}_manifest.json`,
+        JSON.stringify(partial, null, 2),
+        'application/json'
+      );
+      
+      Logger.debug('Partial manifest saved', { 
+        runId, 
+        completed_agents: Object.keys(agentResults),
+      });
+    } catch (error) {
+      // Don't fail the whole run if manifest save fails
+      Logger.warn('Failed to save partial manifest', { 
+        error: (error as Error).message,
+      });
+    }
+  }
+
   /**
    * Build partial manifest from completed agents (for failed runs)
    */

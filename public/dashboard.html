@@ -1950,13 +1950,18 @@ Full data in console (F12).`;
                 // Show pipeline report modal
                 showPipelineReport(runId, data);
                 
-                // If run is still active, start polling for updates
-                if (data.summary?.status === 'running') {
-                    console.log('🔄 Run is active - starting real-time updates');
+                // Start polling if run is active OR very recent (within 5 minutes)
+                const isRunning = data.summary?.status === 'running';
+                const startedAt = data.summary?.started_at ? new Date(data.summary.started_at) : null;
+                const isRecent = startedAt && (Date.now() - startedAt.getTime() < 5 * 60 * 1000);
+                
+                if (isRunning || isRecent) {
+                    console.log('🔄 Starting real-time updates', { isRunning, isRecent, status: data.summary?.status });
                     currentDetailsRunId = runId;
                     startDetailsPolling(runId);
                 } else {
-                    // Run is complete, stop any existing polling
+                    // Run is old and complete, stop any existing polling
+                    console.log('⏹️ Run is complete and not recent, no polling needed');
                     stopDetailsPolling();
                 }
             } catch (error) {
