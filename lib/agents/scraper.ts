@@ -4,14 +4,15 @@
  * Takes ranked stories and enriches them with full article text,
  * enabling more detailed and "meaty" podcast scripts.
  * 
- * Uses Puppeteer to resolve Google News URLs to actual article URLs.
+ * Uses Playwright (playwright-aws-lambda) to resolve Google News URLs to actual article URLs.
+ * Designed for serverless deployment on Vercel.
  */
 
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import playwright from 'playwright-aws-lambda';
+import { Browser, Page } from 'playwright-core';
 
 // Node 18+ has fetch built-in globally (no import needed)
 
@@ -39,7 +40,7 @@ export interface ScraperOutput {
 }
 
 export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
-  private browser: puppeteer.Browser | null = null;
+  private browser: Browser | null = null;
   
   constructor() {
     super({
@@ -50,18 +51,15 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
   }
   
   /**
-   * Launch Puppeteer browser instance (reused across all scrapes)
-   * Uses serverless-compatible Chrome binary for Vercel
+   * Launch Playwright browser instance (reused across all scrapes)
+   * Uses playwright-aws-lambda for serverless Vercel deployment
    */
-  private async launchBrowser(): Promise<any> {
+  private async launchBrowser(): Promise<Browser> {
     if (!this.browser) {
-      Logger.info('Launching Puppeteer browser (serverless Chrome) for URL resolution');
+      Logger.info('Launching Playwright browser (serverless Chromium) for URL resolution');
       
-      this.browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+      this.browser = await playwright.launchChromium({
+        headless: true,
       });
     }
     return this.browser;
@@ -74,7 +72,7 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
-      Logger.debug('Puppeteer browser closed');
+      Logger.debug('Playwright browser closed');
     }
   }
   
@@ -86,20 +84,22 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
   }
   
   /**
-   * Resolve Google News URL to actual article URL using Puppeteer
+   * Resolve Google News URL to actual article URL using Playwright
    */
   private async resolveGoogleNewsUrl(googleNewsUrl: string): Promise<string> {
     const browser = await this.launchBrowser();
-    let page: any = null;
+    let page: Page | null = null;
     
     try {
       page = await browser.newPage();
       
       // Set realistic viewport
-      await page.setViewport({ width: 1920, height: 1080 });
+      await page.setViewportSize({ width: 1920, height: 1080 });
       
-      // Set realistic user agent
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      // Set realistic user agent (Playwright has built-in user agents, but we can override)
+      await page.setExtraHTTPHeaders({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      });
       
       // Intercept navigation to capture redirects (HTML documents only)
       let redirectedUrl: string | null = null;
@@ -128,8 +128,8 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
         timeout: 8000 
       });
       
-      // Give time for JavaScript redirects
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Give time for JavaScript redirects (Playwright's built-in method)
+      await page.waitForTimeout(3000);
       
       // Check if URL changed
       const finalUrl = page.url();
