@@ -175,9 +175,12 @@ URL: ${story.url}`;
         .filter(Boolean)
         .join('\n\n');
 
+      // Convert target_words to duration_sec (assuming ~150 words per minute = 2.5 words per second)
+      const targetDurationSec = section.target_words ? Math.round(section.target_words / 2.5) : 60;
+
       return `
 SECTION ${idx + 1}: ${section.type}
-Duration Target: ${section.duration_sec || 60} seconds
+Target: ${section.target_words || 150} words (~${targetDurationSec} seconds)
 Stories to cover:
 ${picksSummary || 'No specific stories (intro/outro)'}
 Guidance: ${section.guidance || 'Follow general style guidelines'}
@@ -197,12 +200,13 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
     
     const userPrompt = `Generate a news briefing for ${listenerName} on ${date}.
 
-${wordCountRange ? `TARGET WORD COUNT: ${wordCountRange} words total` : 'Keep it concise and impactful.'}
+${wordCountRange ? `**CRITICAL: TARGET WORD COUNT: ${wordCountRange} words total**
+This is NOT a suggestion - the total script MUST be within this range.` : 'Keep it concise and impactful.'}
 
 SOURCES WITH FULL DETAILS:
 ${allSources}
 
-OUTLINE WITH STORY SUMMARIES:
+OUTLINE WITH STORY SUMMARIES (each section shows target word count):
 ${sectionsPrompt}
 
 Respond with a JSON object:
@@ -218,6 +222,7 @@ Respond with a JSON object:
 }
 
 Each section MUST:
+- MATCH the target word count shown in the outline above (±10 words is acceptable)
 - COLD-OPEN: Strong opening that immediately engages
 - STORY: Lead with impact, then specific details
   * END each story section (except the last) with a natural, brief transition to the next story
@@ -226,7 +231,9 @@ Each section MUST:
 - SIGN-OFF: Brief summary of key takeaways
 - Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
 - Cite sources inline using [1], [2], etc.
-${styleGuidance}`;
+${styleGuidance}
+
+**REMINDER: Total word count must be ${wordCountRange || '500-700'} words.**`;
 
     const response = await this.callOpenAI(
       [
