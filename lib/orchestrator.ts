@@ -348,6 +348,7 @@ export class Orchestrator {
         podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['outline'] = Date.now() - outlineStart;
+      agentResults.outline = outlineResult; // Save for partial manifest
       
       progressTracker.addUpdate(runId, {
         phase: 'Outline',
