@@ -2365,8 +2365,8 @@ Full data in console (F12).`;
                 if (report.scriptwriting) renderScriptTab(report.scriptwriting);
                 if (report.factcheck) renderFactCheckTab(report.factcheck);
                 if (report.safety) renderSafetyTab(report.safety);
-                if (report.tts) renderTtsTab(report.tts);
-                if (report.audio) renderAudioTab(report.audio);
+                if (report.tts_director || report.tts) renderTtsTab(report.tts_director || report.tts);
+                if (report.audio_engineer || report.audio) renderAudioTab(report.audio_engineer || report.audio);
                 if (report.publisher) renderPublisherTab(report.publisher);
                 if (report.memory) renderMemoryTab(report.memory);
                 
@@ -2403,6 +2403,10 @@ Full data in console (F12).`;
                     scriptwriting: !!report.scriptwriting,
                     factcheck: !!report.factcheck,
                     safety: !!report.safety,
+                    tts_director: !!report.tts_director,
+                    audio_engineer: !!report.audio_engineer,
+                    publisher: !!report.publisher,
+                    memory: !!report.memory,
                 });
                 
                 renderSummaryTab(report);
@@ -2413,8 +2417,8 @@ Full data in console (F12).`;
                 renderScriptTab(report.scriptwriting);
                 renderFactCheckTab(report.factcheck);
                 renderSafetyTab(report.safety);
-                renderTtsTab(report.tts);
-                renderAudioTab(report.audio);
+                renderTtsTab(report.tts_director || report.tts); // Support both old and new key names
+                renderAudioTab(report.audio_engineer || report.audio); // Support both old and new key names
                 renderPublisherTab(report.publisher);
                 renderMemoryTab(report.memory);
             } else {

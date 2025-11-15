@@ -1011,25 +1011,23 @@ export class Orchestrator {
     }
 
     // Add scriptwriting data if available
-    if (agentResults.scriptwriter?.output?.script) {
-      const script = agentResults.scriptwriter.output.script;
-      partial.pipeline_report.scriptwriting = {
-        word_count: script.word_count,
-        duration_estimate_sec: script.duration_estimate_sec,
-        sections: script.sections
-          .filter((s: any) => s && s.text) // Filter out sections without text
-          .map((s: any) => ({
-            type: s.type,
-            word_count: s.word_count,
-            duration_estimate_sec: s.duration_estimate_sec,
-            text: (s.text && typeof s.text === 'string') ? s.text.substring(0, 200) + '...' : '', // Include preview
-          })),
+    if (agentResults.scriptwriter?.output) {
+      // Use detailed_report which has the right structure for the dashboard
+      partial.pipeline_report.scriptwriting = agentResults.scriptwriter.output.detailed_report || {
+        sections_generated: 0,
+        total_word_count: 0,
+        full_script_text: '',
+        citations_used: [],
       };
-      partial.word_count = script.word_count;
-      partial.script_text = script.sections
-        .filter((s: any) => s && s.text && typeof s.text === 'string') // CRITICAL FIX: Filter out undefined text
-        .map((s: any) => s.text)
-        .join('\n\n');
+      
+      // Also populate manifest fields from script
+      if (agentResults.scriptwriter.output.script) {
+        partial.word_count = agentResults.scriptwriter.output.script.word_count;
+        partial.script_text = agentResults.scriptwriter.output.script.sections
+          .filter((s: any) => s && s.text && typeof s.text === 'string')
+          .map((s: any) => s.text)
+          .join('\n\n');
+      }
     }
 
     // Add fact-check data if available
