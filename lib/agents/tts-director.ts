@@ -87,6 +87,16 @@ You must respond with valid JSON only.`,
     const { text: emotionalText, speed } = this.addEmotionalCues(section.text, section.type);
     const voice = this.voices[role];
     
+    // Extra safety check on emotionalText
+    if (!emotionalText || typeof emotionalText !== 'string') {
+      Logger.error('emotionalText is invalid after addEmotionalCues', { 
+        section_type: section.type,
+        original_text: section.text,
+        emotional_text: emotionalText
+      });
+      return [];
+    }
+    
     // Clean text for TTS and apply emotionalText enhancements
     let text = emotionalText;
     

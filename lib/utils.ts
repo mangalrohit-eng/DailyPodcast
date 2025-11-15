@@ -134,6 +134,9 @@ export function extractDomain(url: string): string {
 }
 
 export function truncate(text: string, maxLength: number, suffix = '...'): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
   if (text.length <= maxLength) {
     return text;
   }
@@ -141,6 +144,9 @@ export function truncate(text: string, maxLength: number, suffix = '...'): strin
 }
 
 export function cleanText(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
   return text
     .replace(/\s+/g, ' ')
     .replace(/[\r\n]+/g, ' ')

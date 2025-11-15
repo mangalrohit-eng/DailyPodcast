@@ -71,9 +71,18 @@ You must respond with valid JSON only.`,
         continue;
       }
       
-      if (sectionResult.revised_text) {
+      if (sectionResult.revised_text && typeof sectionResult.revised_text === 'string') {
         script.sections[i].text = sectionResult.revised_text;
         changesMade.push(...(sectionResult.changes || []));
+      }
+      
+      // Ensure text is never null/undefined after fact-check
+      if (!script.sections[i].text || typeof script.sections[i].text !== 'string') {
+        Logger.warn('Section has invalid text after fact-check, preserving original', { 
+          index: i,
+          type: script.sections[i].type 
+        });
+        // Keep original text if revision is invalid
       }
       
       flagsRaised.push(...(sectionResult.flags || []));
