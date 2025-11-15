@@ -76,6 +76,12 @@ You must respond with valid JSON only.`,
   }
   
   private async prepareTtsSegments(section: any): Promise<SynthesisPlan[]> {
+    // Safety check
+    if (!section || !section.text || typeof section.text !== 'string') {
+      Logger.warn('Invalid section or missing text in prepareTtsSegments', { section });
+      return [];
+    }
+    
     // Determine voice and emotion based on section type and content
     const role = this.getRoleForSection(section.type);
     const { text: emotionalText, speed } = this.addEmotionalCues(section.text, section.type);
@@ -166,6 +172,11 @@ You must respond with valid JSON only.`,
    * Add emotional cues to make TTS more engaging
    */
   private addEmotionalCues(text: string, sectionType: string): { text: string; speed: number } {
+    // Safety check
+    if (!text || typeof text !== 'string') {
+      return { text: '', speed: 0.95 };
+    }
+    
     let emotionalText = text;
     let speed = 0.95; // Default speed
     
