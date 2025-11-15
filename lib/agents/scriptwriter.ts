@@ -38,10 +38,12 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
       systemPrompt: `You are an executive news analyst delivering high-density business intelligence.
 
 YOUR MISSION:
-- Deliver maximum information per second
+- Deliver comprehensive information with full context
 - Every sentence must inform a business decision
 - Lead with numbers and concrete facts
 - State direct implications, not vague observations
+- Provide thorough analysis - don't sacrifice depth for brevity
+- Hit the target word count by expanding on context, implications, and analysis
 
 CRITICAL REQUIREMENTS FOR EXECUTIVE BRIEFINGS:
 - NUMBERS FIRST: "$20B investment", "15,000 jobs", "Q3 up 23%"
@@ -67,8 +69,8 @@ BAD EXAMPLES (too vague):
 ❌ "Leaders must navigate an increasingly complex landscape"
 
 You must respond with valid JSON only.`,
-      temperature: 0.8,
-      maxTokens: 4000, // GPT-4-turbo max is 4096
+      temperature: 0.9, // Higher temp = more verbose, less concise
+      maxTokens: 8000, // Increased to allow longer scripts (was 4000)
     });
   }
   
@@ -265,8 +267,27 @@ Guidance: ${sectionGuidance}
     
     const userPrompt = `Generate a news briefing for a general audience on ${date}.
 
-${wordCountRange ? `**CRITICAL: TARGET WORD COUNT: ${wordCountRange} words total**
-This is NOT a suggestion - the total script MUST be within this range.` : 'Keep it concise and impactful.'}
+${wordCountRange ? `🚨 **ABSOLUTE REQUIREMENT - WORD COUNT: ${wordCountRange} words TOTAL** 🚨
+
+THIS IS NON-NEGOTIABLE. The script MUST hit this word count:
+- Target range: ${wordCountRange} words
+- DO NOT write a shorter script "to be concise" - that will FAIL
+- DO NOT summarize - EXPAND with details, context, implications
+- Each section has a target word count - HIT THOSE TARGETS
+- If you write fewer than ${Math.floor(targetWordCount * 0.9)} words, you have FAILED
+- Add more context, more details, more implications to reach the target
+- Being thorough is MORE important than being brief
+
+STRATEGIES TO REACH WORD COUNT:
+✅ Add business context and background
+✅ Explain implications in detail ("This means X, which leads to Y, resulting in Z")
+✅ Include specific numbers, dates, names, quotes from sources
+✅ Compare to past events or competitors
+✅ Discuss what to watch for next
+✅ Add analyst perspectives and interpretations
+✅ Explain the "why" and "so what" thoroughly
+
+❌ DO NOT write a 300-400 word script when 1500 words are required!` : 'Keep it concise and impactful.'}
 
 ${openingHook ? `🎣 **OPENING HOOK** (Use this to start your intro):
 "${openingHook}"
