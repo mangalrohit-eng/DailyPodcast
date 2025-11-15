@@ -237,7 +237,22 @@ export class Orchestrator {
         },
       });
       
-      // 2. RANKING
+      // ===================================================================
+      // 🛑 ALL DOWNSTREAM AGENTS DISABLED TO FOCUS ON INGESTION TESTING
+      // Only ingestion runs, then we save the manifest with the report
+      // To re-enable: uncomment phases 2-6 below
+      // ===================================================================
+      
+      Logger.info('⏸️  DOWNSTREAM AGENTS DISABLED - Stopping at ingestion to test URL extraction');
+      
+      progressTracker.addUpdate(runId, {
+        phase: 'Ingestion Complete',
+        status: 'completed',
+        message: '✅ Ingestion complete! Check the details tab for Google News extraction results.',
+      });
+      
+      /*
+      // 2. RANKING (DISABLED)
       Logger.info('Phase 2: Ranking');
       progressTracker.addUpdate(runId, {
         phase: 'Ranking',
@@ -417,20 +432,117 @@ export class Orchestrator {
       if (safetyResult.output!.risk_level === 'high') {
         Logger.warn('High risk content detected - review before publishing');
       }
+      */
       
       // ===================================================================
-      // 🔇 AUDIO GENERATION DISABLED TO SAVE API COSTS
-      // Pipeline stops at script generation
-      // To re-enable: uncomment phases 7-8 below
+      // BUILD MINIMAL MANIFEST WITH INGESTION REPORT ONLY
       // ===================================================================
       
-      Logger.info('⏸️  AUDIO GENERATION DISABLED - Stopping at script generation to save costs');
+      const ingestionReport = ingestionResult.output!.detailed_report || {
+        sources_scanned: [],
+        total_items_before_filter: 0,
+        filtered_out: [],
+        topics_breakdown: {},
+        google_news_domain_extraction: {
+          attempted: 0,
+          successful: 0,
+          failed: 0,
+          success_rate: '0%'
+        },
+        all_stories_detailed: []
+      };
+      
+      const pipeline_report = {
+        ingestion: {
+          sources_scanned: ingestionReport.sources_scanned,
+          total_items_before_filter: ingestionReport.total_items_before_filter,
+          filtered_out: ingestionReport.filtered_out,
+          topics_breakdown: ingestionReport.topics_breakdown,
+          google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
+          all_stories_detailed: ingestionReport.all_stories_detailed,
+        },
+        ranking: { status: 'disabled' },
+        scraper: { status: 'disabled' },
+        outline: { status: 'disabled' },
+        scriptwriting: { status: 'disabled' },
+        factcheck: { status: 'disabled' },
+        safety: { status: 'disabled' },
+      };
+      
+      const manifest: EpisodeManifest = {
+        run_id: runId,
+        date: runConfig.date,
+        title: `Daily News Briefing - ${runConfig.date} (Ingestion Test)`,
+        description: 'Ingestion-only test run to verify Google News URL extraction',
+        mp3_url: '',
+        duration_sec: 0,
+        word_count: 0,
+        sections: [],
+        sources: ingestionResult.output.stories.map(s => ({
+          title: s.title,
+          url: s.url,
+        })),
+        metrics: {
+          ingestion_time_ms: agentTimes['ingestion'] || 0,
+          ranking_time_ms: 0,
+          scripting_time_ms: 0,
+          tts_time_ms: 0,
+          total_time_ms: Date.now() - startTime,
+          openai_tokens: 0,
+        },
+        pipeline_report,
+      };
+      
+      // Save manifest
+      Logger.info('Saving ingestion-only manifest');
+      await this.storage.put(
+        `episodes/${runId}_manifest.json`,
+        JSON.stringify(manifest, null, 2),
+        'application/json'
+      );
+      
+      const totalTime = Date.now() - startTime;
+      
+      Logger.info('Ingestion test complete', {
+        runId,
+        total_time_ms: totalTime,
+        stories_found: ingestionResult.output.stories.length,
+        google_news_extraction: ingestionReport.google_news_domain_extraction,
+      });
       
       progressTracker.addUpdate(runId, {
-        phase: 'Script Complete',
+        phase: 'Complete',
         status: 'completed',
-        message: '✅ Script generated successfully! (Audio disabled to save API costs)',
+        message: `Ingestion test complete (${Math.floor(totalTime / 1000)}s) - Check Details tab for URL extraction results`,
+        details: {
+          stories_found: ingestionResult.output.stories.length,
+          google_news_extraction: ingestionReport.google_news_domain_extraction,
+        },
       });
+      
+      // Complete the run and update index
+      try {
+        await runsStorage.completeRun(runId, manifest);
+        Logger.info('Run index updated successfully', { runId });
+      } catch (indexError) {
+        Logger.error('Failed to update runs index', {
+          runId,
+          error: (indexError as Error).message,
+          stack: (indexError as Error).stack,
+        });
+      }
+      
+      // Clean up API call tracking
+      BaseAgent.clearApiCalls(runId);
+      
+      return {
+        success: true,
+        manifest,
+        metrics: {
+          total_time_ms: totalTime,
+          agent_times: agentTimes,
+        },
+      };
       
       /*
       // 7. TTS DIRECTOR (DISABLED)
@@ -648,6 +760,7 @@ export class Orchestrator {
           agent_times: agentTimes,
         },
       };
+      */
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
