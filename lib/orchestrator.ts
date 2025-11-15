@@ -384,6 +384,8 @@ export class Orchestrator {
         podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['scriptwriter'] = Date.now() - scriptStart;
+      agentResults.scriptwriter = scriptResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       progressTracker.addUpdate(runId, {
         phase: 'Scriptwriting',
@@ -409,6 +411,8 @@ export class Orchestrator {
         script: scriptResult.output!.script,
       });
       agentTimes['factcheck'] = Date.now() - factCheckStart;
+      agentResults.factcheck = factCheckResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       Logger.info('Fact-check complete', {
         changes: factCheckResult.output!.changes_made.length,
@@ -427,6 +431,8 @@ export class Orchestrator {
         script: factCheckResult.output!.script,
       });
       agentTimes['safety'] = Date.now() - safetyStart;
+      agentResults.safety = safetyResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       Logger.info('Safety check complete', {
         edits: safetyResult.output!.edits_made.length,
@@ -902,6 +908,46 @@ export class Orchestrator {
     // Add scraper data if available
     if (agentResults.scraper?.output?.scraping_report) {
       partial.pipeline_report.scraper = agentResults.scraper.output.scraping_report;
+    }
+
+    // Add outline data if available
+    if (agentResults.outline?.output?.outline) {
+      partial.pipeline_report.outline = {
+        sections: agentResults.outline.output.outline.sections.map((s: any) => ({
+          type: s.type,
+          title: s.title,
+          target_words: s.target_words,
+          refs: s.refs,
+        })),
+        total_sections: agentResults.outline.output.outline.sections.length,
+      };
+    }
+
+    // Add scriptwriting data if available
+    if (agentResults.scriptwriter?.output?.script) {
+      const script = agentResults.scriptwriter.output.script;
+      partial.pipeline_report.scriptwriting = {
+        word_count: script.word_count,
+        duration_estimate_sec: script.duration_estimate_sec,
+        sections: script.sections.map((s: any) => ({
+          type: s.type,
+          word_count: s.word_count,
+          duration_estimate_sec: s.duration_estimate_sec,
+          text: s.text?.substring(0, 200) + '...' || '', // Include preview
+        })),
+      };
+      partial.word_count = script.word_count;
+      partial.script_text = script.sections.map((s: any) => s.text).join('\n\n');
+    }
+
+    // Add fact-check data if available
+    if (agentResults.factcheck?.output?.report) {
+      partial.pipeline_report.factcheck = agentResults.factcheck.output.report;
+    }
+
+    // Add safety data if available
+    if (agentResults.safety?.output?.report) {
+      partial.pipeline_report.safety = agentResults.safety.output.report;
     }
 
     return partial;
