@@ -1031,13 +1031,13 @@ export class Orchestrator {
     }
 
     // Add fact-check data if available
-    if (agentResults.factcheck?.output?.report) {
-      partial.pipeline_report.factcheck = agentResults.factcheck.output.report;
+    if (agentResults.factcheck?.output?.detailed_report) {
+      partial.pipeline_report.factcheck = agentResults.factcheck.output.detailed_report;
     }
 
     // Add safety data if available
-    if (agentResults.safety?.output?.report) {
-      partial.pipeline_report.safety = agentResults.safety.output.report;
+    if (agentResults.safety?.output?.detailed_report) {
+      partial.pipeline_report.safety = agentResults.safety.output.detailed_report;
     }
 
     // Add TTS Director data if available
