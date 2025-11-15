@@ -212,14 +212,16 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
     <itunes:explicit>no</itunes:explicit>
 ${episodes.map((ep: any) => {
       const episodeDate = escapeXml(ep.date || 'Unknown Date');
+      const episodeTitle = escapeXml(ep.title || `Daily News - ${episodeDate}`);
+      const episodeDescription = escapeXml(ep.description || `Your daily news brief for ${episodeDate}`);
       const episodeUrl = ep.episode_url; // URLs don't need escaping in XML
       const fileSize = ep.file_size || 5000000;
       const duration = ep.duration_ms ? Math.round(ep.duration_ms / 1000) : 900;
       const pubDate = ep.completed_at ? new Date(ep.completed_at).toUTCString() : now;
       
       return `    <item>
-      <title>Daily News - ${episodeDate}</title>
-      <description>Your daily news brief for ${episodeDate}</description>
+      <title>${episodeTitle}</title>
+      <description>${episodeDescription}</description>
       <pubDate>${pubDate}</pubDate>
       <enclosure url="${episodeUrl}" length="${fileSize}" type="audio/mpeg"/>
       <guid isPermaLink="false">${escapeXml(ep.run_id)}</guid>

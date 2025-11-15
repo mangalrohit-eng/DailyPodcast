@@ -102,8 +102,8 @@ export class PublisherAgent extends BaseAgent<PublisherInput, PublisherOutput> {
     
     // Build feed items
     const items = recentManifests.map(m => ({
-      title: `Daily Brief - ${m.date}`,
-      description: this.buildEpisodeDescription(m),
+      title: m.title || `Daily Brief - ${m.date}`, // Use manifest title if available
+      description: m.description || this.buildEpisodeDescription(m),
       link: `${config.base_url}/podcast/episodes/${m.date}.mp3`,
       enclosureUrl: m.mp3_url,
       enclosureLength: 0, // Will be estimated or actual if available

@@ -569,11 +569,15 @@ export class Orchestrator {
         outline_sections: pipeline_report.outline.sections.length,
       });
       
+      // Generate dynamic episode title and description based on content
+      const episodeTitle = this.generateEpisodeTitle(rankingResult.output.picks, runConfig.date);
+      const episodeDescription = this.generateEpisodeDescription(rankingResult.output.picks, runConfig.date);
+      
       const manifest: EpisodeManifest = {
         date: runConfig.date,
         run_id: runId,
-        title: `Daily News Briefing - ${runConfig.date}`,
-        description: 'AI-generated podcast from news sources',
+        title: episodeTitle,
+        description: episodeDescription,
         picks: rankingResult.output.picks,
         outline_hash: Crypto.contentId(outlineResult.output!.outline),
         script_hash: Crypto.contentId(safetyResult.output!.script),
@@ -1149,6 +1153,67 @@ export class Orchestrator {
     Logger.debug(`Auto-generated keywords for "${topicLabel}"`, { keywords });
     
     return keywords;
+  }
+  
+  /**
+   * Generate dynamic episode title based on content
+   */
+  private generateEpisodeTitle(picks: any[], date: string): string {
+    // Get unique topics from picks
+    const topicCounts: Record<string, number> = {};
+    for (const pick of picks) {
+      topicCounts[pick.topic] = (topicCounts[pick.topic] || 0) + 1;
+    }
+    
+    // Sort topics by count
+    const sortedTopics = Object.entries(topicCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([topic]) => topic);
+    
+    // Format date (e.g., "Nov 15" or "November 15")
+    const dateObj = new Date(date);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedDate = `${monthNames[dateObj.getMonth()]} ${dateObj.getDate()}`;
+    
+    // Create title based on number of topics
+    if (sortedTopics.length === 1) {
+      return `${sortedTopics[0]} - ${formattedDate}`;
+    } else if (sortedTopics.length === 2) {
+      return `${sortedTopics[0]} & ${sortedTopics[1]} - ${formattedDate}`;
+    } else if (sortedTopics.length >= 3) {
+      // Take top 3 topics
+      const topThree = sortedTopics.slice(0, 3);
+      return `${topThree[0]}, ${topThree[1]} & ${topThree[2]} - ${formattedDate}`;
+    }
+    
+    // Fallback
+    return `Daily Brief - ${formattedDate}`;
+  }
+  
+  /**
+   * Generate dynamic episode description based on content
+   */
+  private generateEpisodeDescription(picks: any[], date: string): string {
+    const topicCounts: Record<string, number> = {};
+    
+    for (const pick of picks) {
+      topicCounts[pick.topic] = (topicCounts[pick.topic] || 0) + 1;
+    }
+    
+    const topicSummary = Object.entries(topicCounts)
+      .map(([topic, count]) => `${count} ${topic.toLowerCase()}`)
+      .join(', ');
+    
+    const storyCount = picks.length;
+    const dateObj = new Date(date);
+    const formattedDate = dateObj.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    
+    return `Your daily news brief for ${formattedDate}. ${storyCount} stories covering ${topicSummary}. AI-generated podcast powered by OpenAI.`;
   }
 }
 

@@ -72,6 +72,8 @@ export interface Chapter {
 export interface EpisodeManifest {
   date: string;
   run_id: string;
+  title: string;
+  description: string;
   picks: Pick[];
   outline_hash: string;
   script_hash: string;
@@ -79,6 +81,8 @@ export interface EpisodeManifest {
   mp3_url: string;
   duration_sec: number;
   word_count: number;
+  sections?: any[];
+  sources?: Array<{ title: string; url: string }>;
   chapters?: Chapter[];
   created_at: string;
   metrics?: {

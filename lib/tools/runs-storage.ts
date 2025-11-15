@@ -9,6 +9,8 @@ import { Logger } from '../utils';
 export interface RunSummary {
   run_id: string;
   date: string;
+  title?: string;
+  description?: string;
   status: 'running' | 'success' | 'failed';
   started_at: string;
   completed_at?: string;
@@ -16,6 +18,7 @@ export interface RunSummary {
   stories_count?: number;
   episode_url?: string;
   error?: string;
+  file_size?: number;
 }
 
 export interface RunsIndex {
@@ -68,12 +71,15 @@ export class RunsStorage {
     const summary: RunSummary = {
       run_id: runId,
       date: manifest.date,
+      title: manifest.title,
+      description: manifest.description,
       status: 'success',
       started_at: manifest.created_at,
       completed_at: new Date().toISOString(),
       duration_ms: manifest.metrics?.total_time_ms,
       stories_count: manifest.picks?.length || 0,
       episode_url: manifest.mp3_url,
+      file_size: 0, // Will be populated if available
     };
     
     await this.updateRun(summary);
