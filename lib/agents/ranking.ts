@@ -177,18 +177,28 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     // Authority score (simple heuristic based on domain)
     const authorityScore = this.getAuthorityScore(story.domain);
     
-    // Combined score
+    // Combined score with explicit topic priority bonus
+    // The topicWeight is applied twice:
+    // 1. Multiplied with topicScore (content relevance)
+    // 2. Added as direct priority bonus (dashboard priority)
     const score =
-      0.3 * recencyScore +
-      0.5 * topicScore * topicWeight +
-      0.2 * authorityScore;
+      0.25 * recencyScore +              // Recent stories preferred
+      0.4 * topicScore * topicWeight +   // Relevant stories for weighted topics
+      0.15 * authorityScore +            // Reputable sources preferred
+      0.2 * topicWeight;                 // Direct topic priority bonus
+    
+    // This means:
+    // - A high-weight topic (0.6) gets 0.12 bonus
+    // - A medium-weight topic (0.3) gets 0.06 bonus  
+    // - A low-weight topic (0.1) gets 0.02 bonus
+    // This significantly prioritizes stories from high-weight topics
     
     return score;
   }
   
   private getAuthorityScore(domain: string): number {
     // Tiered authority scoring based on source reputation
-    // Scores are multiplied by 0.2 in calculateScore, so these affect final ranking
+    // Scores are multiplied by 0.15 in calculateScore, so these affect final ranking
     
     const domainLower = domain.toLowerCase();
     
