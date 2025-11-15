@@ -49,7 +49,6 @@ export default async function handler(
       <itunes:name>Daily Rohit News</itunes:name>
       <itunes:email>podcast@daily-rohit.com</itunes:email>
     </itunes:owner>
-    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
     <itunes:category text="News"/>
     <itunes:explicit>no</itunes:explicit>
   </channel>
@@ -159,7 +158,6 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
       <itunes:name>Daily Rohit News</itunes:name>
       <itunes:email>podcast@daily-rohit.com</itunes:email>
     </itunes:owner>
-    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
     <itunes:category text="News"/>
     <itunes:explicit>no</itunes:explicit>
 ${episodes.map((ep: any) => {
