@@ -33,20 +33,25 @@ export default async function handler(
         Logger.warn('Could not generate feed from index');
         
         // Return a minimal valid RSS feed with helpful message
+        const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
         const emptyFeed = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Daily Rohit News</title>
-    <link>https://daily-podcast-brown.vercel.app</link>
+    <link>${baseUrl}</link>
     <description>Your personalized daily news brief</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-    <item>
-      <title>No Episodes Yet</title>
-      <description>No episodes have been generated yet. Click "Index Existing Episodes" in the dashboard or wait for the daily cron job to run.</description>
-      <pubDate>${new Date().toUTCString()}</pubDate>
-      <guid isPermaLink="false">no-episodes-${Date.now()}</guid>
-    </item>
+    <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
+    <itunes:author>Daily Rohit News</itunes:author>
+    <itunes:summary>Your personalized daily news brief</itunes:summary>
+    <itunes:owner>
+      <itunes:name>Daily Rohit News</itunes:name>
+      <itunes:email>podcast@daily-rohit.com</itunes:email>
+    </itunes:owner>
+    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
+    <itunes:category text="News"/>
+    <itunes:explicit>no</itunes:explicit>
   </channel>
 </rss>`;
         
@@ -134,15 +139,21 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
     <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
     <itunes:author>Daily Rohit News</itunes:author>
     <itunes:summary>Your personalized daily news brief</itunes:summary>
+    <itunes:owner>
+      <itunes:name>Daily Rohit News</itunes:name>
+      <itunes:email>podcast@daily-rohit.com</itunes:email>
+    </itunes:owner>
+    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
     <itunes:category text="News"/>
     <itunes:explicit>no</itunes:explicit>
 ${episodes.map((ep: any) => `    <item>
       <title>Daily News - ${ep.date}</title>
       <description>Your daily news brief for ${ep.date}</description>
       <pubDate>${new Date(ep.completed_at).toUTCString()}</pubDate>
-      <enclosure url="${ep.episode_url}" type="audio/mpeg"/>
+      <enclosure url="${ep.episode_url}" length="${ep.file_size || 5000000}" type="audio/mpeg"/>
       <guid isPermaLink="false">${ep.run_id}</guid>
       <itunes:duration>${ep.duration_ms ? Math.round(ep.duration_ms / 1000) : 900}</itunes:duration>
+      <itunes:explicit>no</itunes:explicit>
     </item>`).join('\n')}
   </channel>
 </rss>`;
