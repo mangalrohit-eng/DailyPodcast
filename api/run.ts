@@ -67,6 +67,7 @@ export default async function handler(
     if (result.success) {
       return res.status(200).json({
         success: true,
+        runId: result.manifest!.run_id,
         episode: {
           date: result.manifest!.date,
           url: result.manifest!.mp3_url,
@@ -78,6 +79,7 @@ export default async function handler(
     } else {
       return res.status(500).json({
         success: false,
+        runId: result.manifest?.run_id,
         error: result.error,
         metrics: result.metrics,
       });

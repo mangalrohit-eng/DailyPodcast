@@ -687,9 +687,18 @@ export class Orchestrator {
         await runsStorage.failRun(runId, (error as Error).message);
       }
       
+      // Build partial manifest for the error response
+      let errorManifest = null;
+      try {
+        errorManifest = this.buildPartialManifest(runId, runConfig, agentResults, agentTimes, (error as Error).message);
+      } catch (e) {
+        Logger.warn('Could not build error manifest', { error: (e as Error).message });
+      }
+      
       return {
         success: false,
         error: (error as Error).message,
+        manifest: errorManifest,
         metrics: {
           total_time_ms: totalTime,
           agent_times: agentTimes,
