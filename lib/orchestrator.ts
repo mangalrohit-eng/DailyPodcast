@@ -455,18 +455,19 @@ export class Orchestrator {
       const pipeline_report = {
         ingestion: {
           sources_scanned: ingestionReport.sources_scanned,
-          total_items_before_filter: ingestionReport.total_items_before_filter,
+          total_stories_found: ingestionReport.total_items_before_filter,
+          stories_after_filtering: ingestionResult.output.stories.length,
           filtered_out: ingestionReport.filtered_out,
           topics_breakdown: ingestionReport.topics_breakdown,
           google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
           all_stories_detailed: ingestionReport.all_stories_detailed,
         },
-        ranking: { status: 'disabled' },
-        scraper: { status: 'disabled' },
-        outline: { status: 'disabled' },
-        scriptwriting: { status: 'disabled' },
-        factcheck: { status: 'disabled' },
-        safety: { status: 'disabled' },
+        ranking: { status: 'disabled' } as any,
+        scraper: { status: 'disabled' } as any,
+        outline: { status: 'disabled' } as any,
+        scriptwriting: { status: 'disabled' } as any,
+        factcheck: { status: 'disabled' } as any,
+        safety: { status: 'disabled' } as any,
       };
       
       const manifest: EpisodeManifest = {
