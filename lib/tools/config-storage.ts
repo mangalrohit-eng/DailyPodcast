@@ -43,6 +43,12 @@ export interface DashboardConfig {
   podcast_email: string;
   podcast_language: string;
   podcast_category: string;
+  
+  // Audio branding
+  intro_music_file?: string;  // S3 path or URL to intro music (e.g., 'music/intro.mp3')
+  outro_music_file?: string;  // S3 path or URL to outro music (e.g., 'music/outro.mp3')
+  use_intro_music?: boolean;
+  use_outro_music?: boolean;
   podcast_base_url: string;
   
   // Operational
@@ -240,6 +246,12 @@ export class ConfigStorage {
       podcast_language: process.env.PODCAST_LANGUAGE || 'en-us',
       podcast_category: process.env.PODCAST_CATEGORY || 'News',
       podcast_base_url: process.env.PODCAST_BASE_URL || 'http://localhost:3000',
+      
+      // Audio branding defaults
+      intro_music_file: process.env.INTRO_MUSIC_FILE || 'music/intro.mp3',
+      outro_music_file: process.env.OUTRO_MUSIC_FILE || 'music/outro.mp3',
+      use_intro_music: process.env.USE_INTRO_MUSIC !== 'false', // Default true
+      use_outro_music: process.env.USE_OUTRO_MUSIC !== 'false', // Default true
       
       window_hours: parseInt(process.env.WINDOW_HOURS || '36', 10),
       target_duration_sec: parseInt(process.env.TARGET_DURATION_SECONDS || '900', 10),
