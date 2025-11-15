@@ -461,46 +461,49 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
       // Google News URLs may have ?oc=5 or other query params
       encodedUrl = encodedUrl.split('?')[0].split('#')[0];
       
-      // Extract Base64 String: Remove Google News prefixes
-      // Pattern: Starts with CB followed by M or A, then 0+ lowercase letters
-      // Examples: CBM, CBMi, CBMij, CBA, CBAi, CBAU
-      // Using * (0 or more) instead of ? (0 or 1) to handle any prefix length
-      encodedUrl = encodedUrl.replace(/^CB[MA][a-z]*/, '');
+      // Google News uses prefixes like CBMi, CBA, etc. followed by base64 data
+      // The actual article URL is encoded in a Protocol Buffer format
+      // We need to decode the ENTIRE string (including prefix), then extract the URL
       
-      Logger.debug(`🔍 Decoding Google News URL`, {
+      Logger.debug(`🔍 Preparing to decode (NO prefix removal)`, {
         original_encoded: originalEncoded.substring(0, 40),
-        after_prefix_removal: encodedUrl.substring(0, 40),
-        prefix_removed: originalEncoded.substring(0, originalEncoded.length - encodedUrl.length)
+        full_string: encodedUrl.substring(0, 40),
+        length: encodedUrl.length
       });
       
-      // Fix Base64 Padding: Add '=' characters to make length a multiple of 4
-      // Note: base64url doesn't strictly require padding, but adding it doesn't hurt
-      while (encodedUrl.length % 4 !== 0) {
-        encodedUrl += '=';
+      // Manual URL-safe base64 decoding (base64url)
+      // Google uses URL-safe base64 where: - → +, _ → /
+      // We must convert these BEFORE decoding
+      Logger.debug(`🔧 Converting URL-safe base64 to standard base64`, {
+        original_length: encodedUrl.length,
+        has_url_safe_chars: encodedUrl.includes('-') || encodedUrl.includes('_')
+      });
+      
+      // Step 1: Convert URL-safe characters to standard base64
+      let base64String = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
+      
+      // Step 2: Add padding if needed (base64 strings must be multiple of 4)
+      while (base64String.length % 4 !== 0) {
+        base64String += '=';
       }
       
-      // Base64 Decode (URL-safe)
-      // Node.js 14.18+ supports 'base64url' encoding natively
-      // This properly handles URL-safe characters (- and _) without manual conversion
-      let decodedBuffer: Buffer;
-      try {
-        decodedBuffer = Buffer.from(encodedUrl, 'base64url');
-      } catch (base64Error) {
-        // Fallback: If base64url is not supported (shouldn't happen on Node 14.18+),
-        // try manual conversion
-        Logger.warn(`⚠️ base64url not supported, using manual conversion`, {
-          node_version: process.version
-        });
-        const base64 = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
-        decodedBuffer = Buffer.from(base64, 'base64');
-      }
+      Logger.debug(`🔧 Base64 string prepared for decoding`, {
+        converted_length: base64String.length,
+        padding_added: base64String.length - encodedUrl.length,
+        ends_with: base64String.slice(-10)
+      });
+      
+      // Step 3: Decode from standard base64
+      const decodedBuffer = Buffer.from(base64String, 'base64');
       const decodedString = decodedBuffer.toString('utf8');
       
       Logger.info(`✅ Successfully decoded base64`, {
         decoded_length: decodedString.length,
         first_100_chars: decodedString.substring(0, 100),
+        first_20_bytes: Array.from(decodedString.substring(0, 20)).map(c => c.charCodeAt(0)),
         has_http: decodedString.includes('http'),
-        has_https: decodedString.includes('https')
+        has_https: decodedString.includes('https'),
+        looks_binary: decodedString.substring(0, 10).split('').some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) > 126)
       });
       
       // Extract Actual URL: Look for http/https URL in the decoded string
