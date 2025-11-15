@@ -99,6 +99,18 @@ Structure for maximum impact with dense, actionable information. You must respon
       topicCounts[p.topic] = (topicCounts[p.topic] || 0) + 1;
     });
     
+    // Calculate target words for each section (150 words per minute speaking pace)
+    const wordsPerSecond = 2.5; // 150 words/min = 2.5 words/sec
+    const introOutroWords = Math.round(introOutroTimeSec * wordsPerSecond);
+    const storyWords = Math.round(storyTimeSec * wordsPerSecond);
+    const totalTargetWords = Math.round(target_duration_sec * wordsPerSecond);
+    
+    Logger.info('Word count targets', {
+      total_target_words: totalTargetWords,
+      intro_outro_words: introOutroWords,
+      story_words: storyWords,
+    });
+    
     const prompt = `Create an executive news briefing outline for ${date}.
 
 Stories to include (PRE-SELECTED and PRE-SORTED by topic priority - highest weight first):
@@ -106,12 +118,13 @@ ${JSON.stringify(storySummaries, null, 2)}
 
 Requirements:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
+- **TOTAL TARGET WORD COUNT: ${totalTargetWords} words** (at 150 words/minute speaking pace)
 - **CRITICAL: USE ALL ${sortedPicks.length} STORIES IN THE EXACT ORDER SHOWN ABOVE**
 - **DO NOT reorder, skip, or add stories** - the list is already optimized
 - Stories are ordered by topic weight: highest priority topics appear FIRST
-- Intro: ~${introOutroTimeSec} seconds - Welcome + brief topic preview list
-- Each story: ~${storyTimeSec} seconds - Dense, actionable information
-- Outro: ~${introOutroTimeSec} seconds - Key takeaways + upbeat closing
+- Intro: ~${introOutroWords} words (~${introOutroTimeSec} seconds) - Welcome + brief topic preview list
+- Each story: ~${storyWords} words (~${storyTimeSec} seconds) - Dense, actionable information
+- Outro: ~${introOutroWords} words (~${introOutroTimeSec} seconds) - Key takeaways + upbeat closing
 - NO small talk, greetings, or filler - executive audience
 - Dense information delivery
 - Prioritize business implications and strategic context
@@ -119,37 +132,37 @@ Requirements:
 Topic distribution (for your reference only):
 ${JSON.stringify(topicCounts, null, 2)}
 
-Respond with JSON in this exact format:
+Respond with JSON in this exact format (USE THE WORD COUNTS SPECIFIED ABOVE):
 {
   "sections": [
     {
       "type": "intro",
       "title": "Welcome & Topics",
-      "target_words": 40,
+      "target_words": ${introOutroWords},
       "refs": []
     },
     {
       "type": "story",
       "title": "Story 1 Title",
-      "target_words": 120,
+      "target_words": ${storyWords},
       "refs": [0]
     },
     {
       "type": "story",
       "title": "Story 2 Title",
-      "target_words": 120,
+      "target_words": ${storyWords},
       "refs": [1]
     },
     {
       "type": "story",
       "title": "Story 3 Title",
-      "target_words": 120,
+      "target_words": ${storyWords},
       "refs": [2]
     },
     {
       "type": "outro",
       "title": "Closing & Takeaways",
-      "target_words": 40,
+      "target_words": ${introOutroWords},
       "refs": []
     }
   ]
