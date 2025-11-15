@@ -431,7 +431,6 @@ export class Orchestrator {
       if (safetyResult.output!.risk_level === 'high') {
         Logger.warn('High risk content detected - review before publishing');
       }
-      */
       
       // ===================================================================
       // BUILD MINIMAL MANIFEST WITH INGESTION REPORT ONLY
@@ -654,6 +653,7 @@ export class Orchestrator {
           openai_tokens: 0, // Would need to track from actual API calls
         },
       };
+      */
       
       /*
       // 10. PUBLISHER (DISABLED - no audio to publish)
@@ -685,6 +685,7 @@ export class Orchestrator {
         manifest,
       });
       agentTimes['memory'] = Date.now() - memoryStart;
+      */
       
       // Save manifest directly (since publisher is disabled)
       Logger.info('Saving manifest without audio');
