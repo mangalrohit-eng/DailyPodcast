@@ -268,10 +268,39 @@ export class Orchestrator {
         }, {}),
       });
       
+      // Calculate adjusted target count based on historical scraping success rate
+      const baseTargetCount = 5; // Desired final number of stories
+      const historicalScrapeRate = await runsStorage.getAverageScrapeSuccessRate(5);
+      
+      let adjustedTargetCount = baseTargetCount;
+      if (historicalScrapeRate !== null && historicalScrapeRate > 0.1) {
+        // Adjustment factor: 1 / success_rate
+        // Example: If success rate is 60%, request 5 / 0.6 = 8.33 ≈ 8 stories
+        const adjustmentFactor = 1 / historicalScrapeRate;
+        adjustedTargetCount = Math.ceil(baseTargetCount * adjustmentFactor);
+        
+        // Cap at reasonable bounds (don't request too many stories)
+        adjustedTargetCount = Math.min(adjustedTargetCount, baseTargetCount * 3);
+        adjustedTargetCount = Math.max(adjustedTargetCount, baseTargetCount);
+        
+        Logger.info('📊 Adjusting target count based on historical scraping success', {
+          base_target: baseTargetCount,
+          historical_success_rate: Math.round(historicalScrapeRate * 100) + '%',
+          adjustment_factor: adjustmentFactor.toFixed(2),
+          adjusted_target: adjustedTargetCount,
+          rationale: `Requesting ${adjustedTargetCount} stories expecting ~${Math.round(adjustedTargetCount * historicalScrapeRate)} to succeed`,
+        });
+      } else {
+        Logger.info('📊 No historical scraping data, using base target count', {
+          base_target: baseTargetCount,
+          note: 'Will start collecting data after first few episodes',
+        });
+      }
+      
       const rankingResult = await this.rankingAgent.execute(runId, {
         stories: ingestionResult.output.stories,
         topic_weights: runConfig.weights,
-        target_count: 5,
+        target_count: adjustedTargetCount,
       });
       agentTimes['ranking'] = Date.now() - rankingStart;
       agentResults.ranking = rankingResult; // Save for partial manifest
@@ -710,8 +739,15 @@ export class Orchestrator {
       
       // Complete the run and update index
       try {
-        await runsStorage.completeRun(runId, manifest);
-        Logger.info('Run index updated successfully', { runId });
+        // Pass scraping stats for historical tracking
+        const scrapingStats = scraperResult.output?.scraping_report ? {
+          total_attempts: scraperResult.output.scraping_report.total_articles,
+          successful: scraperResult.output.scraping_report.successful_scrapes,
+          failed: scraperResult.output.scraping_report.failed_scrapes.length,
+        } : undefined;
+        
+        await runsStorage.completeRun(runId, manifest, scrapingStats);
+        Logger.info('Run index updated successfully', { runId, scraping_stats: scrapingStats });
       } catch (indexError) {
         Logger.error('Failed to update runs index', {
           runId,

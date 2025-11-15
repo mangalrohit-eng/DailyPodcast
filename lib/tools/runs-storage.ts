@@ -19,6 +19,12 @@ export interface RunSummary {
   episode_url?: string;
   error?: string;
   file_size?: number;
+  scraping_stats?: {
+    total_attempts: number;
+    successful: number;
+    failed: number;
+    success_rate: number; // 0.0 to 1.0
+  };
 }
 
 export interface RunsIndex {
@@ -67,7 +73,7 @@ export class RunsStorage {
   /**
    * Complete a run
    */
-  async completeRun(runId: string, manifest: EpisodeManifest): Promise<void> {
+  async completeRun(runId: string, manifest: EpisodeManifest, scrapingStats?: { total_attempts: number; successful: number; failed: number }): Promise<void> {
     const summary: RunSummary = {
       run_id: runId,
       date: manifest.date,
@@ -80,6 +86,12 @@ export class RunsStorage {
       stories_count: manifest.picks?.length || 0,
       episode_url: manifest.mp3_url,
       file_size: 0, // Will be populated if available
+      scraping_stats: scrapingStats ? {
+        ...scrapingStats,
+        success_rate: scrapingStats.total_attempts > 0 
+          ? scrapingStats.successful / scrapingStats.total_attempts 
+          : 0,
+      } : undefined,
     };
     
     await this.updateRun(summary);
@@ -89,7 +101,7 @@ export class RunsStorage {
       RunsStorage.activeRun = null;
     }
     
-    Logger.info('Run completed', { runId });
+    Logger.info('Run completed', { runId, scraping_stats: summary.scraping_stats });
   }
   
   /**
@@ -287,6 +299,43 @@ export class RunsStorage {
       });
       return null;
     }
+  }
+  
+  /**
+   * Get average scraping success rate from last N runs
+   * Returns a value between 0.0 and 1.0, or null if no data
+   */
+  async getAverageScrapeSuccessRate(lastNRuns: number = 5): Promise<number | null> {
+    const index = await this.loadIndex();
+    
+    // Get successful runs with scraping stats
+    const runsWithStats = index.runs
+      .filter(r => r.status === 'success' && r.scraping_stats)
+      .slice(0, lastNRuns); // Get most recent N runs
+    
+    if (runsWithStats.length === 0) {
+      Logger.debug('No historical scraping stats available');
+      return null;
+    }
+    
+    const successRates = runsWithStats
+      .map(r => r.scraping_stats!.success_rate)
+      .filter(rate => rate !== undefined && !isNaN(rate));
+    
+    if (successRates.length === 0) {
+      return null;
+    }
+    
+    const average = successRates.reduce((sum, rate) => sum + rate, 0) / successRates.length;
+    
+    Logger.info('Calculated average scraping success rate', {
+      last_n_runs: lastNRuns,
+      runs_used: runsWithStats.length,
+      average_rate: Math.round(average * 100) + '%',
+      individual_rates: successRates.map(r => Math.round(r * 100) + '%'),
+    });
+    
+    return average;
   }
 }
 
