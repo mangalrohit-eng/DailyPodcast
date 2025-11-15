@@ -257,13 +257,19 @@ ${styleGuidance}
     // Map back to ScriptSection format with null safety
     return parsed.sections
       .filter((section: any) => section && section.text) // Filter out null/invalid sections
-      .map((section: any, idx: number) => ({
-        type: section.type || 'story',
-        text: section.text,
-        duration_estimate_sec: section.duration_estimate_sec || 60,
-        word_count: section.word_count || section.text.split(/\s+/).length,
-        citations: this.extractCitations(section.text),
-      }));
+      .map((section: any, idx: number) => {
+        const actualWordCount = section.word_count || section.text.split(/\s+/).length;
+        // Calculate duration from actual word count (150 words/min = 2.5 words/sec)
+        const calculatedDuration = Math.round(actualWordCount / 2.5);
+        
+        return {
+          type: section.type || 'story',
+          text: section.text,
+          duration_estimate_sec: calculatedDuration,
+          word_count: actualWordCount,
+          citations: this.extractCitations(section.text),
+        };
+      });
   }
 
   /**
