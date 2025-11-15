@@ -18,6 +18,27 @@
             color: #1d1d1f;
             line-height: 1.6;
             padding-top: 70px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Better touch scrolling on iOS */
+        * {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Prevent text selection on buttons */
+        button, .btn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
 
         /* Top Navigation Bar */
@@ -871,6 +892,12 @@
                 overflow-x: auto;
                 width: 100%;
                 padding: 8px 0;
+                scrollbar-width: none; /* Firefox */
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .nav-tabs::-webkit-scrollbar {
+                display: none; /* Chrome, Safari */
             }
 
             .nav-tab {
@@ -920,11 +947,27 @@
             .btn {
                 padding: 10px 16px;
                 font-size: 14px;
+                width: 100% !important;
+                margin-bottom: 8px;
+            }
+
+            .btn i {
+                margin-right: 6px;
+            }
+
+            /* Run Now button - special handling */
+            #runNowBtn {
+                width: 100% !important;
             }
 
             /* Form groups */
             .form-group {
                 margin-bottom: 16px;
+            }
+
+            .form-group label {
+                font-size: 14px;
+                margin-bottom: 6px;
             }
 
             input[type="text"],
@@ -933,21 +976,48 @@
             textarea,
             select {
                 font-size: 16px; /* Prevents zoom on iOS */
+                width: 100%;
             }
 
-            /* Tables */
+            textarea {
+                min-height: 100px;
+            }
+
+            /* Tables - Make scrollable horizontally */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -16px;
+                padding: 0 16px;
+            }
+
             table {
                 font-size: 13px;
+                min-width: 600px;
             }
 
             table th,
             table td {
                 padding: 8px 6px;
+                white-space: nowrap;
             }
 
             /* Hide less important columns on mobile */
             .hide-mobile {
                 display: none !important;
+            }
+
+            /* Make action buttons stack */
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .action-buttons button {
+                width: 100%;
+                padding: 6px 8px;
+                font-size: 12px;
             }
 
             /* Pipeline Report Modal */
@@ -1057,12 +1127,33 @@
 
         @media (max-width: 480px) {
             /* Extra small devices */
+            body {
+                padding-top: 50px;
+            }
+
+            .nav-container {
+                height: 50px;
+            }
+
             .nav-logo span {
                 display: none;
             }
 
+            .nav-logo i {
+                font-size: 18px;
+            }
+
+            .nav-tab {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
             .card {
                 padding: 16px 12px;
+            }
+
+            .card h2 {
+                font-size: 18px;
             }
 
             .btn {
@@ -1074,17 +1165,61 @@
                 font-size: 20px;
             }
 
+            .metric-label {
+                font-size: 10px;
+            }
+
             .report-section {
                 padding: 12px;
             }
 
+            .report-section h3 {
+                font-size: 14px;
+            }
+
             table {
                 font-size: 12px;
+                min-width: 500px;
             }
 
             table th,
             table td {
                 padding: 6px 4px;
+            }
+
+            /* Smaller modals on very small screens */
+            .report-modal {
+                padding: 0;
+            }
+
+            .report-header {
+                padding: 12px;
+            }
+
+            .report-header h2 {
+                font-size: 16px;
+            }
+
+            .close-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 18px;
+            }
+
+            /* Better touch targets */
+            button,
+            a,
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Compact forms */
+            input,
+            select,
+            textarea {
+                padding: 10px;
+                font-size: 16px;
             }
         }
 
@@ -1188,24 +1323,26 @@
                         <span id="activeRunPhase">Starting...</span>
                     </div>
                 </div>
-                <table class="runs-table" id="runsTable">
-                    <thead>
-                        <tr>
-                            <th>Date & Time</th>
-                            <th>Status</th>
-                            <th>Stories</th>
-                            <th>Duration</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px;">
-                                <div class="spinner"></div> Loading...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="runs-table" id="runsTable">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Status</th>
+                                <th>Stories</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 40px;">
+                                    <div class="spinner"></div> Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -2231,6 +2368,9 @@ Full data in console (F12).`;
                     if (result.success || result.runId) {
                         showToast('✅ Podcast generation started! Opening details...', 'success');
                         
+                        // Immediately refresh the runs list to show the new run
+                        loadRuns();
+                        
                         // Auto-open details popup to watch live streaming
                         if (result.runId) {
                             setTimeout(() => {
@@ -2238,10 +2378,10 @@ Full data in console (F12).`;
                             }, 1000);
                         }
                         
-                        // Reload runs after a delay to show the new run
+                        // Reload runs again after a delay to update status
                         setTimeout(() => {
                             loadRuns();
-                        }, 10000);
+                        }, 5000);
                     } else {
                         showToast(`❌ ${result.error || 'Failed to start'}`, 'error');
                     }
