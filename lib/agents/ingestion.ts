@@ -349,45 +349,32 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     let domain: string;
     
     if (isGoogleNewsUrl) {
-      // ALWAYS extract for Google News URLs (tracking is optional)
-      Logger.info(`🚀 ENTERING Google News extraction logic`, {
-        url: item.link.substring(0, 80),
-        title: item.title.substring(0, 50),
-        has_tracking: !!tracking
-      });
-      
+      // Extract source from title (Google News titles have format: "Title - Source")
       if (tracking) {
         tracking.attempted++;
       }
       
-      const extracted = await this.extractFromGoogleNewsUrl(item.link);
+      const extractedSource = this.extractSourceFromTitle(item.title);
       
-      Logger.info(`🔍 Extraction result`, {
-        success: !!extracted,
-        extracted_domain: extracted?.domain,
-        extracted_url: extracted?.url?.substring(0, 60)
-      });
-      
-      if (extracted) {
-        storyUrl = extracted.url;  // Use actual article URL for scraping!
-        domain = extracted.domain;
+      if (extractedSource) {
+        storyUrl = item.link;  // Keep Google News URL for now
+        domain = extractedSource;
         if (tracking) {
           tracking.successful++;
         }
-        Logger.debug(`✅ Decoded Google News URL`, { 
-          original: item.link.substring(0, 60),
-          actual_url: storyUrl.substring(0, 60),
+        Logger.debug(`✅ Extracted source from title`, { 
+          title: item.title.substring(0, 60),
           domain: domain
         });
       } else {
-        // Fallback to Google News URL if decoding fails
+        // Fallback to news.google.com if title extraction fails
         storyUrl = item.link;
-        domain = extractDomain(item.link);
+        domain = 'news.google.com';
         if (tracking) {
           tracking.failed++;
         }
-        Logger.warn(`⚠️ Failed to decode Google News URL, using fallback`, { 
-          url: item.link.substring(0, 60),
+        Logger.debug(`⚠️ Could not extract source from title, using fallback`, { 
+          title: item.title.substring(0, 60),
           fallback_domain: domain
         });
       }
@@ -416,50 +403,41 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   }
   
   /**
-   * Extract actual article URL and domain from a Google News RSS URL by following HTTP redirects.
-   * Base64 decoding doesn't work because Google encodes URLs as Protocol Buffer binary data.
-   * HTTP redirect following is the only reliable method.
-   * Returns both the full article URL (for scraping) and the domain (for deduplication).
+   * Extract source domain from a Google News story title.
+   * Google News RSS titles have format: "Story Title - Source Name"
+   * This is instant and much more reliable than HTTP redirects or base64 decoding.
+   * 
+   * @param title The story title
+   * @returns The source domain or null if not extractable
    */
-  private async extractFromGoogleNewsUrl(googleNewsUrl: string): Promise<{ url: string; domain: string } | null> {
+  private extractSourceFromTitle(title: string): string | null {
     try {
-      Logger.debug(`🔄 Following Google News redirect: ${googleNewsUrl.substring(0, 100)}`);
+      // Find the last occurrence of " - " in the title
+      const lastDashIndex = title.lastIndexOf(' - ');
       
-      const response = await fetch(googleNewsUrl, {
-        method: 'GET',
-        redirect: 'follow', // Follow redirects automatically
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-
-      const finalUrl = response.url;
-      
-      // Check if we actually got redirected away from Google News
-      if (finalUrl.includes('news.google.com')) {
-        Logger.warn(`⚠️ Redirect stayed on Google News`, { finalUrl: finalUrl.substring(0, 100) });
+      if (lastDashIndex === -1) {
         return null;
       }
-
-      // Extract domain
-      const urlObj = new URL(finalUrl);
-      const domain = urlObj.hostname.replace(/^www\./, '');
-
-      Logger.debug(`✅ Successfully resolved Google News redirect`, {
-        original: googleNewsUrl.substring(0, 80),
-        final: finalUrl.substring(0, 80),
-        domain
-      });
-
-      return { url: finalUrl, domain };
-
-    } catch (error) {
-      Logger.warn(`❌ Failed to resolve Google News redirect`, {
-        url: googleNewsUrl.substring(0, 80),
-        error: error instanceof Error ? error.message : String(error)
-      });
       
+      // Extract everything after the last dash
+      const source = title.substring(lastDashIndex + 3).trim();
+      
+      if (!source) {
+        return null;
+      }
+      
+      // Clean up the source:
+      // 1. Convert to lowercase
+      // 2. Remove "www." prefix if present
+      let domain = source.toLowerCase();
+      
+      if (domain.startsWith('www.')) {
+        domain = domain.substring(4);
+      }
+      
+      return domain;
+      
+    } catch (error) {
       return null;
     }
   }
