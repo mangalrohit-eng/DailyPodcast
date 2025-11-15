@@ -112,13 +112,32 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     const rejectedStories = scoredStories
       .filter(s => !selectedIds.has(s.story.id))
       .slice(0, 20) // Top 20 rejected
-      .map(s => ({
-        title: s.story.title,
-        score: Math.round(s.score * 1000) / 1000,
-        reason: s.score < 0.5 
-          ? 'Score below threshold (0.5)' 
-          : 'Not selected due to diversity/similarity constraints',
-      }));
+      .map(s => {
+        // Determine rejection reason
+        let reason: string;
+        
+        const topic = s.story.topic || 'Unknown';
+        const topicSelectedCount = topicDistribution[topic] || 0;
+        const topicTotalCount = scoredStories.filter(st => st.story.topic === topic).length;
+        
+        if (topicSelectedCount > 0 && topicSelectedCount < topicTotalCount) {
+          // Topic had selections, but this story wasn't picked → topic quota filled
+          reason = `Topic quota filled (${topicSelectedCount} ${topic} stories already selected)`;
+        } else if (s.score < 0.5) {
+          // Low score
+          reason = 'Score below threshold (0.5)';
+        } else {
+          // Other reasons (similarity, diversity)
+          reason = 'Not selected due to diversity/similarity constraints';
+        }
+        
+        return {
+          title: s.story.title,
+          topic: topic,
+          score: Math.round(s.score * 1000) / 1000,
+          reason,
+        };
+      });
     
     Logger.info('Ranking complete', {
       picks: picks.length,
