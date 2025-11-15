@@ -1910,6 +1910,9 @@ Full data in console (F12).`;
             }
         }
 
+        let detailsPollingInterval = null;
+        let currentDetailsRunId = null;
+
         async function viewRunDetails(runId) {
             try {
                 console.log('🔍 Fetching run details for:', runId);
@@ -1933,15 +1936,91 @@ Full data in console (F12).`;
                     manifest_keys: data.manifest ? Object.keys(data.manifest) : [],
                     has_pipeline_report: !!data.manifest?.pipeline_report,
                     pipeline_report_keys: data.manifest?.pipeline_report ? Object.keys(data.manifest.pipeline_report) : [],
+                    status: data.summary?.status,
                 });
                 console.log('📊 Full manifest:', data.manifest);
                 console.log('📈 Pipeline report:', data.manifest?.pipeline_report);
                 
                 // Show pipeline report modal
                 showPipelineReport(runId, data);
+                
+                // If run is still active, start polling for updates
+                if (data.summary?.status === 'running') {
+                    console.log('🔄 Run is active - starting real-time updates');
+                    currentDetailsRunId = runId;
+                    startDetailsPolling(runId);
+                } else {
+                    // Run is complete, stop any existing polling
+                    stopDetailsPolling();
+                }
             } catch (error) {
                 console.error('❌ Failed to load run details:', error);
                 showToast(`Failed to load run details: ${error.message}`, 'error');
+            }
+        }
+
+        function startDetailsPolling(runId) {
+            // Clear any existing interval
+            stopDetailsPolling();
+            
+            // Poll every 2 seconds
+            detailsPollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/runs?runId=${runId}`, {
+                        headers: getAuthHeaders(),
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Update the modal content without closing it
+                        updatePipelineReport(runId, data);
+                        
+                        // Stop polling if run completed
+                        if (data.summary?.status !== 'running') {
+                            console.log('✅ Run completed - stopping real-time updates');
+                            stopDetailsPolling();
+                            showToast('Episode generation complete!', 'success');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    // Don't stop polling on temporary errors
+                }
+            }, 2000);
+        }
+        
+        function stopDetailsPolling() {
+            if (detailsPollingInterval) {
+                clearInterval(detailsPollingInterval);
+                detailsPollingInterval = null;
+                currentDetailsRunId = null;
+            }
+        }
+        
+        function updatePipelineReport(runId, data) {
+            // Update report title with status indicator
+            const title = document.getElementById('reportTitle');
+            const statusEmoji = data.summary?.status === 'running' ? '🔄' : 
+                                data.summary?.status === 'success' ? '✅' : 
+                                data.summary?.status === 'failed' ? '❌' : '📊';
+            title.textContent = `${statusEmoji} Episode Report - ${runId}`;
+            
+            // Re-render tabs with new data
+            if (data.manifest && data.manifest.pipeline_report) {
+                const report = data.manifest.pipeline_report;
+                
+                // Only update tabs that have new data to avoid flickering
+                if (report.ingestion) renderIngestionTab(report.ingestion);
+                if (report.ranking) renderRankingTab(report.ranking);
+                if (report.scraper) renderScraperTab(report.scraper);
+                if (report.outline) renderOutlineTab(report.outline);
+                if (report.scriptwriting) renderScriptTab(report.scriptwriting);
+                if (report.factcheck) renderFactCheckTab(report.factcheck);
+                if (report.safety) renderSafetyTab(report.safety);
+                
+                // Always update summary to show progress
+                renderSummaryTab(report);
             }
         }
 
@@ -1949,7 +2028,10 @@ Full data in console (F12).`;
             const modal = document.getElementById('pipelineReportModal');
             const title = document.getElementById('reportTitle');
             
-            title.textContent = `📊 Episode Report - ${runId}`;
+            const statusEmoji = data.summary?.status === 'running' ? '🔄' : 
+                                data.summary?.status === 'success' ? '✅' : 
+                                data.summary?.status === 'failed' ? '❌' : '📊';
+            title.textContent = `${statusEmoji} Episode Report - ${runId}`;
             
             console.log('🎨 showPipelineReport called with:', {
                 runId,
@@ -2015,6 +2097,8 @@ Full data in console (F12).`;
 
         function hidePipelineReport() {
             document.getElementById('pipelineReportModal').classList.remove('show');
+            // Stop polling when modal is closed
+            stopDetailsPolling();
         }
 
         function switchReportTab(tabName) {
