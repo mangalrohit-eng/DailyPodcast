@@ -573,6 +573,8 @@ export class Orchestrator {
       agentTimes['audio_engineer'] = Date.now() - audioStart;
       */
       
+      // OLD FULL PIPELINE CODE - ALL DISABLED
+      /*
       // Create manifest
       // Build pipeline report from all agent outputs
       const ingestionReport = ingestionResult.output!.detailed_report || {
@@ -585,7 +587,7 @@ export class Orchestrator {
       // Calculate stories_after_filtering from topics_breakdown
       const storiesAfterFiltering = Object.values(ingestionReport.topics_breakdown).reduce((sum: number, count: number) => sum + count, 0);
       
-      const pipeline_report = {
+      const pipeline_report_OLD = {
         ingestion: {
           sources_scanned: ingestionReport.sources_scanned,
           total_stories_found: ingestionReport.total_items_before_filter,
@@ -693,7 +695,9 @@ export class Orchestrator {
         JSON.stringify(manifest, null, 2),
         'application/json'
       );
-      
+      */
+      // END OF OLD FULL PIPELINE CODE - ALL COMMENTED OUT
+      /*
       const totalTime = Date.now() - startTime;
       
       // Get API call statistics
