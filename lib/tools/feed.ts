@@ -86,6 +86,9 @@ export class FeedTool {
     const { title, description, link, language, author, email, category, imageUrl, items } = options;
     
     const escapeXml = (text: string) => {
+      if (!text || typeof text !== 'string') {
+        return '';
+      }
       return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')

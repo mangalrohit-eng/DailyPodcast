@@ -449,6 +449,26 @@ export class Orchestrator {
       
       // 7. TTS DIRECTOR
       Logger.info('Phase 7: TTS Planning');
+      
+      // CRITICAL: Validate all sections have text before TTS
+      const invalidSections = safetyResult.output!.script.sections.filter((s: any, idx: number) => {
+        if (!s || !s.text || typeof s.text !== 'string') {
+          Logger.error('Invalid section before TTS', { 
+            index: idx, 
+            type: s?.type, 
+            has_text: !!s?.text,
+            text_type: typeof s?.text,
+            text_value: s?.text
+          });
+          return true;
+        }
+        return false;
+      });
+      
+      if (invalidSections.length > 0) {
+        throw new Error(`Cannot generate TTS: ${invalidSections.length} sections have invalid text. Check Safety and Fact-Check agents.`);
+      }
+      
       progressTracker.addUpdate(runId, {
         phase: 'TTS Planning',
         status: 'running',
@@ -958,15 +978,20 @@ export class Orchestrator {
       partial.pipeline_report.scriptwriting = {
         word_count: script.word_count,
         duration_estimate_sec: script.duration_estimate_sec,
-        sections: script.sections.map((s: any) => ({
-          type: s.type,
-          word_count: s.word_count,
-          duration_estimate_sec: s.duration_estimate_sec,
-          text: s.text?.substring(0, 200) + '...' || '', // Include preview
-        })),
+        sections: script.sections
+          .filter((s: any) => s && s.text) // Filter out sections without text
+          .map((s: any) => ({
+            type: s.type,
+            word_count: s.word_count,
+            duration_estimate_sec: s.duration_estimate_sec,
+            text: (s.text && typeof s.text === 'string') ? s.text.substring(0, 200) + '...' : '', // Include preview
+          })),
       };
       partial.word_count = script.word_count;
-      partial.script_text = script.sections.map((s: any) => s.text).join('\n\n');
+      partial.script_text = script.sections
+        .filter((s: any) => s && s.text && typeof s.text === 'string') // CRITICAL FIX: Filter out undefined text
+        .map((s: any) => s.text)
+        .join('\n\n');
     }
 
     // Add fact-check data if available
