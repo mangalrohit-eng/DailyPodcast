@@ -72,7 +72,7 @@ export class RunsStorage {
       started_at: manifest.created_at,
       completed_at: new Date().toISOString(),
       duration_ms: manifest.metrics?.total_time_ms,
-      stories_count: manifest.picks.length,
+      stories_count: manifest.picks?.length || 0,
       episode_url: manifest.mp3_url,
     };
     

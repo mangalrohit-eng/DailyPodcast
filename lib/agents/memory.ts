@@ -73,7 +73,7 @@ export class MemoryAgent extends BaseAgent<MemoryInput, MemoryOutput> {
     }
     
     // Track source performance
-    const sources = manifest.picks.map(p => p.story.source);
+    const sources = (manifest.picks || []).map(p => p.story.source);
     for (const source of sources) {
       if (!profile.preferred_sources.includes(source)) {
         profile.preferred_sources.push(source);

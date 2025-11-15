@@ -158,7 +158,7 @@ export class PublisherAgent extends BaseAgent<PublisherInput, PublisherOutput> {
   private buildEpisodeDescription(manifest: EpisodeManifest): string {
     const topicCounts: Record<string, number> = {};
     
-    for (const pick of manifest.picks) {
+    for (const pick of (manifest.picks || [])) {
       topicCounts[pick.topic] = (topicCounts[pick.topic] || 0) + 1;
     }
     

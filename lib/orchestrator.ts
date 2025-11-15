@@ -822,6 +822,7 @@ export class Orchestrator {
       status: 'failed',
       error: errorMessage,
       created_at: new Date().toISOString(),
+      picks: [], // Default to empty array to prevent "not iterable" errors
       metrics: {
         ingestion_time_ms: agentTimes['ingestion'] || 0,
         ranking_time_ms: agentTimes['ranking'] || 0,
