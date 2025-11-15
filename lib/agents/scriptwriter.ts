@@ -35,14 +35,32 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
       name: 'ScriptwriterAgent',
       // System prompt is now built dynamically in process() method
       // to include actual target duration and word count from dashboard
-      systemPrompt: `You are a professional news briefing writer creating executive-grade content.
+      systemPrompt: `You are a podcast host creating engaging, conversational news content.
+
+YOUR VOICE:
+- Talk like you're explaining news to a friend over coffee
+- Natural, warm, and engaging - not robotic or formal
+- Use contractions (don't, can't, it's, they're, we're)
+- React naturally to stories (interesting, surprising, concerning)
 
 CRITICAL REQUIREMENTS:
-- Use SPECIFIC DETAILS from story summaries: company names, product names, numbers, dates, key facts
-- For THEMATIC SEGMENTS: WEAVE multiple stories together into a cohesive narrative that shows connections and insights
-- DO NOT write generic summaries or list stories one-by-one
-- Show cause and effect, draw connections, synthesize strategic implications
-- Think like NPR, Morning Brew, or The Daily - tell a story, don't read a list
+- Use SPECIFIC DETAILS: company names, numbers, dates, exact facts
+- EXPLAIN WHY IT MATTERS - don't just say what happened
+- Add personal commentary: "Here's what's interesting...", "Think about it...", "Now, here's the thing..."
+- Use rhetorical questions to engage listeners
+- Draw connections between stories
+- Avoid corporate jargon (leverage, synergy, ecosystem, paradigm)
+- Sound human, not like a press release
+
+STYLE EXAMPLES:
+❌ BAD: "The company announced a strategic restructuring initiative"
+✅ GOOD: "So they're restructuring - basically saying 'we need to change how we do things'"
+
+❌ BAD: "This development represents a significant advancement"
+✅ GOOD: "This is huge - think of it like going from dial-up to fiber internet"
+
+❌ BAD: "Moving on to our next story..."
+✅ GOOD: "Now here's where it gets interesting..."
 
 You must respond with valid JSON only.`,
       temperature: 0.8,
@@ -203,7 +221,16 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
       ? '- EXECUTIVE TONE: Direct, authoritative, no hedging\n- NO FILLER: Eliminate "actually," "basically," "pretty," "kind of"\n- NO SMALL TALK: Skip "Good morning," "Let\'s talk about," "Moving on"\n- Dense information - every word counts\n- Fast-paced - minimal pauses'
       : style === 'technical'
       ? '- TECHNICAL TONE: Detailed, analytical, precise\n- Include technical terminology and specifications\n- Explain mechanisms and processes\n- Focus on how things work, not just what happened'
-      : '- CONVERSATIONAL TONE: Friendly, engaging, relatable\n- Use natural language and examples\n- Explain context and implications\n- Make complex topics accessible';
+      : `- CONVERSATIONAL TONE: Like talking to a friend
+- START SECTIONS: "Alright, so...", "Now check this out...", "Here's what happened..."
+- USE CONTRACTIONS: don't, can't, it's, they're, we're, that's
+- ADD REACTIONS: "That's huge", "Interesting right?", "Pretty wild"
+- ASK QUESTIONS: "Why does this matter?", "What's the big deal?"
+- EXPLAIN PLAINLY: Replace jargon with simple words
+- PERSONAL TOUCH: "Think about it...", "Here's the thing...", "You know what's interesting?"
+- BE SPECIFIC: Use real numbers, names, facts
+- NO CORPORATE SPEAK: Avoid "leverage", "synergy", "ecosystem", "strategic initiatives"
+- SOUND HUMAN: Natural pauses, incomplete thoughts, emphasis`;
     
     const userPrompt = `Generate a news briefing for ${listenerName} on ${date}.
 
@@ -269,12 +296,15 @@ ${styleGuidance}
         // Calculate duration from actual word count (150 words/min = 2.5 words/sec)
         const calculatedDuration = Math.round(actualWordCount / 2.5);
         
+        // Apply conversational enhancements to the text
+        const enhancedText = this.makeConversational(section.text, section.type);
+        
         return {
           type: section.type || 'story',
-          text: section.text,
+          text: enhancedText,
           duration_estimate_sec: calculatedDuration,
           word_count: actualWordCount,
-          citations: this.extractCitations(section.text),
+          citations: this.extractCitations(enhancedText),
         };
       });
   }
@@ -402,6 +432,127 @@ Respond with JSON:
       text: result.text,
       refs,
     };
+  }
+
+  /**
+   * Post-process script text to make it more conversational
+   */
+  private makeConversational(text: string, sectionType?: string): string {
+    if (!text || typeof text !== 'string') {
+      return text;
+    }
+
+    let enhanced = text;
+
+    // 1. Add natural contractions
+    enhanced = enhanced
+      .replace(/\bcannot\b/g, "can't")
+      .replace(/\bwill not\b/g, "won't")
+      .replace(/\bdid not\b/g, "didn't")
+      .replace(/\bdo not\b/g, "don't")
+      .replace(/\bdoes not\b/g, "doesn't")
+      .replace(/\bhave not\b/g, "haven't")
+      .replace(/\bhas not\b/g, "hasn't")
+      .replace(/\bhad not\b/g, "hadn't")
+      .replace(/\bwould not\b/g, "wouldn't")
+      .replace(/\bcould not\b/g, "couldn't")
+      .replace(/\bshould not\b/g, "shouldn't")
+      .replace(/\bare not\b/g, "aren't")
+      .replace(/\bis not\b/g, "isn't")
+      .replace(/\bwas not\b/g, "wasn't")
+      .replace(/\bwere not\b/g, "weren't")
+      .replace(/\bwe are\b/g, "we're")
+      .replace(/\bthey are\b/g, "they're")
+      .replace(/\bwe will\b/g, "we'll")
+      .replace(/\bthey will\b/g, "they'll")
+      .replace(/\bit will\b/g, "it'll")
+      .replace(/\bthat will\b/g, "that'll")
+      .replace(/\bI am\b/g, "I'm")
+      .replace(/\byou are\b/g, "you're")
+      .replace(/\bhe is\b/g, "he's")
+      .replace(/\bshe is\b/g, "she's")
+      .replace(/\bit is\b/g, "it's")
+      .replace(/\bthat is\b/g, "that's")
+      .replace(/\bwhat is\b/g, "what's")
+      .replace(/\bwhere is\b/g, "where's")
+      .replace(/\bwho is\b/g, "who's")
+      .replace(/\bhow is\b/g, "how's")
+      .replace(/\bthere is\b/g, "there's")
+      .replace(/\blet us\b/g, "let's");
+
+    // 2. Remove corporate jargon
+    enhanced = enhanced
+      .replace(/\bleveraging\b/gi, "using")
+      .replace(/\bleverage\b/gi, "use")
+      .replace(/\bsynergies\b/gi, "benefits")
+      .replace(/\bsynergy\b/gi, "benefit")
+      .replace(/\becosystem\b/gi, "market")
+      .replace(/\bparadigm shift\b/gi, "big change")
+      .replace(/\bparadigm\b/gi, "approach")
+      .replace(/\butilize\b/gi, "use")
+      .replace(/\bfacilitate\b/gi, "help")
+      .replace(/\boptimize\b/gi, "improve")
+      .replace(/\bstreamline\b/gi, "simplify")
+      .replace(/\bimpactful\b/gi, "important")
+      .replace(/\brobust\b/gi, "strong")
+      .replace(/\bscalable\b/gi, "expandable")
+      .replace(/\bat this point in time\b/gi, "now")
+      .replace(/\bin order to\b/gi, "to")
+      .replace(/\bdue to the fact that\b/gi, "because")
+      .replace(/\bfor the purpose of\b/gi, "to")
+      .replace(/\bin the event that\b/gi, "if")
+      .replace(/\bprior to\b/gi, "before")
+      .replace(/\bsubsequent to\b/gi, "after");
+
+    // 3. Make sentences more natural
+    enhanced = enhanced
+      .replace(/^Today, /g, "So today, ")
+      .replace(/^This represents/g, "This is")
+      .replace(/^The company announced/g, "They just announced")
+      .replace(/^The company reported/g, "They're reporting")
+      .replace(/^Officials stated/g, "Officials say")
+      .replace(/^According to/g, "According to")
+      .replace(/Moving on to /gi, "Now, ")
+      .replace(/In conclusion, /gi, "So, ")
+      .replace(/Furthermore, /gi, "Also, ")
+      .replace(/Moreover, /gi, "Plus, ")
+      .replace(/Additionally, /gi, "And ")
+      .replace(/However, /gi, "But ")
+      .replace(/Nevertheless, /gi, "Still, ")
+      .replace(/Therefore, /gi, "So ")
+      .replace(/Consequently, /gi, "As a result, ");
+
+    // 4. Simplify verbose phrases
+    enhanced = enhanced
+      .replace(/\ba significant number of\b/gi, "many")
+      .replace(/\ba majority of\b/gi, "most")
+      .replace(/\bthe majority of\b/gi, "most")
+      .replace(/\bat the present time\b/gi, "now")
+      .replace(/\bin the near future\b/gi, "soon")
+      .replace(/\bin light of the fact that\b/gi, "since")
+      .replace(/\bwith regard to\b/gi, "about")
+      .replace(/\bwith respect to\b/gi, "about")
+      .replace(/\bconcerning the matter of\b/gi, "about")
+      .replace(/\btake into consideration\b/gi, "consider")
+      .replace(/\bmake an announcement\b/gi, "announce")
+      .replace(/\bcome to a decision\b/gi, "decide")
+      .replace(/\bprovide assistance\b/gi, "help")
+      .replace(/\bmake a recommendation\b/gi, "recommend");
+
+    // 5. Add emphasis for key numbers (but preserve citations [1], [2])
+    // Only emphasize standalone numbers, not those in brackets
+    enhanced = enhanced.replace(/(?<!\[)\b(\d+%|\$\d+[BMK]?|\d+,?\d* (million|billion|thousand))\b(?!\])/gi, (match) => {
+      return `${match}`;  // Keep as-is but could add emphasis markers if needed
+    });
+
+    Logger.debug('Applied conversational enhancements', {
+      section_type: sectionType,
+      original_length: text.length,
+      enhanced_length: enhanced.length,
+      sample: enhanced.substring(0, 100),
+    });
+
+    return enhanced;
   }
 }
 
