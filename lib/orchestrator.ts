@@ -551,6 +551,24 @@ export class Orchestrator {
           edits_made: [],
           risk_level: 'none',
         },
+        tts_director: {
+          segments_planned: ttsDirectorResult.output!.synthesis_plan?.length || 0,
+          estimated_duration_sec: ttsDirectorResult.output!.estimated_duration_sec || 0,
+          synthesis_plan: ttsDirectorResult.output!.synthesis_plan || [],
+        },
+        audio_engineer: {
+          actual_duration_sec: audioResult.output!.actual_duration_sec || 0,
+          audio_size_bytes: audioResult.output!.audio_buffer?.length || 0,
+        },
+        publisher: {
+          episode_url: publishResult.output!.episode_url || '',
+          file_size: publishResult.output!.file_size || 0,
+          published_at: new Date().toISOString(),
+        },
+        memory: {
+          insights_learned: 0, // Memory agent doesn't return detailed metrics yet
+          trends_identified: 0,
+        },
       };
       
       Logger.info('Pipeline report compiled', {
