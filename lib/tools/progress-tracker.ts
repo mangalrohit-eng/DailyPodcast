@@ -20,10 +20,11 @@ export interface ProgressUpdate {
 export interface RunProgress {
   runId: string;
   startedAt: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
   currentPhase: string;
   progress: number; // 0-100
   updates: ProgressUpdate[];
+  cancelRequested?: boolean; // Flag to request cancellation
 }
 
 class ProgressTracker {
@@ -37,7 +38,46 @@ class ProgressTracker {
       currentPhase: 'Starting',
       progress: 0,
       updates: [],
+      cancelRequested: false,
     });
+  }
+  
+  /**
+   * Request cancellation of a running episode
+   */
+  requestCancel(runId: string): boolean {
+    const run = this.runs.get(runId);
+    if (!run || run.status !== 'running') {
+      return false;
+    }
+    
+    run.cancelRequested = true;
+    this.addUpdate(runId, {
+      phase: run.currentPhase,
+      status: 'failed',
+      message: 'Cancellation requested by user',
+    });
+    
+    return true;
+  }
+  
+  /**
+   * Check if cancellation has been requested for a run
+   */
+  isCancelRequested(runId: string): boolean {
+    const run = this.runs.get(runId);
+    return run?.cancelRequested || false;
+  }
+  
+  /**
+   * Mark run as cancelled
+   */
+  cancelRun(runId: string) {
+    const run = this.runs.get(runId);
+    if (!run) return;
+    
+    run.status = 'cancelled';
+    run.cancelRequested = true;
   }
   
   addUpdate(runId: string, update: Omit<ProgressUpdate, 'timestamp'>) {
