@@ -4,14 +4,14 @@
  * Takes ranked stories and enriches them with full article text,
  * enabling more detailed and "meaty" podcast scripts.
  * 
- * Uses Playwright (playwright-aws-lambda) to resolve Google News URLs to actual article URLs.
- * Designed for serverless deployment on Vercel.
+ * Uses Puppeteer to resolve Google News URLs to actual article URLs.
  */
 
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import { chromium, Browser, Page } from 'playwright';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 // Node 18+ has fetch built-in globally (no import needed)
 
@@ -39,7 +39,7 @@ export interface ScraperOutput {
 }
 
 export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
-  private browser: Browser | null = null;
+  private browser: puppeteer.Browser | null = null;
   
   constructor() {
     super({
@@ -50,21 +50,18 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
   }
   
   /**
-   * Launch Playwright browser instance (reused across all scrapes)
-   * Standard Playwright for Vercel deployment
+   * Launch Puppeteer browser instance (reused across all scrapes)
+   * Uses serverless-compatible Chrome binary for Vercel
    */
-  private async launchBrowser(): Promise<Browser> {
+  private async launchBrowser(): Promise<any> {
     if (!this.browser) {
-      Logger.info('Launching Playwright Chromium browser for URL resolution');
+      Logger.info('Launching Puppeteer browser (serverless Chrome) for URL resolution');
       
-      this.browser = await chromium.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-blink-features=AutomationControlled',
-        ],
+      this.browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
       });
     }
     return this.browser;
@@ -77,7 +74,7 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
-      Logger.debug('Playwright browser closed');
+      Logger.debug('Puppeteer browser closed');
     }
   }
   
@@ -89,22 +86,20 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
   }
   
   /**
-   * Resolve Google News URL to actual article URL using Playwright
+   * Resolve Google News URL to actual article URL using Puppeteer
    */
   private async resolveGoogleNewsUrl(googleNewsUrl: string): Promise<string> {
     const browser = await this.launchBrowser();
-    let page: Page | null = null;
+    let page: any = null;
     
     try {
       page = await browser.newPage();
       
       // Set realistic viewport
-      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.setViewport({ width: 1920, height: 1080 });
       
-      // Set realistic user agent (Playwright has built-in user agents, but we can override)
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      });
+      // Set realistic user agent
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
       
       // Intercept navigation to capture redirects (HTML documents only)
       let redirectedUrl: string | null = null;
@@ -133,8 +128,8 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
         timeout: 8000 
       });
       
-      // Give time for JavaScript redirects (Playwright's built-in method)
-      await page.waitForTimeout(3000);
+      // Give time for JavaScript redirects
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
       // Check if URL changed
       const finalUrl = page.url();
