@@ -25,10 +25,10 @@ export interface Pick {
 }
 
 export interface OutlineSection {
-  type: 'cold-open' | 'headlines' | 'deep-dive' | 'quick-hits' | 'what-to-watch' | 'sign-off';
+  type: 'intro' | 'segment' | 'outro' | 'story'; // 'story' kept for backward compatibility
   title: string;
   target_words: number;
-  refs: string[]; // story IDs
+  refs: string[]; // story IDs - can be multiple for thematic segments
 }
 
 export interface Outline {

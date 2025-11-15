@@ -151,35 +151,37 @@ The Daily Personal News Podcast is a production-ready agentic AI system that aut
 
 ### 3. Outline Agent
 
-**Responsibility**: Structure selected stories into radio segments
+**Responsibility**: Structure selected stories into thematic radio segments that blend related stories
 
 **Inputs**:
-- Ranked picks
+- Ranked picks (pre-sorted by topic priority)
 - Target duration
 - Episode date
 
 **Outputs**:
-- Outline with sections and word budgets
+- Outline with 2-4 thematic segments and word budgets
 
-**Segments**:
-1. **Cold Open** (30-45s / 80 words): Hook
-2. **Headlines** (3 min / 450 words): Top 3-4 stories
-3. **Deep Dive** (5 min / 750 words): Detailed analysis of 1 story
-4. **Quick Hits** (4 min / 600 words): 4-6 brief updates
-5. **What to Watch** (2 min / 300 words): Forward-looking
-6. **Sign-off** (15-30s / 60 words): Closing
+**Segment Structure**:
+1. **Intro** (30-45s / 80 words): Welcome + theme preview
+2. **Thematic Segments** (2-4 segments): Related stories woven together narratively
+   - Each segment groups multiple stories that naturally connect
+   - Shows cause-effect, connections, and strategic insights
+   - E.g., "AI's Enterprise Moment" might blend OpenAI announcements, Microsoft partnerships, and regulatory responses
+3. **Outro** (30-45s / 80 words): Key takeaways + forward look
 
 **Implementation Details**:
-- Uses GPT-4 to intelligently assign stories to segments
-- Ensures topic balance across segments
-- Adjusts word budgets dynamically based on story count
+- Uses GPT-4 to create cohesive thematic groupings (not story-by-story lists)
+- Groups stories by natural connections and strategic themes
+- Allocates word budgets based on story importance
+- Maintains topic priority flow (highest weight topics first)
+- Produces NPR/Morning Brew-style narrative structure
 
 ### 4. Scriptwriter Agent
 
-**Responsibility**: Write conversational, cited script
+**Responsibility**: Write conversational, cited script that weaves stories into cohesive narratives
 
 **Inputs**:
-- Outline
+- Outline (with thematic segments)
 - Story picks (full content)
 - Listener name
 
@@ -194,9 +196,17 @@ The Daily Personal News Podcast is a production-ready agentic AI system that aut
 - Target: 2,300 ± 200 words
 - Reading pace: ~150 wpm
 
+**Narrative Approach**:
+- For **thematic segments**: Blends multiple stories into one flowing narrative
+- Shows connections between stories: cause-effect, patterns, strategic implications
+- Avoids story-by-story lists in favor of synthesized storytelling
+- Maintains executive focus: dense information, business context
+
 **Implementation Details**:
 - Generates each section separately for better focus
 - Uses GPT-4 with temperature=0.8 for natural variation
+- Provides specific guidance for intro/segment/outro types
+- For multi-story segments: explicitly instructs to weave narratives
 - Extracts citation references from text
 - Maps citations to source URLs
 

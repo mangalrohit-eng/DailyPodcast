@@ -35,9 +35,14 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
       name: 'ScriptwriterAgent',
       // System prompt is now built dynamically in process() method
       // to include actual target duration and word count from dashboard
-      systemPrompt: `You are a professional news briefing writer.
+      systemPrompt: `You are a professional news briefing writer creating executive-grade content.
 
-CRITICAL: Use SPECIFIC DETAILS from the story summaries provided. Mention company names, product names, numbers, dates, and key facts. DO NOT write generic summaries.
+CRITICAL REQUIREMENTS:
+- Use SPECIFIC DETAILS from story summaries: company names, product names, numbers, dates, key facts
+- For THEMATIC SEGMENTS: WEAVE multiple stories together into a cohesive narrative that shows connections and insights
+- DO NOT write generic summaries or list stories one-by-one
+- Show cause and effect, draw connections, synthesize strategic implications
+- Think like NPR, Morning Brew, or The Daily - tell a story, don't read a list
 
 You must respond with valid JSON only.`,
       temperature: 0.8,
@@ -318,30 +323,53 @@ ${styleGuidance}
       })
       .filter(Boolean);
     
-    // Build transition guidance for story sections
-    let transitionGuidance = '';
-    if (section.type === 'story' && !isLastStorySection) {
-      transitionGuidance = `\n- END with a brief, natural transition phrase that smoothly leads to the next story
-- Transition examples: "Speaking of innovation...", "In related news...", "Shifting gears to...", "Meanwhile...", "On a similar note..."
-- Keep transitions SHORT (5-10 words) and conversational`;
+    // Build guidance based on section type
+    let sectionGuidance = '';
+    if (section.type === 'intro') {
+      sectionGuidance = `
+INTRO SECTION - Your opening must:
+- Welcome ${listenerName} warmly
+- Preview the day's THEMES (not individual stories) in an engaging way
+- Set the tone: authoritative but conversational, energizing but professional`;
+    } else if (section.type === 'segment' && storyDetails.length > 1) {
+      sectionGuidance = `
+THEMATIC SEGMENT - You are weaving ${storyDetails.length} related stories into ONE cohesive narrative:
+- DO NOT cover stories sequentially or separately
+- BLEND them: show how they connect, what they mean together, cause and effect
+- Draw insights that emerge from seeing these stories as part of a larger pattern
+- Use transitions within the narrative (not between stories): "This connects to...", "Which explains why...", "The broader pattern here..."
+- Write as one flowing narrative with strategic synthesis`;
+    } else if (section.type === 'outro') {
+      sectionGuidance = `
+OUTRO SECTION - Your closing must:
+- Synthesize key strategic takeaways from today's brief
+- Forward-looking insight: what to watch
+- Warm, energizing sign-off wishing ${listenerName} a great day`;
+    } else if (section.type === 'story' || section.type === 'segment') {
+      sectionGuidance = `
+STORY SECTION - Cover this story with:
+- Specific details and business implications
+- Strategic context for executives`;
+      if (!isLastStorySection) {
+        sectionGuidance += `
+- END with a brief, natural transition (5-10 words): "Speaking of innovation...", "In related news...", "Meanwhile..."`;
+      }
     }
     
-    const prompt = `Write the "${section.type}" section for ${date} morning brief for ${listenerName}.
+    const prompt = `Write the "${section.type}" section titled "${section.title}" for ${date} morning brief.
 
-Target words: ${section.target_words}
-Section title: ${section.title}
+Target words: ${section.target_words} (±20%)
+${sectionGuidance}
 
-${storyDetails.length > 0 ? `Stories to cover:\n${JSON.stringify(storyDetails, null, 2)}` : 'No specific stories - write introduction/transition.'}
+${storyDetails.length > 0 ? `Stories/Sources:\n${JSON.stringify(storyDetails, null, 2)}` : 'No specific stories - write introduction/transition.'}
 
-${section.type === 'cold-open' ? `Start with: "Good morning, ${listenerName}!"` : ''}
-${section.type === 'sign-off' ? `End with a warm sign-off wishing ${listenerName} a great day.` : ''}
-
-Remember:
-- Be conversational and engaging
-- Cite sources as [n] where n is the sourceId
-- Include stage directions in parentheses
-- Add natural pauses with [beat 300ms] or similar
-- Stay within word target ± 20%${transitionGuidance}
+WRITING STYLE:
+- Conversational and engaging - sound natural, not scripted
+- Dense with specific facts: company names, numbers, dates, product names
+- Cite sources as [n] where n is the sourceId (CRITICAL: cite every claim)
+- Include stage directions in parentheses: (warmly), (seriously), (with energy)
+- Add natural pauses: [beat 300ms], [beat 500ms]
+- Executive audience: strategic implications, business context
 
 Respond with JSON:
 {
