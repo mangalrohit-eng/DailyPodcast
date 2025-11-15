@@ -181,7 +181,7 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     const ageHours = (Date.now() - story.published_at.getTime()) / (1000 * 60 * 60);
     const recencyScore = Math.max(0, 1 - ageHours / 48); // Decay over 48 hours
     
-    // Topic match score (0-1)
+    // Topic match score (0-1) - check ALL topics, not just the assigned one
     let topicScore = 0;
     const storyTopic = story.topic || 'AI';
     
@@ -190,11 +190,14 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
       topicScore = cosineSimilarity(embedding, topicVector);
     }
     
-    // Apply topic weight
+    // Apply topic weight for primary topic
     const topicWeight = topicWeights[storyTopic.toLowerCase()] || 0.3;
     
     // Authority score (simple heuristic based on domain)
     const authorityScore = this.getAuthorityScore(story.domain);
+    
+    // MULTI-TOPIC BONUS: Check if story matches multiple topics
+    const multiTopicBonus = this.calculateMultiTopicBonus(story, embedding, topicWeights, storyTopic);
     
     // Combined score with explicit topic priority bonus
     // The topicWeight is applied twice:
@@ -202,17 +205,72 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     // 2. Added as direct priority bonus (dashboard priority)
     const score =
       0.25 * recencyScore +              // Recent stories preferred
-      0.4 * topicScore * topicWeight +   // Relevant stories for weighted topics
+      0.35 * topicScore * topicWeight +  // Relevant stories for weighted topics (reduced from 0.4)
       0.15 * authorityScore +            // Reputable sources preferred
-      0.2 * topicWeight;                 // Direct topic priority bonus
+      0.15 * topicWeight +               // Direct topic priority bonus (reduced from 0.2)
+      0.1 * multiTopicBonus;             // Multi-topic stories get bonus (NEW!)
     
     // This means:
-    // - A high-weight topic (0.6) gets 0.12 bonus
-    // - A medium-weight topic (0.3) gets 0.06 bonus  
-    // - A low-weight topic (0.1) gets 0.02 bonus
-    // This significantly prioritizes stories from high-weight topics
+    // - A high-weight topic (0.6) gets 0.09 bonus (down from 0.12)
+    // - A medium-weight topic (0.3) gets 0.045 bonus (down from 0.06)
+    // - A low-weight topic (0.1) gets 0.015 bonus (down from 0.02)
+    // - Multi-topic stories get up to 0.1 additional bonus
+    // This significantly prioritizes stories from high-weight topics AND cross-topic stories
     
     return score;
+  }
+  
+  /**
+   * Calculate bonus for stories that match multiple topics
+   * Stories relevant to multiple topics are more valuable
+   */
+  private calculateMultiTopicBonus(
+    story: Story,
+    embedding: number[],
+    topicWeights: Record<string, number>,
+    primaryTopic: string
+  ): number {
+    const storyText = `${story.title} ${story.summary || ''}`.toLowerCase();
+    let matchedTopics: Array<{ topic: string; weight: number; similarity: number }> = [];
+    
+    // Check similarity to ALL topics (not just primary)
+    for (const [topicName, topicVector] of this.topicVectors.entries()) {
+      if (topicName === primaryTopic) continue; // Skip primary topic
+      
+      const similarity = cosineSimilarity(embedding, topicVector);
+      const weight = topicWeights[topicName.toLowerCase()] || 0.1;
+      
+      // Consider it a match if similarity > 0.65 (high relevance threshold)
+      if (similarity > 0.65) {
+        matchedTopics.push({ topic: topicName, weight, similarity });
+      }
+    }
+    
+    // If no additional topics matched, no bonus
+    if (matchedTopics.length === 0) return 0;
+    
+    // Calculate bonus based on number of additional topics and their weights
+    // More topics = bigger bonus, higher-weight topics = bigger bonus
+    const bonus = matchedTopics.reduce((sum, match) => {
+      // Each additional topic adds: weight * similarity * 0.5
+      // Max bonus if story matches all high-weight topics
+      return sum + (match.weight * match.similarity * 0.5);
+    }, 0);
+    
+    // Cap bonus at 1.0
+    const cappedBonus = Math.min(bonus, 1.0);
+    
+    // Log multi-topic matches for visibility
+    if (matchedTopics.length > 0) {
+      Logger.debug('Multi-topic story detected', {
+        title: story.title.substring(0, 60),
+        primary_topic: primaryTopic,
+        additional_topics: matchedTopics.map(m => `${m.topic} (${(m.similarity * 100).toFixed(0)}%)`),
+        bonus: cappedBonus.toFixed(3),
+      });
+    }
+    
+    return cappedBonus;
   }
   
   private getAuthorityScore(domain: string): number {
