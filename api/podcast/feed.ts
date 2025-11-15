@@ -61,7 +61,8 @@ export default async function handler(
         };
         
         // Return a minimal valid RSS feed with helpful message
-        const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
+        const baseUrl = config.podcast_base_url || process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
+        const imageUrl = config.podcast_image_url || `${baseUrl}/podcast-artwork.jpg`;
         const emptyFeed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -77,7 +78,7 @@ export default async function handler(
       <itunes:name>${escapeXml(config.podcast_author)}</itunes:name>
       <itunes:email>${config.podcast_email}</itunes:email>
     </itunes:owner>
-    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
+    <itunes:image href="${imageUrl}"/>
     <itunes:category text="${config.podcast_category || 'News'}"/>
     <itunes:explicit>no</itunes:explicit>
   </channel>
@@ -175,7 +176,8 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
       return null;
     }
     
-    const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
+    const baseUrl = config.podcast_base_url || process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
+    const imageUrl = config.podcast_image_url || `${baseUrl}/podcast-artwork.jpg`;
     const now = new Date().toUTCString();
     
     // Helper to escape XML special characters
@@ -205,7 +207,7 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
       <itunes:name>${escapeXml(config.podcast_author)}</itunes:name>
       <itunes:email>${config.podcast_email}</itunes:email>
     </itunes:owner>
-    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
+    <itunes:image href="${imageUrl}"/>
     <itunes:category text="${config.podcast_category || 'News'}"/>
     <itunes:explicit>no</itunes:explicit>
 ${episodes.map((ep: any) => {

@@ -3,6 +3,7 @@
  */
 
 import { TopicConfig, PodcastConfig } from './types';
+import { ConfigStorage } from './tools/config-storage';
 
 export class Config {
   // OpenAI
@@ -70,16 +71,36 @@ export class Config {
     return [];
   }
   
-  static getPodcastConfig(): PodcastConfig {
-    return {
-      title: Config.PODCAST_TITLE,
-      description: Config.PODCAST_DESCRIPTION,
-      author: Config.PODCAST_AUTHOR,
-      email: Config.PODCAST_EMAIL,
-      language: Config.PODCAST_LANGUAGE,
-      category: Config.PODCAST_CATEGORY,
-      base_url: Config.PODCAST_BASE_URL,
-    };
+  /**
+   * Load podcast config from dashboard settings (preferred) or fall back to env vars
+   */
+  static async getPodcastConfig(): Promise<PodcastConfig> {
+    try {
+      const configStorage = new ConfigStorage();
+      const dashboardConfig = await configStorage.load();
+      
+      return {
+        title: dashboardConfig.podcast_title || Config.PODCAST_TITLE,
+        description: dashboardConfig.podcast_description || Config.PODCAST_DESCRIPTION,
+        author: dashboardConfig.podcast_author || Config.PODCAST_AUTHOR,
+        email: dashboardConfig.podcast_email || Config.PODCAST_EMAIL,
+        language: dashboardConfig.podcast_language || Config.PODCAST_LANGUAGE,
+        category: dashboardConfig.podcast_category || Config.PODCAST_CATEGORY,
+        image_url: dashboardConfig.podcast_image_url,
+        base_url: dashboardConfig.podcast_base_url || Config.PODCAST_BASE_URL,
+      };
+    } catch (error) {
+      // Fallback to env vars if dashboard config fails to load
+      return {
+        title: Config.PODCAST_TITLE,
+        description: Config.PODCAST_DESCRIPTION,
+        author: Config.PODCAST_AUTHOR,
+        email: Config.PODCAST_EMAIL,
+        language: Config.PODCAST_LANGUAGE,
+        category: Config.PODCAST_CATEGORY,
+        base_url: Config.PODCAST_BASE_URL,
+      };
+    }
   }
 }
 

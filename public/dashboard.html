@@ -1349,6 +1349,14 @@
                 </div>
                 
                 <div class="form-group">
+                    <label>Podcast Cover Image URL</label>
+                    <input type="url" id="podcastImageUrl" placeholder="https://example.com/podcast-artwork.jpg">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Direct URL to your podcast cover art (minimum 1400x1400px for Apple Podcasts). Leave empty to use default.
+                    </small>
+                </div>
+                
+                <div class="form-group">
                     <label>Podcast Base URL (Read-only)</label>
                     <input type="text" id="podcastBaseUrl" readonly>
                     <small style="color: #666; display: block; margin-top: 5px;">
@@ -1892,6 +1900,7 @@ Full data in console (F12).`;
             document.getElementById('podcastEmail').value = config.podcast_email || 'podcast@example.com';
             document.getElementById('podcastLanguage').value = config.podcast_language || 'en-us';
             document.getElementById('podcastCategory').value = config.podcast_category || 'News';
+            document.getElementById('podcastImageUrl').value = config.podcast_image_url || '';
             document.getElementById('podcastBaseUrl').value = config.podcast_base_url || window.location.origin;
             
             // Podcast Production
@@ -2032,6 +2041,7 @@ Full data in console (F12).`;
                 podcast_email: document.getElementById('podcastEmail').value,
                 podcast_language: document.getElementById('podcastLanguage').value,
                 podcast_category: document.getElementById('podcastCategory').value,
+                podcast_image_url: document.getElementById('podcastImageUrl').value || undefined,
                 podcast_base_url: document.getElementById('podcastBaseUrl').value,
                 use_intro_music: document.getElementById('enableIntroMusic').checked,
                 intro_music_file: document.getElementById('introMusicFile').value,

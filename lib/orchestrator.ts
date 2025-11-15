@@ -609,7 +609,7 @@ export class Orchestrator {
       const publishResult = await this.publisherAgent.execute(runId, {
         audio_buffer: audioResult.output!.audio_buffer,
         manifest,
-        podcast_config: Config.getPodcastConfig(),
+        podcast_config: await Config.getPodcastConfig(),
       });
       agentTimes['publisher'] = Date.now() - publishStart;
       agentResults.publisher = publishResult; // Save for partial manifest

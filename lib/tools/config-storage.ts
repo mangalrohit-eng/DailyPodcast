@@ -43,6 +43,7 @@ export interface DashboardConfig {
   podcast_email: string;
   podcast_language: string;
   podcast_category: string;
+  podcast_image_url?: string;
   
   // Audio branding
   intro_music_file?: string;  // S3 path or URL to intro music (e.g., 'music/intro.mp3')
@@ -245,6 +246,7 @@ export class ConfigStorage {
       podcast_email: process.env.PODCAST_EMAIL || 'podcast@example.com',
       podcast_language: process.env.PODCAST_LANGUAGE || 'en-us',
       podcast_category: process.env.PODCAST_CATEGORY || 'News',
+      podcast_image_url: process.env.PODCAST_IMAGE_URL || undefined,
       podcast_base_url: process.env.PODCAST_BASE_URL || 'http://localhost:3000',
       
       // Audio branding defaults
