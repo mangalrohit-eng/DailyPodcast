@@ -7,6 +7,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { StorageTool } from '../../lib/tools/storage';
+import { ConfigStorage } from '../../lib/tools/config-storage';
 import { Logger } from '../../lib/utils';
 
 export default async function handler(
@@ -32,25 +33,52 @@ export default async function handler(
       if (!feedXml) {
         Logger.warn('Could not generate feed from index');
         
+        // Load config for empty feed
+        const configStorage = new ConfigStorage();
+        let config;
+        try {
+          config = await configStorage.load();
+        } catch (error) {
+          config = {
+            podcast_title: "Rohit's Daily AI & Corporate News Brief",
+            podcast_description: 'Your personalized daily news brief',
+            podcast_author: 'Rohit',
+            podcast_email: 'podcast@example.com',
+            podcast_language: 'en-us',
+            podcast_category: 'News',
+          };
+        }
+        
+        // Helper to escape XML
+        const escapeXml = (str: string): string => {
+          if (!str) return '';
+          return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+        };
+        
         // Return a minimal valid RSS feed with helpful message
         const baseUrl = process.env.PODCAST_BASE_URL || 'https://daily-podcast-brown.vercel.app';
         const emptyFeed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Daily Rohit News</title>
+    <title>${escapeXml(config.podcast_title)}</title>
     <link>${baseUrl}</link>
-    <description>Your personalized daily news brief</description>
-    <language>en-us</language>
+    <description>${escapeXml(config.podcast_description)}</description>
+    <language>${config.podcast_language || 'en-us'}</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
-    <itunes:author>Daily Rohit News</itunes:author>
-    <itunes:summary>Your personalized daily news brief</itunes:summary>
+    <itunes:author>${escapeXml(config.podcast_author)}</itunes:author>
+    <itunes:summary>${escapeXml(config.podcast_description)}</itunes:summary>
     <itunes:owner>
-      <itunes:name>Daily Rohit News</itunes:name>
-      <itunes:email>podcast@daily-rohit.com</itunes:email>
+      <itunes:name>${escapeXml(config.podcast_author)}</itunes:name>
+      <itunes:email>${config.podcast_email}</itunes:email>
     </itunes:owner>
     <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
-    <itunes:category text="News"/>
+    <itunes:category text="${config.podcast_category || 'News'}"/>
     <itunes:explicit>no</itunes:explicit>
   </channel>
 </rss>`;
@@ -91,6 +119,24 @@ export default async function handler(
  */
 async function generateFeedFromIndex(storage: StorageTool): Promise<string | null> {
   try {
+    // Load dashboard config for podcast metadata
+    const configStorage = new ConfigStorage();
+    let config;
+    try {
+      config = await configStorage.load();
+      Logger.info('Loaded dashboard config for feed generation');
+    } catch (error) {
+      Logger.warn('Failed to load dashboard config, using defaults', { error });
+      config = {
+        podcast_title: "Rohit's Daily AI & Corporate News Brief",
+        podcast_description: 'Your personalized daily news brief',
+        podcast_author: 'Rohit',
+        podcast_email: 'podcast@example.com',
+        podcast_language: 'en-us',
+        podcast_category: 'News',
+      };
+    }
+    
     // Load runs index
     Logger.info('Checking for runs/index.json');
     const indexExists = await storage.exists('runs/index.json');
@@ -143,23 +189,24 @@ async function generateFeedFromIndex(storage: StorageTool): Promise<string | nul
         .replace(/'/g, '&apos;');
     };
     
-    // Generate RSS feed XML
+    // Generate RSS feed XML using dashboard config
     const feedXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Daily Rohit News</title>
+    <title>${escapeXml(config.podcast_title)}</title>
     <link>${baseUrl}</link>
-    <description>Your personalized daily news brief</description>
-    <language>en-us</language>
+    <description>${escapeXml(config.podcast_description)}</description>
+    <language>${config.podcast_language || 'en-us'}</language>
     <lastBuildDate>${now}</lastBuildDate>
     <atom:link href="${baseUrl}/podcast/feed.xml" rel="self" type="application/rss+xml"/>
-    <itunes:author>Daily Rohit News</itunes:author>
-    <itunes:summary>Your personalized daily news brief</itunes:summary>
+    <itunes:author>${escapeXml(config.podcast_author)}</itunes:author>
+    <itunes:summary>${escapeXml(config.podcast_description)}</itunes:summary>
     <itunes:owner>
-      <itunes:name>Daily Rohit News</itunes:name>
-      <itunes:email>podcast@daily-rohit.com</itunes:email>
+      <itunes:name>${escapeXml(config.podcast_author)}</itunes:name>
+      <itunes:email>${config.podcast_email}</itunes:email>
     </itunes:owner>
-    <itunes:category text="News"/>
+    <itunes:image href="${baseUrl}/podcast-artwork.jpg"/>
+    <itunes:category text="${config.podcast_category || 'News'}"/>
     <itunes:explicit>no</itunes:explicit>
 ${episodes.map((ep: any) => {
       const episodeDate = escapeXml(ep.date || 'Unknown Date');
