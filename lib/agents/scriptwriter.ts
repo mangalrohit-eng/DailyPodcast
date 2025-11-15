@@ -127,7 +127,21 @@ You must respond with valid JSON only.`,
     );
     
     // Assign voices to each section and add transitions
-    sections = this.assignVoicesAndTransitions(sections);
+    try {
+      sections = this.assignVoicesAndTransitions(sections);
+      Logger.info('Voice assignment complete', {
+        total_sections: sections.length,
+        section_types: sections.map(s => s.type),
+      });
+    } catch (error) {
+      Logger.error('Failed to assign voices and transitions', {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        sections_count: sections?.length || 0,
+      });
+      // Continue without voice assignments rather than failing the entire run
+      Logger.warn('Continuing without voice assignments due to error');
+    }
     
     // Calculate total word count
     const totalText = sections.map(s => s.text).join(' ');
@@ -652,12 +666,32 @@ Respond with JSON:
    * Assign voices to sections and insert transitions when voice changes
    */
   private assignVoicesAndTransitions(sections: ScriptSection[]): ScriptSection[] {
+    // Safety check - ensure sections is a valid array
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      Logger.warn('assignVoicesAndTransitions received invalid sections', {
+        is_array: Array.isArray(sections),
+        length: sections?.length || 0,
+      });
+      return sections || [];
+    }
+    
     const result: ScriptSection[] = [];
     let previousRole: string | null = null;
     let previousVoice: string | null = null;
 
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
+      
+      // Safety check - skip invalid sections
+      if (!section || !section.text || typeof section.text !== 'string') {
+        Logger.warn('Skipping section with invalid text in assignVoicesAndTransitions', {
+          section_index: i,
+          has_section: !!section,
+          has_text: !!(section?.text),
+          text_type: typeof section?.text,
+        });
+        continue;
+      }
       
       // Select voice based on content and section type
       const { voice, role } = this.selectVoiceForContent(section.text, section.type);
