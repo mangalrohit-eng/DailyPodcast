@@ -534,7 +534,7 @@ export class Orchestrator {
         script_hash: Crypto.contentId(safetyResult.output!.script),
         audio_hash: Crypto.contentId(audioResult.output!.audio_buffer),
         mp3_url: '', // Will be set by publisher
-        duration_sec: audioResult.output!.duration_sec,
+        duration_sec: audioResult.output!.actual_duration_sec,
         word_count: safetyResult.output!.script.word_count,
         sections: safetyResult.output!.script.sections,
         sources: rankingResult.output.picks.map(p => ({
