@@ -560,15 +560,7 @@ export class Orchestrator {
           actual_duration_sec: audioResult.output!.actual_duration_sec || 0,
           audio_size_bytes: audioResult.output!.audio_buffer?.length || 0,
         },
-        publisher: {
-          episode_url: publishResult.output!.episode_url || '',
-          file_size: publishResult.output!.file_size || 0,
-          published_at: new Date().toISOString(),
-        },
-        memory: {
-          insights_learned: 0, // Memory agent doesn't return detailed metrics yet
-          trends_identified: 0,
-        },
+        // Publisher and Memory data will be added after they run
       };
       
       Logger.info('Pipeline report compiled', {
@@ -630,6 +622,16 @@ export class Orchestrator {
       // Update manifest with published episode URL
       manifest.mp3_url = publishResult.output!.episode_url;
       
+      // Add publisher data to pipeline report
+      pipeline_report.publisher = {
+        episode_url: publishResult.output!.episode_url || '',
+        file_size: publishResult.output!.file_size || 0,
+        published_at: new Date().toISOString(),
+      };
+      
+      // Update manifest with new pipeline_report
+      manifest.pipeline_report = pipeline_report;
+      
       // 10. MEMORY UPDATE
       Logger.info('Phase 10: Memory Update');
       const memoryStart = Date.now();
@@ -638,6 +640,16 @@ export class Orchestrator {
       });
       agentTimes['memory'] = Date.now() - memoryStart;
       agentResults.memory = memoryResult; // Save for partial manifest
+      
+      // Add memory data to pipeline report
+      pipeline_report.memory = {
+        insights_learned: 0, // Memory agent doesn't return detailed metrics yet
+        trends_identified: 0,
+      };
+      
+      // Update manifest with final pipeline_report
+      manifest.pipeline_report = pipeline_report;
+      
       await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       const totalTime = Date.now() - startTime;
