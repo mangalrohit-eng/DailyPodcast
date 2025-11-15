@@ -687,6 +687,8 @@ export class Orchestrator {
       agentTimes['memory'] = Date.now() - memoryStart;
       */
       
+      /*
+      // UNREACHABLE CODE - Already returned at line 537  
       // Save manifest directly (since publisher is disabled)
       Logger.info('Saving manifest without audio');
       await this.storage.put(
@@ -762,6 +764,7 @@ export class Orchestrator {
           agent_times: agentTimes,
         },
       };
+      */
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
