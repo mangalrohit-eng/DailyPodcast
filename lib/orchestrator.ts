@@ -379,7 +379,7 @@ export class Orchestrator {
         outline: outlineResult.output!.outline,
         picks: scraperResult.output.enriched_picks, // Use enriched picks with scraped content!
         date: runConfig.date,
-        listener_name: 'Rohit',
+        listener_name: '', // Generic audience - no personalized name
         target_duration_sec: runConfig.target_duration_sec,
         podcast_production: (runConfig as any).podcast_production,
       });

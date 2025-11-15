@@ -232,7 +232,7 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
 - NO CORPORATE SPEAK: Avoid "leverage", "synergy", "ecosystem", "strategic initiatives"
 - SOUND HUMAN: Natural pauses, incomplete thoughts, emphasis`;
     
-    const userPrompt = `Generate a news briefing for ${listenerName} on ${date}.
+    const userPrompt = `Generate a news briefing for a general audience on ${date}.
 
 ${wordCountRange ? `**CRITICAL: TARGET WORD COUNT: ${wordCountRange} words total**
 This is NOT a suggestion - the total script MUST be within this range.` : 'Keep it concise and impactful.'}
@@ -258,11 +258,14 @@ Respond with a JSON object:
 Each section MUST:
 - MATCH the target word count shown in the outline above (±10 words is acceptable)
 - COLD-OPEN: Strong opening that immediately engages
+  * NO personalized names - use "Hey there", "Welcome", "Alright", or just dive right in
+  * Generic greetings only - this is for a general audience
 - STORY: Lead with impact, then specific details
   * END each story section (except the last) with a natural, brief transition to the next story
   * Transition examples: "Speaking of innovation...", "In related news...", "Shifting gears to...", "Meanwhile..."
   * Keep transitions SHORT (5-10 words max) and conversational - they should flow naturally
 - SIGN-OFF: Brief summary of key takeaways
+  * NO personalized names - use "Have a great day", "That's it for today", "Catch you later", etc.
 - Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
 - Cite sources inline using [1], [2], etc.
 ${styleGuidance}
@@ -358,7 +361,7 @@ ${styleGuidance}
     if (section.type === 'intro') {
       sectionGuidance = `
 INTRO SECTION - Your opening must:
-- Welcome ${listenerName} warmly
+- Use a warm, engaging greeting (NO personalized names - use "Hey there", "Welcome", "Alright", or just dive in)
 - Preview the day's THEMES (not individual stories) in an engaging way
 - Set the tone: authoritative but conversational, energizing but professional`;
     } else if (section.type === 'segment' && storyDetails.length > 1) {
@@ -374,7 +377,7 @@ THEMATIC SEGMENT - You are weaving ${storyDetails.length} related stories into O
 OUTRO SECTION - Your closing must:
 - Synthesize key strategic takeaways from today's brief
 - Forward-looking insight: what to watch
-- Warm, energizing sign-off wishing ${listenerName} a great day`;
+- Warm, energizing sign-off (NO personalized names - use "Have a great day", "That's it for today", "Catch you tomorrow", etc.)`;
     } else if (section.type === 'story' || section.type === 'segment') {
       sectionGuidance = `
 STORY SECTION - Cover this story with:
