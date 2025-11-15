@@ -401,6 +401,12 @@ export class Orchestrator {
         message: 'Creating episode outline and structure',
       });
       const outlineStart = Date.now();
+      
+      Logger.info('🎯 PASSING TO OUTLINE AGENT', {
+        target_duration_sec: runConfig.target_duration_sec,
+        type_of_target: typeof runConfig.target_duration_sec,
+      });
+      
       const outlineResult = await this.outlineAgent.execute(runId, {
         picks: successfullyScrapedPicks, // Use ONLY successfully scraped picks with full content!
         date: runConfig.date,
@@ -979,6 +985,18 @@ export class Orchestrator {
       Logger.info('⚠️ Using input.weights (not dashboard)', { weights: input.weights });
     }
     
+    // EXPLICIT DEBUG: Log target duration resolution
+    const resolvedDuration = (dashboardConfig?.target_duration_sec && dashboardConfig.target_duration_sec > 0) 
+      ? dashboardConfig.target_duration_sec 
+      : Config.TARGET_DURATION_SECONDS;
+    
+    Logger.info('🎯 TARGET DURATION RESOLUTION', {
+      from_dashboard: dashboardConfig?.target_duration_sec,
+      from_config_default: Config.TARGET_DURATION_SECONDS,
+      resolved_value: resolvedDuration,
+      dashboard_exists: !!dashboardConfig,
+    });
+    
     return {
       date,
       topics,
@@ -986,7 +1004,7 @@ export class Orchestrator {
       weights,
       force_overwrite: input.force_overwrite || Config.FORCE_OVERWRITE,
       rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : (dashboardConfig?.rumor_filter ?? Config.RUMOR_FILTER),
-      target_duration_sec: (dashboardConfig?.target_duration_sec && dashboardConfig.target_duration_sec > 0) ? dashboardConfig.target_duration_sec : Config.TARGET_DURATION_SECONDS,
+      target_duration_sec: resolvedDuration,
       dashboardConfig, // Pass dashboard config to run() so it can build TopicConfig array
       podcast_production: dashboardConfig?.podcast_production || {
         intro_text: 'This is your daily podcast to recap recent news. Today we\'ll cover:',
