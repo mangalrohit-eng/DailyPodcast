@@ -113,7 +113,7 @@ You must respond with valid JSON only.`,
     // Generate script sections in ONE API call (batch processing)
     Logger.info('Writing all script sections in single API call', { sectionCount: outline.sections.length });
     
-    const sections = await this.writeAllSections(
+    let sections = await this.writeAllSections(
       outline.sections,
       sourceMap,
       storyToSourceId,
@@ -123,6 +123,9 @@ You must respond with valid JSON only.`,
       style,
       outline.opening_hook // Pass the compelling hook from outline
     );
+    
+    // Assign voices to each section and add transitions
+    sections = this.assignVoicesAndTransitions(sections);
     
     // Calculate total word count
     const totalText = sections.map(s => s.text).join(' ');
@@ -622,6 +625,183 @@ Respond with JSON:
     });
 
     return enhanced;
+  }
+
+  /**
+   * Assign voices to sections and insert transitions when voice changes
+   */
+  private assignVoicesAndTransitions(sections: ScriptSection[]): ScriptSection[] {
+    const result: ScriptSection[] = [];
+    let previousRole: string | null = null;
+    let previousVoice: string | null = null;
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      
+      // Select voice based on content and section type
+      const { voice, role } = this.selectVoiceForContent(section.text, section.type);
+      
+      // Assign voice and role to this section
+      section.voice = voice;
+      section.role = role;
+      
+      // Add transition if voice is changing (skip for first section and cold-open/sign-off)
+      if (
+        i > 0 && 
+        previousRole && 
+        previousVoice &&
+        role !== previousRole &&
+        section.type !== 'cold-open' &&
+        section.type !== 'sign-off'
+      ) {
+        const transitionText = this.generateTransition(previousRole, role);
+        
+        // Create transition section - spoken by PREVIOUS voice handing off
+        const transitionSection: ScriptSection = {
+          type: 'transition',
+          text: transitionText,
+          refs: [],
+          voice: previousVoice as any,
+          role: previousRole as any,
+        };
+        
+        result.push(transitionSection);
+        
+        Logger.info('Added voice transition', {
+          from_role: previousRole,
+          to_role: role,
+          from_voice: previousVoice,
+          to_voice: voice,
+          transition: transitionText,
+        });
+      }
+      
+      result.push(section);
+      
+      // Track for next iteration
+      previousRole = role;
+      previousVoice = voice;
+    }
+    
+    Logger.info('Voice assignment complete', {
+      original_sections: sections.length,
+      final_sections: result.length,
+      transitions_added: result.length - sections.length,
+    });
+    
+    return result;
+  }
+
+  /**
+   * Voice definitions for TTS
+   */
+  private readonly voices = {
+    host: 'shimmer' as const,       // Warm, natural female - main host
+    analyst: 'echo' as const,       // Calm male - analysis, thoughtful content
+    urgent: 'onyx' as const,        // Deep, authoritative male - breaking news
+    tech: 'nova' as const,          // Young, energetic female - tech/innovation
+    expressive: 'fable' as const,   // Expressive - dramatic stories
+    neutral: 'alloy' as const,      // Neutral - general narration
+  };
+
+  /**
+   * Intelligently select voice based on content analysis
+   */
+  private selectVoiceForContent(text: string, sectionType: string): {
+    voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer';
+    role: 'host' | 'analyst' | 'urgent' | 'tech' | 'expressive' | 'neutral';
+  } {
+    // Opening/Closing = warm host voice
+    if (sectionType === 'cold-open' || sectionType === 'sign-off') {
+      return { voice: this.voices.host, role: 'host' };
+    }
+    
+    // Breaking/urgent news = authoritative
+    if (/\b(breaking|alert|urgent|warning|crisis|emergency)\b/i.test(text)) {
+      Logger.debug('Using URGENT voice (onyx) - detected breaking/urgent content');
+      return { voice: this.voices.urgent, role: 'urgent' };
+    }
+    
+    // Tech/innovation = energetic
+    if (/\b(AI|artificial intelligence|tech|technology|innovation|startup|breakthrough|digital|software|platform|app|algorithm)\b/i.test(text)) {
+      Logger.debug('Using TECH voice (nova) - detected tech/innovation content');
+      return { voice: this.voices.tech, role: 'tech' };
+    }
+    
+    // Business analysis/financials = professional, analytical
+    if (/\b(strategy|analysis|financial|earnings|revenue|profit|quarterly|investment|market|valuation|CEO|executive)\b/i.test(text)) {
+      Logger.debug('Using ANALYST voice (echo) - detected business/financial content');
+      return { voice: this.voices.analyst, role: 'analyst' };
+    }
+    
+    // Surprising/dramatic news = expressive
+    if (/\b(surprise|shock|dramatic|remarkable|unprecedented|stunning|extraordinary|massive|historic)\b/i.test(text)) {
+      Logger.debug('Using EXPRESSIVE voice (fable) - detected dramatic content');
+      return { voice: this.voices.expressive, role: 'expressive' };
+    }
+    
+    // Default to host voice for general content
+    Logger.debug('Using HOST voice (shimmer) - general content');
+    return { voice: this.voices.host, role: 'host' };
+  }
+
+  /**
+   * Generate natural conversational transition when voice changes
+   */
+  private generateTransition(fromRole: string, toRole: string): string {
+    // Variety of natural transitions based on role combinations
+    const transitions: Record<string, string[]> = {
+      'host->analyst': [
+        'Let me bring in our analyst for more on this.',
+        'Over to you for the deep dive.',
+        'What\'s your take on this?',
+      ],
+      'analyst->host': [
+        'Back to you.',
+        'Handing it back.',
+        'That\'s my analysis. Back to you.',
+      ],
+      'host->tech': [
+        'Let\'s get into the tech side of this.',
+        'More on the innovation angle.',
+      ],
+      'tech->host': [
+        'Back to you for the next story.',
+        'That\'s the tech perspective. Back to you.',
+      ],
+      'host->urgent': [
+        'This one\'s breaking.',
+        'Here\'s the urgent update.',
+      ],
+      'urgent->host': [
+        'Back to our regular coverage.',
+        'Now back to you.',
+      ],
+      'analyst->tech': [
+        'Let me hand this to our tech specialist.',
+        'Over to you on the technology side.',
+      ],
+      'tech->analyst': [
+        'Back to you for analysis.',
+        'Your take?',
+      ],
+      'host->expressive': [
+        'This story is remarkable.',
+        'This one\'s dramatic.',
+      ],
+      'expressive->host': [
+        'Back to you.',
+        'That\'s the story. Back to you.',
+      ],
+    };
+    
+    const key = `${fromRole}->${toRole}`;
+    const options = transitions[key] || ['Let me hand this over.', 'Over to you.'];
+    
+    // Randomly select a transition for variety
+    const selected = options[Math.floor(Math.random() * options.length)];
+    
+    return selected;
   }
 }
 

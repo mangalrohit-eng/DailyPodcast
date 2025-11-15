@@ -44,6 +44,8 @@ export interface ScriptSection {
   type: string;
   text: string;
   refs: number[]; // citation IDs
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'; // Which voice should read this section
+  role?: 'host' | 'analyst' | 'stinger' | 'urgent' | 'tech' | 'expressive' | 'neutral'; // Role for logging/tracking
 }
 
 export interface Source {
