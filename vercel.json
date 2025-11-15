@@ -70,19 +70,13 @@
     "api/runs.ts": {
       "maxDuration": 10
     },
-    "api/test-run.ts": {
-      "maxDuration": 30
-    },
-    "api/external/trigger-run.ts": {
+    "api/external.ts": {
       "maxDuration": 300
     },
-    "api/external/run-status.ts": {
-      "maxDuration": 10
+    "api/upload-music.ts": {
+      "maxDuration": 30
     },
-    "api/external/run-logs.ts": {
-      "maxDuration": 10
-    },
-    "api/external/run-errors.ts": {
+    "api/runs/[runId].ts": {
       "maxDuration": 10
     }
   }
