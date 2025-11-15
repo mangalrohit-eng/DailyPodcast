@@ -986,7 +986,7 @@ export class Orchestrator {
       weights,
       force_overwrite: input.force_overwrite || Config.FORCE_OVERWRITE,
       rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : (dashboardConfig?.rumor_filter ?? Config.RUMOR_FILTER),
-      target_duration_sec: dashboardConfig?.target_duration_sec || Config.TARGET_DURATION_SECONDS,
+      target_duration_sec: (dashboardConfig?.target_duration_sec && dashboardConfig.target_duration_sec > 0) ? dashboardConfig.target_duration_sec : Config.TARGET_DURATION_SECONDS,
       dashboardConfig, // Pass dashboard config to run() so it can build TopicConfig array
       podcast_production: dashboardConfig?.podcast_production || {
         intro_text: 'This is your daily podcast to recap recent news. Today we\'ll cover:',
