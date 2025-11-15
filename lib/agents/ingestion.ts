@@ -174,6 +174,25 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               continue;
             }
             
+            // Filter by source tier - only allow Tier 1, 2, and 4
+            const sourceTier = this.getSourceTier(story.domain);
+            if (sourceTier === 3 || sourceTier === 5) {
+              const tierName = sourceTier === 3 ? 'Tier 3 (Medium Authority)' : 'Tier 5 (Unknown Source)';
+              const reason = `Source filtered out: ${tierName} - ${story.domain}`;
+              filteredOut.push({ title: story.title, reason });
+              allStoriesDetailed.push({ 
+                title: story.title, 
+                topic: topic.name, 
+                url: story.url,
+                domain: story.domain,
+                published_at: story.published_at.toISOString(),
+                status: 'rejected', 
+                reason 
+              });
+              Logger.debug(`Story filtered by tier: ${story.title.substring(0, 50)}... (${tierName}: ${story.domain})`);
+              continue;
+            }
+            
             // Skip keyword matching for Google News RSS - it's already topic-filtered
             
             if (!isGoogleNews && !this.matchesTopic(story, topic.keywords)) {
@@ -465,6 +484,57 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
     }
     
     return true;
+  }
+  
+  /**
+   * Check source authority tier (1-5)
+   * Returns tier number: 1 = highest authority, 5 = unknown/lowest
+   */
+  private getSourceTier(domain: string): number {
+    const domainLower = domain.toLowerCase();
+    
+    // TIER 1: Highest Authority - Major news organizations & wire services
+    const tier1 = [
+      'reuters.com', 'bloomberg.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com',
+      'ft.com', 'economist.com', 'bbc.com', 'theguardian.com', 'apnews.com',
+      'cnbc.com', 'cnn.com', 'abcnews.go.com', 'cbsnews.com', 'nbcnews.com',
+      'npr.org', 'pbs.org', 'usatoday',
+    ];
+    if (tier1.some(auth => domainLower.includes(auth))) return 1;
+    
+    // TIER 2: High Authority - Tech publications & business news
+    const tier2 = [
+      'techcrunch.com', 'theverge.com', 'wired.com', 'arstechnica.com',
+      'venturebeat.com', 'zdnet.com', 'cnet.com', 'engadget.com',
+      'forbes.com', 'fortune.com', 'businessinsider.com', 'marketwatch.com',
+      'seekingalpha.com', 'barrons.com', 'yahoo', 'cnbc',
+    ];
+    if (tier2.some(auth => domainLower.includes(auth))) return 2;
+    
+    // TIER 3: Medium Authority - Industry publications & regional news
+    const tier3 = [
+      'axios.com', 'politico.com', 'thehill.com', 'latimes.com', 'chicagotribune.com',
+      'sfgate.com', 'mercurynews.com', 'boston.com', 'philly.com',
+      'industryweek.com', 'manufacturing.net', 'sdxcentral.com',
+      'pymnts.com', 'americanbazaar',
+      'pr newswire', 'business wire', 'globe newswire',
+    ];
+    if (tier3.some(auth => domainLower.includes(auth))) return 3;
+    
+    // TIER 4: Company/Corporate Sources - Official company announcements
+    const tier4 = [
+      'microsoft.com', 'google.com', 'meta.com', 'apple.com', 'amazon.com',
+      'openai.com', 'anthropic.com', 'nvidia.com', 'intel.com', 'amd.com',
+      'ibm.com', 'oracle.com', 'salesforce.com', 'sap.com',
+      'verizon.com', 'accenture.com', 't-mobile.com', 'att.com',
+    ];
+    if (tier4.some(auth => domainLower.includes(auth))) return 4;
+    
+    // Google News aggregator
+    if (domainLower.includes('news.google.com')) return 4; // Allow Google News
+    
+    // TIER 5: Unknown/Lower Authority - Default
+    return 5;
   }
   
   private matchesTopic(story: Story, keywords: string[]): boolean {
