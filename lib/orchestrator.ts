@@ -297,6 +297,17 @@ export class Orchestrator {
         topic_weights: runConfig.weights,
         target_count: adjustedTargetCount,
       });
+      
+      // Inject dynamic_selection stats into the ranking result for partial manifest
+      if (rankingResult.output?.detailed_report) {
+        rankingResult.output.detailed_report.dynamic_selection = {
+          base_target: baseTargetCount,
+          historical_scraping_rate: historicalScrapeRate,
+          adjusted_target: adjustedTargetCount,
+          actually_selected: rankingResult.output.picks.length,
+        };
+      }
+      
       agentTimes['ranking'] = Date.now() - rankingStart;
       agentResults.ranking = rankingResult; // Save for partial manifest
       await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
@@ -1072,14 +1083,13 @@ export class Orchestrator {
     if (agentResults.ranking?.output?.detailed_report) {
       partial.pipeline_report.ranking = {
         ...agentResults.ranking.output.detailed_report,
-        // Add dynamic ranking stats
-        dynamic_selection: {
-          base_target: baseTargetCount,
-          historical_scraping_rate: historicalScrapeRate,
-          adjusted_target: adjustedTargetCount,
-          actually_selected: agentResults.ranking.output.picks.length,
-        },
       };
+      
+      // Add dynamic selection stats if they exist (they're added separately in the main flow)
+      if (agentResults.ranking.output.detailed_report.dynamic_selection) {
+        partial.pipeline_report.ranking.dynamic_selection = agentResults.ranking.output.detailed_report.dynamic_selection;
+      }
+      
       partial.picks = agentResults.ranking.output.picks || [];
     }
 
