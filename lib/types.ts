@@ -29,9 +29,13 @@ export interface OutlineSection {
   title: string;
   target_words: number;
   refs: string[]; // story IDs - can be multiple for thematic segments
+  connection_type?: 'cause-effect' | 'common-theme' | 'contrast' | 'timeline' | 'industry-impact';
+  bridge?: string; // How stories connect - used by scriptwriter
+  guidance?: string; // Writing guidance for this section
 }
 
 export interface Outline {
+  opening_hook?: string; // Compelling hook for the intro
   sections: OutlineSection[];
   runtime_target_sec: number;
 }

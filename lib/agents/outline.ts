@@ -120,6 +120,23 @@ ${JSON.stringify(storySummaries, null, 2)}
 
 YOUR MISSION: Create 2-4 THEMATIC SEGMENTS that naturally blend related stories together into cohesive narratives.
 
+STEP 1: ANALYZE FOR COMPELLING HOOK
+Review all stories and identify the MOST compelling angle for the opening:
+- Most surprising development (unexpected layoffs, major pivots, shocking numbers)
+- Biggest impact story (affects millions of people, billions of dollars)
+- Most urgent/breaking news (just announced, happening now)
+- Controversial or dramatic (major conflicts, failures, breakthroughs)
+
+This will be your HOOK - the first thing listeners hear to grab their attention.
+
+STEP 2: IDENTIFY STORY CONNECTIONS
+For each potential segment, identify how stories connect:
+- Cause & Effect: Does story A explain why story B happened?
+- Common Theme: Do multiple stories illustrate the same trend?
+- Contrast: Do stories show competing approaches or opposite outcomes?
+- Timeline: Are stories part of a developing situation?
+- Industry Impact: Do stories affect the same sector/companies?
+
 CRITICAL REQUIREMENTS:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - **TOTAL TARGET WORD COUNT: ${totalTargetWords} words** (at 150 words/minute speaking pace)
@@ -127,13 +144,23 @@ CRITICAL REQUIREMENTS:
 - Stories are PRE-SORTED by topic priority - maintain this general flow but group intelligently
 
 STRUCTURE GUIDELINES:
-1. **Intro**: ~${introOutroWords} words - Warm welcome + preview the day's THEMES (not individual stories)
+1. **Intro**: ~${introOutroWords} words
+   - START WITH YOUR HOOK (the most compelling story angle)
+   - Then preview the day's THEMES (not individual stories)
+   - Make listeners want to keep listening!
+   
+   EXAMPLE HOOKS:
+   ❌ BAD: "Welcome to today's briefing. Let's dive into the key stories..."
+   ✅ GOOD: "15,000 jobs just disappeared at Verizon. But here's the twist - it's not because business is bad..."
+   ✅ GOOD: "AI just got a $6 billion reality check. Here's what it means for every tech company..."
 
 2. **Thematic Segments** (2-4 segments totaling ~${mainContentWords} words):
-   - Group related stories that naturally connect
-   - Give each segment a compelling THEMATIC title (e.g., "AI's Enterprise Moment", "The Regulatory Response", "Market Shifts")
-   - Each segment should include multiple stories (refs: [0, 1, 3]) that you weave together
-   - Show connections, cause-effect relationships, and synthesize insights
+   - Group related stories that naturally connect (use your connection analysis)
+   - Give each segment a compelling THEMATIC title (e.g., "AI's Enterprise Moment", "The Regulatory Response")
+   - Each segment MUST include:
+     * refs: [0, 1, 3] - story indices to include
+     * connection_type: "cause-effect" | "common-theme" | "contrast" | "timeline" | "industry-impact"
+     * bridge: Brief description of HOW these stories connect (used by scriptwriter)
    - Allocate word counts based on story importance and complexity
    - Segments should flow naturally from high-priority topics to lower-priority ones
 
@@ -150,35 +177,50 @@ ${JSON.stringify(topicCounts, null, 2)}
 
 EXAMPLE FORMAT (adapt to your actual stories):
 {
+  "opening_hook": "15,000 jobs just vanished at Verizon - but not for the reason you'd think",
   "sections": [
     {
       "type": "intro",
       "title": "Welcome & Today's Themes",
       "target_words": ${introOutroWords},
-      "refs": []
+      "refs": [],
+      "guidance": "Start with the opening_hook above, then preview themes"
     },
     {
       "type": "segment",
-      "title": "AI's Enterprise Transformation",
+      "title": "The AI Investment Wave",
       "target_words": 300,
-      "refs": [0, 1, 2]
+      "refs": [0, 1, 2],
+      "connection_type": "cause-effect",
+      "bridge": "Verizon's layoffs are directly funding their AI pivot. OpenAI's $6B raise shows why - and Accenture is betting on this shift too.",
+      "guidance": "Weave these 3 stories together - show how they're all part of the same AI transformation trend"
     },
     {
       "type": "segment",
       "title": "The Regulatory Response",
       "target_words": 250,
-      "refs": [3, 4]
+      "refs": [3, 4],
+      "connection_type": "common-theme",
+      "bridge": "As AI accelerates, regulators are scrambling to catch up. Here are two very different approaches.",
+      "guidance": "Contrast the two regulatory approaches - show what this means for companies"
     },
     {
       "type": "outro",
       "title": "Strategic Takeaways",
       "target_words": ${introOutroWords},
-      "refs": []
+      "refs": [],
+      "guidance": "Synthesize key insights and what to watch tomorrow"
     }
   ]
 }
 
-Respond with JSON only. Ensure total word count = ${totalTargetWords} and all ${sortedPicks.length} stories are referenced.`;
+**CRITICAL**: 
+- MUST include "opening_hook" field with your most compelling hook
+- MUST include "connection_type" and "bridge" for each segment
+- Total word count = ${totalTargetWords}
+- All ${sortedPicks.length} stories referenced
+
+Respond with JSON only.`;
     
     const response = await this.callOpenAI(
       [
@@ -189,6 +231,9 @@ Respond with JSON only. Ensure total word count = ${totalTargetWords} and all ${
     );
     
     const outlineData = JSON.parse(response);
+    
+    // Extract opening hook
+    const openingHook = outlineData.opening_hook || undefined;
     
     // Map story indices to story IDs with null safety
     // CRITICAL: Use sortedPicks (not picks) since AI received sorted array
@@ -201,16 +246,22 @@ Respond with JSON only. Ensure total word count = ${totalTargetWords} and all ${
         refs: (section.refs || [])
           .map((idx: number) => sortedPicks[idx]?.story_id)
           .filter(Boolean),
+        connection_type: section.connection_type,
+        bridge: section.bridge,
+        guidance: section.guidance,
       }));
     
     const outline: Outline = {
+      opening_hook: openingHook,
       sections,
       runtime_target_sec: target_duration_sec,
     };
     
     Logger.info('Outline created', {
+      opening_hook: openingHook ? openingHook.substring(0, 80) + '...' : 'none',
       sections: sections.length,
       total_words: sections.reduce((sum, s) => sum + s.target_words, 0),
+      segments_with_connections: sections.filter(s => s.bridge).length,
     });
     
     return { outline };

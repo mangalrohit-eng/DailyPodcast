@@ -116,7 +116,8 @@ You must respond with valid JSON only.`,
       date,
       listener_name,
       wordCountRange,
-      style
+      style,
+      outline.opening_hook // Pass the compelling hook from outline
     );
     
     // Calculate total word count
@@ -172,7 +173,8 @@ You must respond with valid JSON only.`,
     date: string,
     listenerName: string,
     wordCountRange?: string,
-    style?: string
+    style?: string,
+    openingHook?: string // Compelling hook from outline agent
   ): Promise<ScriptSection[]> {
     // Build comprehensive prompt for all sections with FULL story content
     const sectionsPrompt = outlineSections.map((section, idx) => {
@@ -203,12 +205,24 @@ URL: ${story.url}`;
       // Convert target_words to duration_sec (assuming ~150 words per minute = 2.5 words per second)
       const targetDurationSec = section.target_words ? Math.round(section.target_words / 2.5) : 60;
 
+      // Build section-specific guidance
+      let sectionGuidance = section.guidance || 'Follow general style guidelines';
+      
+      // Add connection guidance if available
+      if (section.bridge) {
+        sectionGuidance += `\n\n**STORY CONNECTIONS** (${section.connection_type || 'thematic'}):
+${section.bridge}
+
+Use this to weave the stories together seamlessly. Don't just list them - show how they connect!`;
+      }
+
       return `
-SECTION ${idx + 1}: ${section.type}
+SECTION ${idx + 1}: ${section.type} - "${section.title}"
 Target: ${section.target_words || 150} words (~${targetDurationSec} seconds)
 Stories to cover:
 ${picksSummary || 'No specific stories (intro/outro)'}
-Guidance: ${section.guidance || 'Follow general style guidelines'}
+
+Guidance: ${sectionGuidance}
 ---`;
     }).join('\n\n');
 
@@ -237,6 +251,12 @@ Guidance: ${section.guidance || 'Follow general style guidelines'}
 ${wordCountRange ? `**CRITICAL: TARGET WORD COUNT: ${wordCountRange} words total**
 This is NOT a suggestion - the total script MUST be within this range.` : 'Keep it concise and impactful.'}
 
+${openingHook ? `🎣 **OPENING HOOK** (Use this to start your intro):
+"${openingHook}"
+
+This is your most compelling angle - lead with this immediately to grab attention!
+` : ''}
+
 SOURCES WITH FULL DETAILS:
 ${allSources}
 
@@ -257,13 +277,16 @@ Respond with a JSON object:
 
 Each section MUST:
 - MATCH the target word count shown in the outline above (±10 words is acceptable)
-- COLD-OPEN: Strong opening that immediately engages
+- COLD-OPEN: ${openingHook ? '**START WITH THE HOOK ABOVE!** Then preview themes.' : 'Strong opening that immediately engages'}
   * NO personalized names - use "Hey there", "Welcome", "Alright", or just dive right in
   * Generic greetings only - this is for a general audience
-- STORY: Lead with impact, then specific details
-  * END each story section (except the last) with a natural, brief transition to the next story
-  * Transition examples: "Speaking of innovation...", "In related news...", "Shifting gears to...", "Meanwhile..."
-  * Keep transitions SHORT (5-10 words max) and conversational - they should flow naturally
+  ${openingHook ? '* The hook provides your opening punch - use it as the VERY FIRST THING you say' : ''}
+- STORY SEGMENTS: Weave stories together using the **STORY CONNECTIONS** guidance provided
+  * DON'T just list stories one by one
+  * SHOW how they connect using the bridge guidance
+  * Use the connection_type (cause-effect, common-theme, etc.) to guide your narrative flow
+  * END each segment (except the last) with a natural transition to the next theme
+  * Transition examples: "And this connects to...", "Meanwhile...", "But here's where it gets interesting..."
 - SIGN-OFF: Brief summary of key takeaways
   * NO personalized names - use "Have a great day", "That's it for today", "Catch you later", etc.
 - Use SPECIFIC DETAILS: exact numbers, names, products, dates from summaries
