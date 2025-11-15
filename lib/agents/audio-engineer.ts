@@ -82,34 +82,71 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
     // Load config for music settings
     const config = await this.configStorage.load();
     
+    Logger.info('Music configuration', {
+      use_intro_music: config.use_intro_music,
+      use_outro_music: config.use_outro_music,
+      intro_music_file: config.intro_music_file,
+      outro_music_file: config.outro_music_file,
+    });
+    
     // Add intro music if enabled
     if (config.use_intro_music && config.intro_music_file) {
       try {
-        Logger.info('Loading intro music', { file: config.intro_music_file });
-        const introMusic = await this.loadMusicFile(config.intro_music_file);
-        finalAudio = AudioTool.addStinger(finalAudio, introMusic, 'intro');
-        Logger.info('Intro music added successfully');
+        Logger.info('🎵 Loading intro music', { file: config.intro_music_file });
+        
+        // Check if file exists first
+        const exists = await this.storage.exists(config.intro_music_file);
+        if (!exists) {
+          Logger.error('❌ Intro music file does not exist in S3', {
+            file: config.intro_music_file,
+            hint: 'Upload intro music using the dashboard or API',
+          });
+        } else {
+          const introMusic = await this.loadMusicFile(config.intro_music_file);
+          Logger.info('✅ Intro music loaded', { size_bytes: introMusic.length });
+          
+          finalAudio = AudioTool.addStinger(finalAudio, introMusic, 'intro');
+          Logger.info('✅ Intro music added successfully to podcast');
+        }
       } catch (error) {
-        Logger.warn('Failed to load intro music, skipping', {
+        Logger.error('❌ Failed to load intro music, skipping', {
           error: (error as Error).message,
+          stack: (error as Error).stack,
           file: config.intro_music_file,
         });
       }
+    } else {
+      Logger.info('⏭️ Intro music disabled or not configured');
     }
     
     // Add outro music if enabled
     if (config.use_outro_music && config.outro_music_file) {
       try {
-        Logger.info('Loading outro music', { file: config.outro_music_file });
-        const outroMusic = await this.loadMusicFile(config.outro_music_file);
-        finalAudio = AudioTool.addStinger(finalAudio, outroMusic, 'outro');
-        Logger.info('Outro music added successfully');
+        Logger.info('🎵 Loading outro music', { file: config.outro_music_file });
+        
+        // Check if file exists first
+        const exists = await this.storage.exists(config.outro_music_file);
+        if (!exists) {
+          Logger.error('❌ Outro music file does not exist in S3', {
+            file: config.outro_music_file,
+            hint: 'Upload outro music using the dashboard or API',
+          });
+        } else {
+          const outroMusic = await this.loadMusicFile(config.outro_music_file);
+          Logger.info('✅ Outro music loaded', { size_bytes: outroMusic.length });
+          
+          finalAudio = AudioTool.addStinger(finalAudio, outroMusic, 'outro');
+          Logger.info('✅ Outro music added successfully to podcast');
+        }
       } catch (error) {
-        Logger.warn('Failed to load outro music, skipping', {
+        Logger.error('❌ Failed to load outro music, skipping', {
           error: (error as Error).message,
+          stack: (error as Error).stack,
           file: config.outro_music_file,
         });
       }
+    } else {
+      Logger.info('⏭️ Outro music disabled or not configured');
     }
     
     // Normalize loudness (placeholder - returns as-is for now)
