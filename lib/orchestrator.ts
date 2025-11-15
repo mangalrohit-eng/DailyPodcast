@@ -686,7 +686,6 @@ export class Orchestrator {
         manifest,
       });
       agentTimes['memory'] = Date.now() - memoryStart;
-      */
       
       // Save manifest directly (since publisher is disabled)
       Logger.info('Saving manifest without audio');
@@ -695,9 +694,7 @@ export class Orchestrator {
         JSON.stringify(manifest, null, 2),
         'application/json'
       );
-      */
-      // END OF OLD FULL PIPELINE CODE - ALL COMMENTED OUT
-      /*
+      
       const totalTime = Date.now() - startTime;
       
       // Get API call statistics
