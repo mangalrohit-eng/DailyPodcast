@@ -76,8 +76,24 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
     
     Logger.info('All segments synthesized', { count: audioSegments.length });
     
+    // CRITICAL: Check if we have any audio content
+    if (audioSegments.length === 0) {
+      Logger.error('❌ No audio segments generated! synthesis_plan was empty or all TTS calls failed');
+      throw new Error('No audio segments generated - cannot create podcast with only music');
+    }
+    
+    Logger.info('Total audio content size before concat', {
+      totalBytes: audioSegments.reduce((sum, buf) => sum + buf.length, 0),
+      segmentSizes: audioSegments.map(buf => buf.length),
+    });
+    
     // Concatenate all segments
     let finalAudio = AudioTool.concat(audioSegments);
+    
+    Logger.info('Audio concatenated', {
+      finalSize: finalAudio.length,
+      estimatedDuration: AudioTool.estimateDuration(finalAudio),
+    });
     
     // Load config for music settings
     const config = await this.configStorage.load();
@@ -149,18 +165,33 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
       Logger.info('⏭️ Outro music disabled or not configured');
     }
     
+    Logger.info('🎬 Final audio before normalization', {
+      size_bytes: finalAudio.length,
+      estimated_duration_sec: AudioTool.estimateDuration(finalAudio),
+      has_intro_music: config.use_intro_music,
+      has_outro_music: config.use_outro_music,
+    });
+    
     // Normalize loudness (placeholder - returns as-is for now)
     const normalized = AudioTool.normalizeLoudness(finalAudio, -16);
     
     // Estimate actual duration
     const actualDuration = AudioTool.estimateDuration(normalized);
     
-    Logger.info('Audio engineering complete', {
+    Logger.info('✅ Audio engineering complete', {
       duration_sec: actualDuration,
       size_bytes: normalized.length,
       intro_music: config.use_intro_music,
       outro_music: config.use_outro_music,
     });
+    
+    // WARNING: MP3 concatenation issue
+    if (normalized.length < 50000) {
+      Logger.warn('⚠️ Final audio is suspiciously small! This might indicate a concatenation issue', {
+        size_bytes: normalized.length,
+        estimated_duration_sec: actualDuration,
+      });
+    }
     
     return {
       audio_buffer: normalized,

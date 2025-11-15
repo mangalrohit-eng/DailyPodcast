@@ -67,7 +67,18 @@ You must respond with valid JSON only.`,
     Logger.info('TTS plan created', {
       segments: synthesisPlan.length,
       estimated_duration_sec: estimatedDuration,
+      sections_processed: script.sections.length,
     });
+    
+    // CRITICAL: Ensure we have segments to synthesize
+    if (synthesisPlan.length === 0) {
+      Logger.error('❌ TTS plan is EMPTY! No valid segments created from script', {
+        total_sections: script.sections.length,
+        sections_with_text: script.sections.filter(s => s && s.text).length,
+        sample_section: script.sections[0],
+      });
+      throw new Error('TTS plan is empty - all script sections had invalid or missing text');
+    }
     
     return {
       synthesis_plan: synthesisPlan,
@@ -78,7 +89,14 @@ You must respond with valid JSON only.`,
   private async prepareTtsSegments(section: any): Promise<SynthesisPlan[]> {
     // Safety check
     if (!section || !section.text || typeof section.text !== 'string') {
-      Logger.warn('Invalid section or missing text in prepareTtsSegments', { section });
+      Logger.error('❌ Invalid section or missing text in prepareTtsSegments', { 
+        has_section: !!section,
+        has_text: !!(section?.text),
+        text_type: typeof section?.text,
+        section_type: section?.type,
+        text_preview: section?.text ? String(section.text).substring(0, 100) : 'N/A',
+        full_section: section,
+      });
       return [];
     }
     
