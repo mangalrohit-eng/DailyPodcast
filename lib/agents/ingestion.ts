@@ -360,12 +360,12 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         tracking.attempted++;
       }
       
-      const extracted = this.extractFromGoogleNewsUrl(item.link);
+      const extracted = await this.extractFromGoogleNewsUrl(item.link);
       
       Logger.info(`🔍 Extraction result`, {
         success: !!extracted,
         extracted_domain: extracted?.domain,
-        extracted_url: extracted?.url.substring(0, 60)
+        extracted_url: extracted?.url?.substring(0, 60)
       });
       
       if (extracted) {
@@ -416,152 +416,50 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
   }
   
   /**
-   * Extract actual article URL and domain from a Google News RSS URL by decoding the base64-encoded URL.
-   * Google News RSS URLs contain the actual article URL encoded in the path.
-   * This is MUCH more reliable than following HTTP redirects!
+   * Extract actual article URL and domain from a Google News RSS URL by following HTTP redirects.
+   * Base64 decoding doesn't work because Google encodes URLs as Protocol Buffer binary data.
+   * HTTP redirect following is the only reliable method.
    * Returns both the full article URL (for scraping) and the domain (for deduplication).
    */
-  private extractFromGoogleNewsUrl(googleNewsUrl: string): { url: string; domain: string } | null {
+  private async extractFromGoogleNewsUrl(googleNewsUrl: string): Promise<{ url: string; domain: string } | null> {
     try {
-      Logger.info(`🔍 STARTING extraction for URL: ${googleNewsUrl.substring(0, 100)}`);
+      Logger.debug(`🔄 Following Google News redirect: ${googleNewsUrl.substring(0, 100)}`);
       
-      const url = new URL(googleNewsUrl);
-      const parts = url.pathname.split('/');
-      
-      Logger.info(`📋 URL parts`, {
-        hostname: url.hostname,
-        pathname: url.pathname,
-        parts: parts,
-        articles_index: parts.indexOf('articles')
+      const response = await fetch(googleNewsUrl, {
+        method: 'GET',
+        redirect: 'follow', // Follow redirects automatically
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       });
+
+      const finalUrl = response.url;
       
-      // Check if the URL structure matches: /rss/articles/[encoded_string]
-      const articlesIndex = parts.indexOf('articles');
-      if (url.hostname !== 'news.google.com' || articlesIndex === -1 || articlesIndex + 1 >= parts.length) {
-        Logger.warn(`⚠️ Not a Google News RSS article URL - FAILED CHECK`, { 
-          url: googleNewsUrl.substring(0, 80),
-          hostname: url.hostname,
-          expected_hostname: 'news.google.com',
-          has_articles: parts.includes('articles'),
-          articles_index: articlesIndex,
-          next_part_exists: articlesIndex + 1 < parts.length
-        });
+      // Check if we actually got redirected away from Google News
+      if (finalUrl.includes('news.google.com')) {
+        Logger.warn(`⚠️ Redirect stayed on Google News`, { finalUrl: finalUrl.substring(0, 100) });
         return null;
       }
-      
-      let encodedUrl = parts[articlesIndex + 1];
-      const originalEncoded = encodedUrl;
-      
-      Logger.info(`📦 Encoded part extracted`, {
-        original: originalEncoded.substring(0, 50),
-        length: originalEncoded.length
+
+      // Extract domain
+      const urlObj = new URL(finalUrl);
+      const domain = urlObj.hostname.replace(/^www\./, '');
+
+      Logger.debug(`✅ Successfully resolved Google News redirect`, {
+        original: googleNewsUrl.substring(0, 80),
+        final: finalUrl.substring(0, 80),
+        domain
       });
-      
-      // Remove query parameters and fragments if present
-      // Google News URLs may have ?oc=5 or other query params
-      encodedUrl = encodedUrl.split('?')[0].split('#')[0];
-      
-      // Google News uses prefixes like CBMi, CBA, etc. followed by base64 data
-      // The actual article URL is encoded in a Protocol Buffer format
-      // We need to decode the ENTIRE string (including prefix), then extract the URL
-      
-      Logger.debug(`🔍 Preparing to decode (NO prefix removal)`, {
-        original_encoded: originalEncoded.substring(0, 40),
-        full_string: encodedUrl.substring(0, 40),
-        length: encodedUrl.length
-      });
-      
-      // Manual URL-safe base64 decoding (base64url)
-      // Google uses URL-safe base64 where: - → +, _ → /
-      // We must convert these BEFORE decoding
-      Logger.debug(`🔧 Converting URL-safe base64 to standard base64`, {
-        original_length: encodedUrl.length,
-        has_url_safe_chars: encodedUrl.includes('-') || encodedUrl.includes('_')
-      });
-      
-      // Step 1: Convert URL-safe characters to standard base64
-      let base64String = encodedUrl.replace(/-/g, '+').replace(/_/g, '/');
-      
-      // Step 2: Add padding if needed (base64 strings must be multiple of 4)
-      while (base64String.length % 4 !== 0) {
-        base64String += '=';
-      }
-      
-      Logger.debug(`🔧 Base64 string prepared for decoding`, {
-        converted_length: base64String.length,
-        padding_added: base64String.length - encodedUrl.length,
-        ends_with: base64String.slice(-10)
-      });
-      
-      // Step 3: Decode from standard base64
-      const decodedBuffer = Buffer.from(base64String, 'base64');
-      const decodedString = decodedBuffer.toString('utf8');
-      
-      Logger.info(`✅ Successfully decoded base64`, {
-        decoded_length: decodedString.length,
-        first_100_chars: decodedString.substring(0, 100),
-        first_20_bytes: Array.from(decodedString.substring(0, 20)).map(c => c.charCodeAt(0)),
-        has_http: decodedString.includes('http'),
-        has_https: decodedString.includes('https'),
-        looks_binary: decodedString.substring(0, 10).split('').some(c => c.charCodeAt(0) < 32 || c.charCodeAt(0) > 126)
-      });
-      
-      // Extract Actual URL: Look for http/https URL in the decoded string
-      // More robust regex that handles valid URL characters and stops at binary junk
-      // Matches: http(s)://domain/path with common URL characters
-      const urlMatch = decodedString.match(/(https?:\/\/[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+)/);
-      
-      Logger.info(`🎯 URL regex match result`, {
-        matched: !!urlMatch,
-        match_length: urlMatch ? urlMatch[0].length : 0,
-        match_preview: urlMatch ? urlMatch[0].substring(0, 80) : 'NO MATCH'
-      });
-      
-      if (urlMatch && urlMatch[0]) {
-        const actualUrl = urlMatch[0];
-        
-        // Validate the extracted URL can be parsed
-        try {
-          const hostname = new URL(actualUrl).hostname;
-          
-          // Strip 'www.' for cleaner domain
-          const cleanDomain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
-          
-          // Additional validation: ensure domain has at least one dot (e.g., "example.com")
-          if (!cleanDomain.includes('.')) {
-            Logger.warn(`⚠️ Invalid domain extracted (no TLD): ${cleanDomain}`);
-            return null;
-          }
-          
-          Logger.info(`✅ Successfully decoded Google News URL`, { 
-            original: googleNewsUrl.substring(0, 60),
-            actual_url: actualUrl.substring(0, 60),
-            domain: cleanDomain
-          });
-          
-          return { url: actualUrl, domain: cleanDomain };
-        } catch (urlError) {
-          Logger.warn(`⚠️ Extracted URL is invalid`, {
-            extracted: actualUrl.substring(0, 80),
-            error: urlError instanceof Error ? urlError.message : 'Unknown'
-          });
-          return null;
-        }
-      }
-      
-      Logger.warn(`❌ FAILED: Could not extract URL from decoded string`, {
-        decoded_preview: decodedString.substring(0, 200),
-        decoded_full_length: decodedString.length,
-        decoded_bytes: Array.from(decodedString.substring(0, 20)).map(c => c.charCodeAt(0))
-      });
-      return null;
+
+      return { url: finalUrl, domain };
+
     } catch (error) {
-      Logger.error(`❌ EXCEPTION in extractFromGoogleNewsUrl`, { 
+      Logger.warn(`❌ Failed to resolve Google News redirect`, {
         url: googleNewsUrl.substring(0, 80),
-        error_message: error instanceof Error ? error.message : 'Unknown error',
-        error_name: error instanceof Error ? error.name : 'Unknown',
-        stack: error instanceof Error ? error.stack?.substring(0, 200) : undefined
+        error: error instanceof Error ? error.message : String(error)
       });
+      
       return null;
     }
   }
