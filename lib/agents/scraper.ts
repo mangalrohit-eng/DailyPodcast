@@ -11,8 +11,7 @@
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import { chromium, Browser, Page } from 'playwright-core';
-import playwrightAWS from 'playwright-aws-lambda';
+import { chromium, Browser, Page } from 'playwright';
 
 // Node 18+ has fetch built-in globally (no import needed)
 
@@ -52,19 +51,20 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
   
   /**
    * Launch Playwright browser instance (reused across all scrapes)
-   * Uses playwright-aws-lambda for serverless Vercel deployment
+   * Standard Playwright for Vercel deployment
    */
   private async launchBrowser(): Promise<Browser> {
     if (!this.browser) {
-      Logger.info('Launching Playwright browser (serverless Chromium) for URL resolution');
-      
-      // Get serverless-compatible Chromium executable
-      const executablePath = await playwrightAWS.getExecutablePath();
+      Logger.info('Launching Playwright Chromium browser for URL resolution');
       
       this.browser = await chromium.launch({
-        args: playwrightAWS.args,
-        executablePath: executablePath,
         headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled',
+        ],
       });
     }
     return this.browser;
