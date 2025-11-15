@@ -433,9 +433,36 @@ export class Orchestrator {
       }
       
       // ===================================================================
-      // BUILD MINIMAL MANIFEST WITH INGESTION REPORT ONLY
+      // BUILD COMPLETE MANIFEST WITH ALL AGENT OUTPUTS
       // ===================================================================
       
+      // 7. TTS DIRECTOR
+      Logger.info('Phase 7: TTS Planning');
+      progressTracker.addUpdate(runId, {
+        phase: 'TTS Planning',
+        status: 'running',
+        message: 'Planning voice synthesis for natural delivery',
+      });
+      const ttsDirectorStart = Date.now();
+      const ttsDirectorResult = await this.ttsDirectorAgent.execute(runId, {
+        script: safetyResult.output!.script,
+      });
+      agentTimes['tts_director'] = Date.now() - ttsDirectorStart;
+      
+      // 8. AUDIO ENGINEER
+      Logger.info('Phase 8: Audio Synthesis');
+      progressTracker.addUpdate(runId, {
+        phase: 'Audio Generation',
+        status: 'running',
+        message: 'Generating audio with OpenAI TTS (this takes longest)',
+      });
+      const audioStart = Date.now();
+      const audioResult = await this.audioEngineerAgent.execute(runId, {
+        synthesis_plan: ttsDirectorResult.output!.synthesis_plan,
+      });
+      agentTimes['audio_engineer'] = Date.now() - audioStart;
+      
+      // Build pipeline report from all agent outputs
       const ingestionReport = ingestionResult.output!.detailed_report || {
         sources_scanned: [],
         total_items_before_filter: 0,
@@ -455,156 +482,6 @@ export class Orchestrator {
           sources_scanned: ingestionReport.sources_scanned,
           total_stories_found: ingestionReport.total_items_before_filter,
           stories_after_filtering: ingestionResult.output.stories.length,
-          filtered_out: ingestionReport.filtered_out,
-          topics_breakdown: ingestionReport.topics_breakdown,
-          google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
-          all_stories_detailed: ingestionReport.all_stories_detailed,
-        },
-        ranking: rankingResult.output?.detailed_report || {
-          stories_ranked: 0,
-          top_picks: [],
-          rejected_stories: [],
-        },
-        scraper: scraperResult.output?.scraping_report || { status: 'disabled' } as any,
-        outline: {
-          sections: outlineResult.output?.outline.sections.map((s: any) => ({
-            type: s.type,
-            title: s.title,
-            target_words: s.target_words || 0,
-            story_count: (s.refs || []).length,
-          })) || [],
-          total_duration_target: runConfig.target_duration_sec,
-        },
-        scriptwriting: scriptResult.output?.detailed_report || { status: 'disabled' } as any,
-        factcheck: factCheckResult.output?.detailed_report || { status: 'disabled' } as any,
-        safety: safetyResult.output?.detailed_report || { status: 'disabled' } as any,
-      };
-      
-      const manifest: EpisodeManifest = {
-        run_id: runId,
-        date: runConfig.date,
-        title: `Daily News Briefing - ${runConfig.date}`,
-        description: 'Podcast script generated from news sources',
-        picks: rankingResult.output?.picks || [],
-        mp3_url: '',
-        duration_sec: 0,
-        word_count: scriptResult.output?.script.word_count || 0,
-        sections: scriptResult.output?.script.sections || [],
-        sources: rankingResult.output?.picks.map(p => ({
-          title: p.story.title,
-          url: p.story.url,
-        })) || [],
-        metrics: {
-          ingestion_time_ms: agentTimes['ingestion'] || 0,
-          ranking_time_ms: agentTimes['ranking'] || 0,
-          scripting_time_ms: agentTimes['scriptwriter'] || 0,
-          tts_time_ms: 0,
-          total_time_ms: Date.now() - startTime,
-          openai_tokens: 0,
-        },
-        pipeline_report,
-      };
-      
-      // Save manifest
-      Logger.info('Saving episode manifest');
-      await this.storage.put(
-        `episodes/${runId}_manifest.json`,
-        JSON.stringify(manifest, null, 2),
-        'application/json'
-      );
-      
-      const totalTime = Date.now() - startTime;
-      
-      Logger.info('Pipeline complete', {
-        runId,
-        total_time_ms: totalTime,
-        stories_found: ingestionResult.output.stories.length,
-        stories_ranked: rankingResult.output?.picks.length || 0,
-        script_generated: !!scriptResult.output,
-      });
-      
-      progressTracker.addUpdate(runId, {
-        phase: 'Complete',
-        status: 'completed',
-        message: `Script generated (${Math.floor(totalTime / 1000)}s) - Audio disabled`,
-        details: {
-          stories_found: ingestionResult.output.stories.length,
-          stories_ranked: rankingResult.output?.picks.length || 0,
-          script_words: scriptResult.output?.script.word_count || 0,
-        },
-      });
-      
-      // Complete the run and update index
-      try {
-        await runsStorage.completeRun(runId, manifest);
-        Logger.info('Run index updated successfully', { runId });
-      } catch (indexError) {
-        Logger.error('Failed to update runs index', {
-          runId,
-          error: (indexError as Error).message,
-          stack: (indexError as Error).stack,
-        });
-      }
-      
-      // Clean up API call tracking
-      BaseAgent.clearApiCalls(runId);
-      
-      return {
-        success: true,
-        manifest,
-        metrics: {
-          total_time_ms: totalTime,
-          agent_times: agentTimes,
-        },
-      };
-      
-      /*
-      // 7. TTS DIRECTOR (DISABLED)
-      Logger.info('Phase 7: TTS Planning');
-      progressTracker.addUpdate(runId, {
-        phase: 'TTS Planning',
-        status: 'running',
-        message: 'Planning voice synthesis for natural delivery',
-      });
-      const ttsDirectorStart = Date.now();
-      const ttsDirectorResult = await this.ttsDirectorAgent.execute(runId, {
-        script: safetyResult.output!.script,
-      });
-      agentTimes['tts_director'] = Date.now() - ttsDirectorStart;
-      
-      // 8. AUDIO ENGINEER (DISABLED)
-      Logger.info('Phase 8: Audio Synthesis');
-      progressTracker.addUpdate(runId, {
-        phase: 'Audio Generation',
-        status: 'running',
-        message: 'Generating audio with OpenAI TTS (this takes longest)',
-      });
-      const audioStart = Date.now();
-      const audioResult = await this.audioEngineerAgent.execute(runId, {
-        synthesis_plan: ttsDirectorResult.output!.synthesis_plan,
-      });
-      agentTimes['audio_engineer'] = Date.now() - audioStart;
-      */
-      
-      // OLD FULL PIPELINE CODE - ALL DISABLED
-      /*
-      // Create manifest
-      // Build pipeline report from all agent outputs
-      const ingestionReport = ingestionResult.output!.detailed_report || {
-        sources_scanned: [],
-        total_items_before_filter: 0,
-        filtered_out: [],
-        topics_breakdown: {},
-      };
-      
-      // Calculate stories_after_filtering from topics_breakdown
-      const storiesAfterFiltering = Object.values(ingestionReport.topics_breakdown).reduce((sum: number, count: number) => sum + count, 0);
-      
-      const pipeline_report_OLD = {
-        ingestion: {
-          sources_scanned: ingestionReport.sources_scanned,
-          total_stories_found: ingestionReport.total_items_before_filter,
-          stories_after_filtering: storiesAfterFiltering,
           filtered_out: ingestionReport.filtered_out,
           topics_breakdown: ingestionReport.topics_breakdown,
           google_news_domain_extraction: ingestionReport.google_news_domain_extraction,
@@ -650,29 +527,34 @@ export class Orchestrator {
       const manifest: EpisodeManifest = {
         date: runConfig.date,
         run_id: runId,
+        title: `Daily News Briefing - ${runConfig.date}`,
+        description: 'AI-generated podcast from news sources',
         picks: rankingResult.output.picks,
         outline_hash: Crypto.contentId(outlineResult.output!.outline),
         script_hash: Crypto.contentId(safetyResult.output!.script),
-        audio_hash: 'NO_AUDIO_GENERATED', // Audio generation disabled
-        mp3_url: '', // No audio file
-        duration_sec: 0, // No audio duration
+        audio_hash: Crypto.contentId(audioResult.output!.audio_buffer),
+        mp3_url: '', // Will be set by publisher
+        duration_sec: audioResult.output!.duration_sec,
         word_count: safetyResult.output!.script.word_count,
+        sections: safetyResult.output!.script.sections,
+        sources: rankingResult.output.picks.map(p => ({
+          title: p.story.title,
+          url: p.story.url,
+        })),
         created_at: new Date().toISOString(),
-        pipeline_report, // Add the compiled report
+        pipeline_report,
         metrics: {
           ingestion_time_ms: agentTimes['ingestion'],
           ranking_time_ms: agentTimes['ranking'],
           scripting_time_ms: agentTimes['scriptwriter'],
-          tts_time_ms: 0, // No TTS
+          tts_time_ms: agentTimes['audio_engineer'],
           total_time_ms: Date.now() - startTime,
-          openai_tokens: 0, // Would need to track from actual API calls
+          openai_tokens: 0,
         },
       };
-      */
       
-      /*
-      // 10. PUBLISHER (DISABLED - no audio to publish)
-      Logger.info('Phase 10: Publishing');
+      // 9. PUBLISHER
+      Logger.info('Phase 9: Publishing');
       progressTracker.addUpdate(runId, {
         phase: 'Publishing',
         status: 'running',
@@ -693,24 +575,13 @@ export class Orchestrator {
       // Update manifest with published episode URL
       manifest.mp3_url = publishResult.output!.episode_url;
       
-      // 11. MEMORY UPDATE (DISABLED)
-      Logger.info('Phase 11: Memory Update');
+      // 10. MEMORY UPDATE
+      Logger.info('Phase 10: Memory Update');
       const memoryStart = Date.now();
       await this.memoryAgent.execute(runId, {
         manifest,
       });
       agentTimes['memory'] = Date.now() - memoryStart;
-      */
-      
-      /*
-      // UNREACHABLE CODE - Already returned at line 537  
-      // Save manifest directly (since publisher is disabled)
-      Logger.info('Saving manifest without audio');
-      await this.storage.put(
-        `episodes/${runId}_manifest.json`,
-        JSON.stringify(manifest, null, 2),
-        'application/json'
-      );
       
       const totalTime = Date.now() - startTime;
       
@@ -727,29 +598,17 @@ export class Orchestrator {
       });
       
       // Add API calls to manifest metrics
-      if (!manifest.metrics) {
-        manifest.metrics = {
-          ingestion_time_ms: agentTimes['ingestion'] || 0,
-          ranking_time_ms: agentTimes['ranking'] || 0,
-          scripting_time_ms: agentTimes['scriptwriter'] || 0,
-          tts_time_ms: agentTimes['audio_engineer'] || 0,
-          total_time_ms: totalTime,
-          openai_tokens: 0,
-        };
-      }
       (manifest.metrics as any).openai_api_calls = totalApiCalls;
       (manifest.metrics as any).api_calls_by_agent = apiCalls;
       
       progressTracker.addUpdate(runId, {
         phase: 'Complete',
         status: 'completed',
-        message: manifest.mp3_url 
-          ? `Episode generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls)`
-          : `Script generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls) - Audio disabled`,
+        message: `Episode generated (${Math.floor(totalTime / 1000)}s, ${totalApiCalls} API calls)`,
         details: {
           duration_sec: manifest.duration_sec,
           word_count: manifest.word_count,
-          episode_url: manifest.mp3_url || 'No audio (disabled)',
+          episode_url: manifest.mp3_url,
           total_api_calls: totalApiCalls,
           api_calls_by_agent: apiCalls,
         },
@@ -779,7 +638,6 @@ export class Orchestrator {
           agent_times: agentTimes,
         },
       };
-      */
     } catch (error) {
       const totalTime = Date.now() - startTime;
       
