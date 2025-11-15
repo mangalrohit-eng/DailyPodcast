@@ -623,6 +623,13 @@ export class Orchestrator {
       const episodeTitle = this.generateEpisodeTitle(rankingResult.output.picks, runConfig.date);
       const episodeDescription = this.generateEpisodeDescription(rankingResult.output.picks, runConfig.date);
       
+      // Save script versions for comparison
+      const scriptVersions = {
+        original: JSON.parse(JSON.stringify(scriptResult.output!.script)), // Deep clone
+        after_factcheck: JSON.parse(JSON.stringify(factCheckResult.output!.script)),
+        final: safetyResult.output!.script,
+      };
+      
       const manifest: EpisodeManifest = {
         date: runConfig.date,
         run_id: runId,
@@ -631,6 +638,7 @@ export class Orchestrator {
         picks: rankingResult.output.picks,
         outline_hash: Crypto.contentId(outlineResult.output!.outline),
         script_hash: Crypto.contentId(safetyResult.output!.script),
+        script_versions: scriptVersions, // Include all versions
         audio_hash: Crypto.contentId(audioResult.output!.audio_buffer),
         mp3_url: '', // Will be set by publisher
         duration_sec: audioResult.output!.actual_duration_sec,
@@ -1317,8 +1325,13 @@ export class Orchestrator {
           }
           
           if (phrase) {
-            // Check if we already have this phrase
-            const existing = keyPhrases.find(p => p.phrase.toLowerCase() === phrase.toLowerCase());
+            // Normalize for better deduplication (handle singular/plural, etc.)
+            const normalizedPhrase = this.normalizePhrase(phrase);
+            
+            // Check if we already have this phrase (or a very similar one)
+            const existing = keyPhrases.find(p => 
+              this.normalizePhrase(p.phrase) === normalizedPhrase
+            );
             if (existing) {
               existing.score += 2; // Boost if mentioned multiple times
             } else {
@@ -1366,6 +1379,18 @@ export class Orchestrator {
    */
   private capitalizeWord(word: string): string {
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }
+  
+  /**
+   * Normalize phrase for better deduplication (singular/plural, case, etc.)
+   */
+  private normalizePhrase(phrase: string): string {
+    return phrase
+      .toLowerCase()
+      .replace(/s$/, '')         // Remove trailing 's' (plural)
+      .replace(/es$/, '')        // Remove trailing 'es' (plural)
+      .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
+      .trim();
   }
   
   /**

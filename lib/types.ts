@@ -89,6 +89,11 @@ export interface EpisodeManifest {
   sources?: Array<{ title: string; url: string }>;
   chapters?: Chapter[];
   created_at: string;
+  script_versions?: {
+    original: Script;
+    after_factcheck: Script;
+    final: Script;
+  };
   metrics?: {
     ingestion_time_ms: number;
     ranking_time_ms: number;
