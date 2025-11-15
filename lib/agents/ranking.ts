@@ -281,48 +281,93 @@ export class RankingAgent extends BaseAgent<RankingInput, RankingOutput> {
     
     // TIER 1: Highest Authority (1.0) - Major news organizations & wire services
     const tier1 = [
-      'reuters.com', 'bloomberg.com', 'wsj.com', 'nytimes.com', 'washingtonpost.com',
-      'ft.com', 'economist.com', 'bbc.com', 'theguardian.com', 'apnews.com',
+      // Wire services
+      'reuters.com', 'apnews.com', 'associated press',
+      // Major US newspapers
+      'wsj.com', 'wall street journal', 'nytimes.com', 'new york times', 
+      'washingtonpost.com', 'washington post', 'usatoday',
+      // Major international newspapers
+      'ft.com', 'financial times', 'economist.com', 'bbc.com', 'theguardian.com',
+      // Major US news networks
       'cnbc.com', 'cnn.com', 'abcnews.go.com', 'cbsnews.com', 'nbcnews.com',
-      'npr.org', 'pbs.org', 'usatoday', // usatoday is extracted without .com from titles
+      'foxnews.com', 'fox news', 'msnbc.com',
+      // Public broadcasting
+      'npr.org', 'pbs.org',
     ];
     
     if (tier1.some(auth => domainLower.includes(auth))) {
       return 1.0;
     }
     
-    // TIER 2: High Authority (0.85) - Tech publications & business news
+    // TIER 2: High Authority (0.85) - Business news, tech publications & major digital media
     const tier2 = [
+      // Business & finance news
+      'bloomberg.com', 'forbes.com', 'fortune.com', 'businessinsider.com', 
+      'marketwatch.com', 'barrons.com', 'investopedia.com', 'fool.com',
+      'seekingalpha.com', 'morningstar.com', 'benzinga.com',
+      'yahoo', 'msn', 'money.cnn', // Aggregators that credit sources
+      // Tech publications
       'techcrunch.com', 'theverge.com', 'wired.com', 'arstechnica.com',
       'venturebeat.com', 'zdnet.com', 'cnet.com', 'engadget.com',
-      'forbes.com', 'fortune.com', 'businessinsider.com', 'marketwatch.com',
-      'seekingalpha.com', 'barrons.com', 'yahoo', // yahoo finance extracted without .com
-      'cnbc', // Often appears as just 'cnbc' from title extraction
+      'theregister.com', 'computerworld.com', 'infoworld.com',
+      'technologyreview.com', 'mit technology review',
+      // Major magazines
+      'newsweek.com', 'time.com', 'theatlantic.com', 'newyorker.com',
+      'vanityfair.com', 'gq.com', 'vogue.com',
+      // Digital-first quality journalism
+      'vox.com', 'slate.com', 'salon.com', 'huffpost.com', 'buzzfeed news',
+      'propublica.org', 'theintercept.com',
     ];
     
     if (tier2.some(auth => domainLower.includes(auth))) {
       return 0.85;
     }
     
-    // TIER 3: Medium Authority (0.70) - Industry publications & regional news
+    // TIER 3: Medium Authority (0.70) - Regional news, industry publications & credible blogs
     const tier3 = [
-      'axios.com', 'politico.com', 'thehill.com', 'latimes.com', 'chicagotribune.com',
-      'sfgate.com', 'mercurynews.com', 'boston.com', 'philly.com',
+      // Political news
+      'axios.com', 'politico.com', 'thehill.com', 'rollcall.com', 'washingtonexaminer.com',
+      // Major regional newspapers
+      'latimes.com', 'chicagotribune.com', 'sfgate.com', 'mercurynews.com',
+      'boston.com', 'bostonglobe.com', 'philly.com', 'dallasnews.com',
+      'seattletimes.com', 'denverpost.com', 'star-telegram.com',
+      'ajc.com', 'cleveland.com', 'oregonlive.com',
+      // Industry trade publications
       'industryweek.com', 'manufacturing.net', 'sdxcentral.com',
-      'pymnts.com', 'americanbazaar', // These appear from title extraction
-      'pr newswire', 'business wire', 'globe newswire', // Press release services
+      'channele2e.com', 'crn.com', 'theregister.com',
+      'adweek.com', 'mediapost.com', 'digiday.com',
+      // Fintech & payments
+      'pymnts.com', 'finextra.com', 'fintechfutures.com',
+      // Press release aggregators (lower quality but credited)
+      'pr newswire', 'business wire', 'globe newswire', 'accesswire',
+      // International regional
+      'americanbazaar', 'scmp.com', 'japantimes', 'straitstimes',
     ];
     
     if (tier3.some(auth => domainLower.includes(auth))) {
       return 0.70;
     }
     
-    // TIER 4: Company/Corporate Sources (0.55) - Official company announcements
+    // TIER 4: Company/Corporate Sources (0.55) - Official company announcements & blogs
     const tier4 = [
+      // Tech giants
       'microsoft.com', 'google.com', 'meta.com', 'apple.com', 'amazon.com',
-      'openai.com', 'anthropic.com', 'nvidia.com', 'intel.com', 'amd.com',
-      'ibm.com', 'oracle.com', 'salesforce.com', 'sap.com',
-      'verizon.com', 'accenture.com', 't-mobile.com', 'att.com',
+      'openai.com', 'anthropic.com', 'deepmind.com',
+      // Hardware & semiconductors
+      'nvidia.com', 'intel.com', 'amd.com', 'arm.com', 'tsmc.com',
+      'qualcomm.com', 'broadcom.com',
+      // Enterprise software
+      'ibm.com', 'oracle.com', 'salesforce.com', 'sap.com', 'servicenow.com',
+      'workday.com', 'adobe.com', 'autodesk.com',
+      // Telecom
+      'verizon.com', 't-mobile.com', 'att.com', 'sprint.com', 'vodafone.com',
+      // Consulting & services
+      'accenture.com', 'deloitte.com', 'pwc.com', 'ey.com', 'kpmg.com',
+      'mckinsey.com', 'bcg.com', 'bain.com',
+      // Cloud providers
+      'aws.amazon.com', 'azure.microsoft.com', 'cloud.google.com',
+      // Social media companies
+      'twitter.com', 'linkedin.com', 'facebook.com', 'instagram.com',
     ];
     
     if (tier4.some(auth => domainLower.includes(auth))) {

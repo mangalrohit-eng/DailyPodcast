@@ -1084,7 +1084,16 @@ export class Orchestrator {
 
     // Add ranking data if available
     if (agentResults.ranking?.output?.detailed_report) {
-      partial.pipeline_report.ranking = agentResults.ranking.output.detailed_report;
+      partial.pipeline_report.ranking = {
+        ...agentResults.ranking.output.detailed_report,
+        // Add dynamic ranking stats
+        dynamic_selection: {
+          base_target: baseTargetCount,
+          historical_scraping_rate: historicalScrapeRate,
+          adjusted_target: adjustedTargetCount,
+          actually_selected: agentResults.ranking.output.picks.length,
+        },
+      };
       partial.picks = agentResults.ranking.output.picks || [];
     }
 

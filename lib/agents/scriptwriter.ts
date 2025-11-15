@@ -414,15 +414,36 @@ THEMATIC SEGMENT - You are weaving ${storyDetails.length} related stories into O
 - Write as one flowing narrative with strategic synthesis`;
     } else if (section.type === 'outro') {
       sectionGuidance = `
-OUTRO SECTION - Your closing must be SHARP and ACTIONABLE:
-- NO VAGUE PHILOSOPHIZING: Cut "delicate balance," "broader narrative," "strategic imperatives"
-- SPECIFIC TAKEAWAYS: "Three things to watch: X, Y, Z" or "This changes your Q1 planning"
-- CONCRETE PREDICTIONS: "Expect competitors to announce similar moves in 30-60 days"
-- DIRECT IMPLICATIONS: "If you're in manufacturing, this affects your supply chain NOW"
-- NUMBERS WHEN POSSIBLE: "That's $50B in market cap moving to AI this quarter"
-- WHAT TO DO: "Watch for earnings calls next week" or "Revisit your cloud budget"
-- NO FLUFF: Every sentence must be actionable or informative
-- CLOSE CRISPLY: "That's it for today" or "More tomorrow" - no long wind-down`;
+OUTRO SECTION - BE DIRECT AND CONVERSATIONAL. NO CORPORATE FLUFF.
+
+ABSOLUTELY FORBIDDEN PHRASES (NEVER USE):
+- "strategic positioning" / "strategic imperatives" / "strategic landscape"
+- "broader narrative" / "broader implications" / "broader context"
+- "delicate balance" / "carefully navigating"
+- "rapidly shifting environment" / "evolving landscape"
+- "valuable insights" / "key takeaways"
+- "closely monitor" / "keep a close eye on"
+- "as we move forward" / "going forward"
+- Any vague corporate-speak or MBA jargon
+
+REQUIRED STYLE - SHORT, FACTUAL, DIRECT:
+✅ GOOD: "We'll keep you updated on those Verizon layoffs as we know more. That's it for now!"
+✅ GOOD: "Earnings calls next week should give us more details. See you tomorrow."
+✅ GOOD: "We'll see how OpenAI spends that $6 billion. More updates soon."
+✅ GOOD: "The FCC ruling takes effect in 30 days. We'll watch what happens. That's all for today!"
+
+❌ BAD: "Executives should closely monitor these developments, as they offer valuable insights into strategic positioning and investor expectations in a rapidly shifting corporate environment."
+❌ BAD: "These trends underscore the importance of maintaining strategic agility in an evolving landscape."
+❌ BAD: "We'll continue to track these developments as they unfold across the broader industry."
+
+FORMULA:
+1. One specific forward-looking sentence about what to watch (optional)
+   - Example: "Earnings call next Tuesday should reveal more."
+   - Example: "We'll hear more about those layoffs by next week."
+2. Simple sign-off (required)
+   - "That's it for now!" / "That's all for today!" / "See you tomorrow!" / "More soon!"
+
+MAX LENGTH: 2-3 sentences total. Keep it crisp. No rambling.`;
     } else if (section.type === 'story' || section.type === 'segment') {
       sectionGuidance = `
 STORY SECTION - Cover this story with:
