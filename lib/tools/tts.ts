@@ -25,35 +25,60 @@ export class TtsTool {
   async synthesize(options: TtsOptions): Promise<Buffer> {
     const { voice, text, format = 'mp3', speed = 0.95 } = options; // Slightly slower for more natural conversational pace
     
-    Logger.debug('TTS synthesis', {
+    Logger.info('🔊 Starting TTS API call', {
       voice,
       textLength: text.length,
+      textPreview: text.substring(0, 100),
       format,
       speed,
     });
     
-    // Import retry helper with rate limiting support
-    const { createSpeech } = await import('../utils/openai-helper');
-    
-    const response = await createSpeech(
-      this.client,
-      {
-        model: 'tts-1-hd',
-        voice,
-        input: text,
-        response_format: format,
-        speed,
-      },
-      {
-        maxRetries: 3,
-        initialDelayMs: 2000,
-        maxDelayMs: 15000,
-        backoffMultiplier: 2,
+    try {
+      // Import retry helper with rate limiting support
+      const { createSpeech } = await import('../utils/openai-helper');
+      
+      Logger.info('📞 Calling OpenAI TTS API...');
+      const response = await createSpeech(
+        this.client,
+        {
+          model: 'tts-1-hd',
+          voice,
+          input: text,
+          response_format: format,
+          speed,
+        },
+        {
+          maxRetries: 3,
+          initialDelayMs: 2000,
+          maxDelayMs: 15000,
+          backoffMultiplier: 2,
+        }
+      );
+      
+      Logger.info('✅ OpenAI TTS API responded, converting to buffer...');
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      Logger.info('✅ TTS synthesis complete', {
+        bufferSize: buffer.length,
+        isBuffer: Buffer.isBuffer(buffer),
+      });
+      
+      if (buffer.length === 0) {
+        Logger.error('❌ OpenAI returned EMPTY buffer!');
+        throw new Error('OpenAI TTS returned empty audio buffer');
       }
-    );
-    
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+      
+      return buffer;
+    } catch (error: any) {
+      Logger.error('❌ TTS synthesis error', {
+        error: error.message,
+        stack: error.stack,
+        voice,
+        textLength: text.length,
+      });
+      throw error;
+    }
   }
   
   async synthesizeSegments(segments: TtsOptions[]): Promise<Buffer[]> {

@@ -49,14 +49,16 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
     for (let i = 0; i < synthesis_plan.length; i++) {
       const plan = synthesis_plan[i];
       
-      Logger.debug('Synthesizing segment', {
+      Logger.info(`🎤 Synthesizing segment ${i + 1}/${synthesis_plan.length}`, {
         segment_id: plan.segment_id,
         voice: plan.voice,
         text_length: plan.text_with_cues.length,
+        text_preview: plan.text_with_cues.substring(0, 100),
         speed: plan.speed || 0.95,
       });
       
       try {
+        const startTime = Date.now();
         const audio = await this.ttsTool.synthesize({
           voice: plan.voice,
           text: plan.text_with_cues,
@@ -64,11 +66,29 @@ export class AudioEngineerAgent extends BaseAgent<AudioEngineerInput, AudioEngin
           speed: plan.speed || 0.95, // Use dynamic speed from TTS Director
         });
         
+        const duration = Date.now() - startTime;
+        Logger.info(`✅ Segment ${i + 1} synthesized`, {
+          segment_id: plan.segment_id,
+          audio_size: audio.length,
+          duration_ms: duration,
+          audio_is_buffer: Buffer.isBuffer(audio),
+        });
+        
+        if (!audio || audio.length === 0) {
+          Logger.error(`❌ Segment ${i + 1} returned EMPTY audio!`, {
+            segment_id: plan.segment_id,
+            text: plan.text_with_cues,
+          });
+          throw new Error(`TTS returned empty audio for segment ${plan.segment_id}`);
+        }
+        
         audioSegments.push(audio);
       } catch (error) {
-        Logger.error('TTS synthesis failed', {
+        Logger.error(`❌ TTS synthesis failed for segment ${i + 1}`, {
           segment_id: plan.segment_id,
           error: (error as Error).message,
+          stack: (error as Error).stack,
+          text_preview: plan.text_with_cues.substring(0, 200),
         });
         throw error;
       }
