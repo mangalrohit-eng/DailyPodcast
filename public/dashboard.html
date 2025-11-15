@@ -2059,6 +2059,10 @@ Full data in console (F12).`;
                 if (report.scriptwriting) renderScriptTab(report.scriptwriting);
                 if (report.factcheck) renderFactCheckTab(report.factcheck);
                 if (report.safety) renderSafetyTab(report.safety);
+                if (report.tts) renderTtsTab(report.tts);
+                if (report.audio) renderAudioTab(report.audio);
+                if (report.publisher) renderPublisherTab(report.publisher);
+                if (report.memory) renderMemoryTab(report.memory);
                 
                 // Always update summary to show progress
                 renderSummaryTab(report);
@@ -2103,6 +2107,10 @@ Full data in console (F12).`;
                 renderScriptTab(report.scriptwriting);
                 renderFactCheckTab(report.factcheck);
                 renderSafetyTab(report.safety);
+                renderTtsTab(report.tts);
+                renderAudioTab(report.audio);
+                renderPublisherTab(report.publisher);
+                renderMemoryTab(report.memory);
             } else {
                 // No pipeline report available - show helpful message
                 console.warn('⚠️ No pipeline report found. This episode might be old or manifest is missing.');
@@ -2128,6 +2136,10 @@ Full data in console (F12).`;
                 document.getElementById('tab-script').innerHTML = '<div class="no-data">Generate a new episode to see script details</div>';
                 document.getElementById('tab-factcheck').innerHTML = '<div class="no-data">Generate a new episode to see fact-check details</div>';
                 document.getElementById('tab-safety').innerHTML = '<div class="no-data">Generate a new episode to see safety details</div>';
+                document.getElementById('tab-tts').innerHTML = '<div class="no-data">Generate a new episode to see TTS details</div>';
+                document.getElementById('tab-audio').innerHTML = '<div class="no-data">Generate a new episode to see audio details</div>';
+                document.getElementById('tab-publisher').innerHTML = '<div class="no-data">Generate a new episode to see publisher details</div>';
+                document.getElementById('tab-memory').innerHTML = '<div class="no-data">Generate a new episode to see memory details</div>';
             }
             
             // Reset to first tab
@@ -2850,6 +2862,186 @@ Full data in console (F12).`;
             document.getElementById('tab-safety').innerHTML = html;
         }
 
+        function renderTtsTab(tts) {
+            if (!tts) {
+                document.getElementById('tab-tts').innerHTML = '<div class="no-data">No TTS Director data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3><i class="fas fa-microphone"></i> TTS Planning Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="metric-box">
+                            <div class="metric-value">${tts.total_segments || 0}</div>
+                            <div class="metric-label">Total Segments</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${tts.estimated_duration_sec || 0}s</div>
+                            <div class="metric-label">Estimated Duration</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${tts.total_characters || 0}</div>
+                            <div class="metric-label">Total Characters</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${tts.synthesis_plan && tts.synthesis_plan.length > 0 ? `
+                <div class="report-section">
+                    <h3><i class="fas fa-list"></i> Synthesis Plan</h3>
+                    ${tts.synthesis_plan.slice(0, 10).map((seg, idx) => `
+                        <div class="change-item">
+                            <strong>Segment ${idx + 1}:</strong> ${seg.role || 'host'} - ${seg.voice || 'alloy'}<br>
+                            <small style="color: #666;">Speed: ${seg.speed || 1.0}x | Duration: ${seg.expected_sec || 0}s</small><br>
+                            <small style="color: #999;">${(seg.text_with_cues || '').substring(0, 100)}...</small>
+                        </div>
+                    `).join('')}
+                    ${tts.synthesis_plan.length > 10 ? `<div style="color: #666; text-align: center; margin-top: 10px;">...and ${tts.synthesis_plan.length - 10} more segments</div>` : ''}
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('tab-tts').innerHTML = html;
+        }
+
+        function renderAudioTab(audio) {
+            if (!audio) {
+                document.getElementById('tab-audio').innerHTML = '<div class="no-data">No Audio Engineer data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3><i class="fas fa-music"></i> Audio Engineering Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="metric-box">
+                            <div class="metric-value">${audio.actual_duration_sec || 0}s</div>
+                            <div class="metric-label">Actual Duration</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${((audio.file_size_bytes || 0) / 1024 / 1024).toFixed(2)} MB</div>
+                            <div class="metric-label">File Size</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${audio.sample_rate || 'N/A'}</div>
+                            <div class="metric-label">Sample Rate</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${audio.intro_music ? 'Yes' : 'No'}</div>
+                            <div class="metric-label">Intro Music</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${audio.outro_music ? 'Yes' : 'No'}</div>
+                            <div class="metric-label">Outro Music</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${audio.processing_steps && audio.processing_steps.length > 0 ? `
+                <div class="report-section">
+                    <h3><i class="fas fa-cogs"></i> Processing Steps</h3>
+                    ${audio.processing_steps.map((step, idx) => `
+                        <div class="change-item">
+                            <strong>Step ${idx + 1}:</strong> ${step}
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('tab-audio').innerHTML = html;
+        }
+
+        function renderPublisherTab(publisher) {
+            if (!publisher) {
+                document.getElementById('tab-publisher').innerHTML = '<div class="no-data">No Publisher data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> Publishing Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="metric-box">
+                            <div class="metric-value">${publisher.status || 'unknown'}</div>
+                            <div class="metric-label">Status</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${publisher.storage_path ? 'Yes' : 'No'}</div>
+                            <div class="metric-label">Uploaded to S3</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${publisher.public_url ? 'Yes' : 'No'}</div>
+                            <div class="metric-label">Public URL Generated</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${publisher.public_url ? `
+                <div class="report-section">
+                    <h3><i class="fas fa-link"></i> Episode URL</h3>
+                    <div class="change-item">
+                        <a href="${publisher.public_url}" target="_blank" style="color: #1DB954; word-break: break-all;">
+                            ${publisher.public_url}
+                        </a>
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${publisher.storage_path ? `
+                <div class="report-section">
+                    <h3><i class="fas fa-folder"></i> Storage Path</h3>
+                    <div class="change-item">
+                        <code style="color: #666;">${publisher.storage_path}</code>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('tab-publisher').innerHTML = html;
+        }
+
+        function renderMemoryTab(memory) {
+            if (!memory) {
+                document.getElementById('tab-memory').innerHTML = '<div class="no-data">No Memory data available</div>';
+                return;
+            }
+            
+            const html = `
+                <div class="report-section">
+                    <h3><i class="fas fa-database"></i> Memory System Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div class="metric-box">
+                            <div class="metric-value">${memory.patterns_learned || 0}</div>
+                            <div class="metric-label">Patterns Learned</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${memory.insights_stored || 0}</div>
+                            <div class="metric-label">Insights Stored</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value">${memory.successful_techniques || 0}</div>
+                            <div class="metric-label">Successful Techniques</div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${memory.learnings && memory.learnings.length > 0 ? `
+                <div class="report-section">
+                    <h3><i class="fas fa-brain"></i> Key Learnings</h3>
+                    ${memory.learnings.map((learning, idx) => `
+                        <div class="change-item">
+                            <strong>Learning ${idx + 1}:</strong> ${learning}
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('tab-memory').innerHTML = html;
+        }
+
         // URLs
         function updateHeaderLinks() {
             const feedUrl = `${API_BASE}/podcast/feed.xml`;
@@ -3247,14 +3439,18 @@ Full data in console (F12).`;
             </div>
             
             <div class="report-tabs">
-                <button class="report-tab active" onclick="switchReportTab('summary')">📊 Summary</button>
-                <button class="report-tab" onclick="switchReportTab('ingestion')">📥 Ingestion</button>
-                <button class="report-tab" onclick="switchReportTab('ranking')">🎯 Ranking</button>
-                <button class="report-tab" onclick="switchReportTab('scraper')">🕷️ Scraper</button>
-                <button class="report-tab" onclick="switchReportTab('outline')">📋 Outline</button>
-                <button class="report-tab" onclick="switchReportTab('script')">📝 Script</button>
-                <button class="report-tab" onclick="switchReportTab('factcheck')">✅ Fact Check</button>
-                <button class="report-tab" onclick="switchReportTab('safety')">🛡️ Safety</button>
+                <button class="report-tab active" onclick="switchReportTab('summary')"><i class="fas fa-chart-bar"></i> Summary</button>
+                <button class="report-tab" onclick="switchReportTab('ingestion')"><i class="fas fa-download"></i> Ingestion</button>
+                <button class="report-tab" onclick="switchReportTab('ranking')"><i class="fas fa-sort-amount-down"></i> Ranking</button>
+                <button class="report-tab" onclick="switchReportTab('scraper')"><i class="fas fa-spider"></i> Scraper</button>
+                <button class="report-tab" onclick="switchReportTab('outline')"><i class="fas fa-list-ol"></i> Outline</button>
+                <button class="report-tab" onclick="switchReportTab('script')"><i class="fas fa-file-alt"></i> Script</button>
+                <button class="report-tab" onclick="switchReportTab('factcheck')"><i class="fas fa-check-circle"></i> Fact Check</button>
+                <button class="report-tab" onclick="switchReportTab('safety')"><i class="fas fa-shield-alt"></i> Safety</button>
+                <button class="report-tab" onclick="switchReportTab('tts')"><i class="fas fa-microphone"></i> TTS Director</button>
+                <button class="report-tab" onclick="switchReportTab('audio')"><i class="fas fa-music"></i> Audio Engineer</button>
+                <button class="report-tab" onclick="switchReportTab('publisher')"><i class="fas fa-cloud-upload-alt"></i> Publisher</button>
+                <button class="report-tab" onclick="switchReportTab('memory')"><i class="fas fa-database"></i> Memory</button>
             </div>
             
             <div class="report-body">
@@ -3266,6 +3462,10 @@ Full data in console (F12).`;
                 <div id="tab-script" class="report-tab-content"></div>
                 <div id="tab-factcheck" class="report-tab-content"></div>
                 <div id="tab-safety" class="report-tab-content"></div>
+                <div id="tab-tts" class="report-tab-content"></div>
+                <div id="tab-audio" class="report-tab-content"></div>
+                <div id="tab-publisher" class="report-tab-content"></div>
+                <div id="tab-memory" class="report-tab-content"></div>
             </div>
         </div>
     </div>
