@@ -1383,6 +1383,60 @@
 
         <!-- Podcast Settings Tab -->
         <div id="podcast-settings" class="tab-content">
+            <!-- Preset Configurations -->
+            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                <h2 style="color: white; margin-bottom: 10px;"><i class="fas fa-magic"></i> Quick Presets</h2>
+                <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">Choose a preset configuration to instantly set up your podcast schedule and duration.</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <button class="preset-btn" onclick="applyPreset('morning_brief')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">☕</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Morning Brief</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Daily • 5 minutes • 24h window</div>
+                    </button>
+                    
+                    <button class="preset-btn" onclick="applyPreset('daily_digest')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📰</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Daily Digest</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Daily • 15 minutes • 24h window</div>
+                    </button>
+                    
+                    <button class="preset-btn" onclick="applyPreset('weekly_roundup')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📅</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Roundup</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 10 minutes • 7 day window</div>
+                    </button>
+                    
+                    <button class="preset-btn" onclick="applyPreset('weekly_deep_dive')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Deep Dive</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 20 minutes • 7 day window</div>
+                    </button>
+                    
+                    <button class="preset-btn" onclick="applyPreset('weekly_analysis')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Analysis</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 30 minutes • 7 day window</div>
+                    </button>
+                    
+                    <button class="preset-btn" onclick="applyPreset('monthly_review')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="font-size: 24px; margin-bottom: 8px;">🗓️</div>
+                        <div style="font-size: 16px; margin-bottom: 4px;">Monthly Review</div>
+                        <div style="font-size: 12px; color: #666; font-weight: normal;">Monthly • 30 minutes • 30 day window</div>
+                    </button>
+                </div>
+                
+                <style>
+                    .preset-btn:hover {
+                        transform: translateY(-4px);
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
+                    }
+                    .preset-btn:active {
+                        transform: translateY(-2px);
+                    }
+                </style>
+            </div>
+
             <div class="card">
                 <h2>Topics & Weights</h2>
                 <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
@@ -1395,12 +1449,72 @@
             <div class="card">
                 <h2>Schedule & Duration</h2>
                 <div class="form-group">
+                    <label>Frequency</label>
+                    <select id="frequency" onchange="updateFrequencyFields()">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="weeklyDayGroup" style="display: none;">
+                    <label>Day of Week</label>
+                    <select id="weeklyDay">
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="0">Sunday</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="monthlyDayGroup" style="display: none;">
+                    <label>Day of Month</label>
+                    <select id="monthlyDay">
+                        <option value="1">1st</option>
+                        <option value="2">2nd</option>
+                        <option value="3">3rd</option>
+                        <option value="4">4th</option>
+                        <option value="5">5th</option>
+                        <option value="6">6th</option>
+                        <option value="7">7th</option>
+                        <option value="8">8th</option>
+                        <option value="9">9th</option>
+                        <option value="10">10th</option>
+                        <option value="11">11th</option>
+                        <option value="12">12th</option>
+                        <option value="13">13th</option>
+                        <option value="14">14th</option>
+                        <option value="15">15th</option>
+                        <option value="16">16th</option>
+                        <option value="17">17th</option>
+                        <option value="18">18th</option>
+                        <option value="19">19th</option>
+                        <option value="20">20th</option>
+                        <option value="21">21st</option>
+                        <option value="22">22nd</option>
+                        <option value="23">23rd</option>
+                        <option value="24">24th</option>
+                        <option value="25">25th</option>
+                        <option value="26">26th</option>
+                        <option value="27">27th</option>
+                        <option value="28">28th</option>
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Days 29-31 will run on the last day of months with fewer days.
+                    </small>
+                </div>
+                
+                <div class="form-group">
                     <label>Target Episode Duration (minutes)</label>
                     <input type="number" id="targetDuration" min="5" max="60" value="15" step="1">
                     <small style="color: #666; display: block; margin-top: 5px;">
-                        Recommended: 10-20 minutes. Actual duration may vary based on content.
+                        Recommended: 5-30 minutes. Actual duration may vary based on content.
                     </small>
                 </div>
+                
                 <div class="form-group">
                     <label>Timezone</label>
                     <select id="timezone">
@@ -1411,9 +1525,13 @@
                         <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
                     <label>Cron Schedule (Read-only)</label>
                     <input type="text" id="cronSchedule" readonly value="0 12 * * * (Daily at 12:00 UTC)">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        Automatically generated based on your frequency and timezone settings.
+                    </small>
                 </div>
             </div>
 
@@ -1987,6 +2105,107 @@ Full data in console (F12).`;
         }
 
         // Settings
+        // Preset Configurations
+        function applyPreset(presetName) {
+            const presets = {
+                morning_brief: {
+                    name: 'Morning Brief',
+                    frequency: 'daily',
+                    duration: 5,
+                    windowHours: 24,
+                    numStoriesMin: 3,
+                    numStoriesMax: 5,
+                },
+                daily_digest: {
+                    name: 'Daily Digest',
+                    frequency: 'daily',
+                    duration: 15,
+                    windowHours: 24,
+                    numStoriesMin: 5,
+                    numStoriesMax: 8,
+                },
+                weekly_roundup: {
+                    name: 'Weekly Roundup',
+                    frequency: 'weekly',
+                    duration: 10,
+                    windowHours: 168, // 7 days
+                    numStoriesMin: 8,
+                    numStoriesMax: 12,
+                    weeklyDay: 1, // Monday
+                },
+                weekly_deep_dive: {
+                    name: 'Weekly Deep Dive',
+                    frequency: 'weekly',
+                    duration: 20,
+                    windowHours: 168,
+                    numStoriesMin: 10,
+                    numStoriesMax: 15,
+                    weeklyDay: 1,
+                },
+                weekly_analysis: {
+                    name: 'Weekly Analysis',
+                    frequency: 'weekly',
+                    duration: 30,
+                    windowHours: 168,
+                    numStoriesMin: 12,
+                    numStoriesMax: 20,
+                    weeklyDay: 1,
+                },
+                monthly_review: {
+                    name: 'Monthly Review',
+                    frequency: 'monthly',
+                    duration: 30,
+                    windowHours: 720, // 30 days
+                    numStoriesMin: 15,
+                    numStoriesMax: 25,
+                    monthlyDay: 1,
+                },
+            };
+            
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            // Apply preset values
+            document.getElementById('frequency').value = preset.frequency;
+            document.getElementById('targetDuration').value = preset.duration;
+            document.getElementById('windowHours').value = preset.windowHours;
+            document.getElementById('numStoriesMin').value = preset.numStoriesMin;
+            document.getElementById('numStoriesMax').value = preset.numStoriesMax;
+            
+            if (preset.weeklyDay) {
+                document.getElementById('weeklyDay').value = preset.weeklyDay;
+            }
+            if (preset.monthlyDay) {
+                document.getElementById('monthlyDay').value = preset.monthlyDay;
+            }
+            
+            // Update frequency fields visibility
+            updateFrequencyFields();
+            
+            // Scroll to Schedule & Duration section
+            document.querySelector('.card h2:contains("Schedule & Duration")');
+            
+            showToast(`Applied "${preset.name}" preset! Review settings below and click "Save All Settings".`, 'success');
+        }
+        
+        // Update frequency-specific fields
+        function updateFrequencyFields() {
+            const frequency = document.getElementById('frequency').value;
+            const weeklyGroup = document.getElementById('weeklyDayGroup');
+            const monthlyGroup = document.getElementById('monthlyDayGroup');
+            
+            // Hide all first
+            weeklyGroup.style.display = 'none';
+            monthlyGroup.style.display = 'none';
+            
+            // Show relevant fields
+            if (frequency === 'weekly') {
+                weeklyGroup.style.display = 'block';
+            } else if (frequency === 'monthly') {
+                monthlyGroup.style.display = 'block';
+            }
+        }
+
         async function loadConfig() {
             try {
                 const response = await fetch(`${API_BASE}/api/config`, {
@@ -2009,6 +2228,12 @@ Full data in console (F12).`;
             document.getElementById('targetDuration').value = durationMinutes;
             document.getElementById('timezone').value = config.timezone || 'America/New_York';
             document.getElementById('cronSchedule').value = config.cron_schedule || '0 12 * * *';
+            
+            // Frequency settings
+            document.getElementById('frequency').value = config.frequency || 'daily';
+            document.getElementById('weeklyDay').value = config.weekly_day || '1';
+            document.getElementById('monthlyDay').value = config.monthly_day || '1';
+            updateFrequencyFields(); // Show/hide appropriate fields
 
             // Filters
             document.getElementById('rumorFilter').checked = config.rumor_filter !== false;
@@ -2145,6 +2370,9 @@ Full data in console (F12).`;
                 topics: currentConfig.topics,
                 target_duration_sec: targetDurationSec,
                 timezone: document.getElementById('timezone').value,
+                frequency: document.getElementById('frequency').value,
+                weekly_day: parseInt(document.getElementById('weeklyDay').value),
+                monthly_day: parseInt(document.getElementById('monthlyDay').value),
                 rumor_filter: document.getElementById('rumorFilter').checked,
                 banned_domains: document.getElementById('bannedDomains').value
                     .split('\n')
