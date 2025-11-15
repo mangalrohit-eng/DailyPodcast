@@ -159,6 +159,23 @@ export class RunsStorage {
   }
   
   /**
+   * Delete a run from the index
+   */
+  async deleteRun(runId: string): Promise<void> {
+    const index = await this.loadIndex();
+    
+    const existingIndex = index.runs.findIndex(r => r.run_id === runId);
+    
+    if (existingIndex >= 0) {
+      index.runs.splice(existingIndex, 1);
+      await this.saveIndex(index);
+      Logger.info('Run removed from index', { runId });
+    } else {
+      Logger.warn('Run not found in index', { runId });
+    }
+  }
+  
+  /**
    * Load runs index
    */
   private async loadIndex(): Promise<RunsIndex> {

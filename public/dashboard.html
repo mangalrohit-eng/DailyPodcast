@@ -1786,10 +1786,34 @@ Full data in console (F12).`;
                         <td>
                             ${run.episode_url ? `<a href="${run.episode_url}" target="_blank" class="btn btn-secondary" style="font-size: 12px;">▶️ Play</a>` : ''}
                             <button class="btn btn-secondary" style="font-size: 12px;" onclick="viewRunDetails('${run.run_id}')">Details</button>
+                            <button class="btn btn-danger" style="font-size: 12px; margin-left: 5px;" onclick="deleteRun('${run.run_id}')" title="Delete this episode">🗑️</button>
                         </td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        async function deleteRun(runId) {
+            if (!confirm(`Are you sure you want to delete episode ${runId}?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/runs/${runId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast('✅ Episode deleted successfully', 'success');
+                    loadRuns(); // Refresh the list
+                } else {
+                    const error = await response.text();
+                    showToast(`❌ Failed to delete episode: ${error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting episode:', error);
+                showToast('❌ Error deleting episode', 'error');
+            }
         }
 
         function showActiveRun(runId) {
