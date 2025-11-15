@@ -18,9 +18,12 @@ export interface TtsDirectorOutput {
 export class TtsDirectorAgent extends BaseAgent<TtsDirectorInput, TtsDirectorOutput> {
   // OpenAI TTS voices - optimized for most natural sound
   private readonly voices = {
-    host: 'shimmer' as const,   // Most natural-sounding female (warmer, less robotic than nova)
-    analyst: 'echo' as const,   // Calmer, more natural male (smoother than onyx)
-    stinger: 'fable' as const,  // Expressive and engaging for intro/outro
+    host: 'shimmer' as const,       // Warm, natural female - main host
+    analyst: 'echo' as const,       // Calm male - analysis, thoughtful content
+    urgent: 'onyx' as const,        // Deep, authoritative male - breaking news
+    tech: 'nova' as const,          // Young, energetic female - tech/innovation
+    expressive: 'fable' as const,   // Expressive - dramatic stories
+    neutral: 'alloy' as const,      // Neutral - general narration
   };
   
   constructor() {
@@ -100,10 +103,12 @@ You must respond with valid JSON only.`,
       return [];
     }
     
-    // Determine voice and emotion based on section type and content
-    const role = this.getRoleForSection(section.type);
+    // Intelligent voice selection based on content AND section type
+    const voice = this.selectVoiceForContent(section.text, section.type);
+    const role = this.getRole(voice);
+    
+    // Enhanced emotional cues with dynamic pacing
     const { text: emotionalText, speed } = this.addEmotionalCues(section.text, section.type);
-    const voice = this.voices[role];
     
     // Extra safety check on emotionalText
     if (!emotionalText || typeof emotionalText !== 'string') {
@@ -177,6 +182,54 @@ You must respond with valid JSON only.`,
     return segments;
   }
   
+  /**
+   * Intelligently select voice based on content analysis
+   */
+  private selectVoiceForContent(text: string, sectionType: string): string {
+    // Opening/Closing = warm host voice
+    if (sectionType === 'cold-open' || sectionType === 'sign-off') {
+      return this.voices.host; // Warm, welcoming
+    }
+    
+    // Breaking/urgent news = authoritative
+    if (/\b(breaking|alert|urgent|warning|crisis|emergency)\b/i.test(text)) {
+      Logger.debug('Using URGENT voice (onyx) - detected breaking/urgent content');
+      return this.voices.urgent;
+    }
+    
+    // Tech/innovation = energetic
+    if (/\b(AI|artificial intelligence|tech|technology|innovation|startup|breakthrough|digital|software|platform|app|algorithm)\b/i.test(text)) {
+      Logger.debug('Using TECH voice (nova) - detected tech/innovation content');
+      return this.voices.tech;
+    }
+    
+    // Business analysis/financials = professional, analytical
+    if (/\b(strategy|analysis|financial|earnings|revenue|profit|quarterly|investment|market|valuation|CEO|executive)\b/i.test(text)) {
+      Logger.debug('Using ANALYST voice (echo) - detected business/financial content');
+      return this.voices.analyst;
+    }
+    
+    // Surprising/dramatic news = expressive
+    if (/\b(surprise|shock|dramatic|remarkable|unprecedented|stunning|extraordinary|massive|historic)\b/i.test(text)) {
+      Logger.debug('Using EXPRESSIVE voice (fable) - detected dramatic content');
+      return this.voices.expressive;
+    }
+    
+    // Default to host voice for general content
+    Logger.debug('Using HOST voice (shimmer) - general content');
+    return this.voices.host;
+  }
+  
+  /**
+   * Get role name from voice for logging
+   */
+  private getRole(voice: string): string {
+    for (const [role, voiceName] of Object.entries(this.voices)) {
+      if (voiceName === voice) return role;
+    }
+    return 'host';
+  }
+  
   private getRoleForSection(sectionType: string): 'host' | 'analyst' | 'stinger' {
     switch (sectionType) {
       case 'intro':
@@ -197,7 +250,7 @@ You must respond with valid JSON only.`,
   }
   
   /**
-   * Add emotional cues to make TTS more engaging
+   * Add emotional cues to make TTS more engaging with enhanced dynamic pacing
    */
   private addEmotionalCues(text: string, sectionType: string): { text: string; speed: number } {
     // Safety check
@@ -208,31 +261,56 @@ You must respond with valid JSON only.`,
     let emotionalText = text;
     let speed = 0.95; // Default speed
     
-    // Detect exciting content (growth, innovation, breakthrough, launch)
-    const excitingKeywords = /\b(growth|innovation|breakthrough|launch|record|milestone|revolutionary|transform|disrupt)/gi;
-    if (excitingKeywords.test(text)) {
-      speed = 1.0; // Slightly faster for exciting news
-      // Add emphasis punctuation
-      emotionalText = emotionalText.replace(/(!|\?)/g, '$1!');
+    // URGENT/BREAKING NEWS: Faster, energetic (highest priority)
+    if (/\b(breaking|alert|just announced|just in|urgent|happening now)\b/i.test(text)) {
+      speed = 1.08;
+      Logger.debug('Applied URGENT pacing (1.08x) - breaking news detected');
     }
     
-    // Detect serious/concerning content (decline, warning, concern, risk)
-    const seriousKeywords = /\b(decline|warning|concern|risk|threat|challenge|crisis|fail)/gi;
-    if (seriousKeywords.test(text)) {
-      speed = 0.90; // Slower for serious topics
-      // Add pauses after concerning statements
-      emotionalText = emotionalText.replace(/\./g, '...');
+    // EXCITING/POSITIVE: Slightly faster for enthusiasm
+    else if (/\b(growth|innovation|breakthrough|launch|record|milestone|revolutionary|transform|success|win|soar|surge)\b/gi.test(text)) {
+      speed = 1.02;
+      emotionalText = emotionalText.replace(/(!)/g, '!!'); // Add emphasis
+      Logger.debug('Applied EXCITING pacing (1.02x) - positive news detected');
     }
     
-    // Intro/outro should be warm and welcoming
-    if (sectionType === 'intro') {
-      speed = 0.95;
-      emotionalText = emotionalText.replace(/\./g, '. '); // Add space for natural pauses
+    // SERIOUS/CONCERNING: Slower, deliberate
+    else if (/\b(decline|warning|concern|risk|threat|challenge|crisis|fail|collapse|plunge|loss)\b/gi.test(text)) {
+      speed = 0.88;
+      // Add strategic pauses after key points
+      emotionalText = emotionalText.replace(/\. /g, '... ');
+      Logger.debug('Applied SERIOUS pacing (0.88x) - concerning content detected');
     }
     
-    if (sectionType === 'outro') {
-      speed = 0.93; // Slightly slower, more reflective
+    // FINANCIAL DATA: Measured, clear
+    else if (/\b(revenue|earnings|profit|quarterly|billion|million|\$\d+|percent|%|stock|shares)\b/i.test(text)) {
+      speed = 0.92;
+      Logger.debug('Applied FINANCIAL pacing (0.92x) - financial data detected');
     }
+    
+    // ANALYSIS/EXPLANATION: Thoughtful pace
+    else if (/\b(because|therefore|however|analysis|strategy|impact|means|indicates|suggests)\b/i.test(text)) {
+      speed = 0.90;
+      Logger.debug('Applied ANALYTICAL pacing (0.90x) - analysis detected');
+    }
+    
+    // INTRO: Welcoming, natural
+    else if (sectionType === 'cold-open') {
+      speed = 0.96;
+      Logger.debug('Applied INTRO pacing (0.96x) - welcoming tone');
+    }
+    
+    // OUTRO: Confident, wrapping up
+    else if (sectionType === 'sign-off') {
+      speed = 0.98;
+      Logger.debug('Applied OUTRO pacing (0.98x) - confident closure');
+    }
+    
+    Logger.info('🎭 Voice & pacing applied', { 
+      speed, 
+      text_preview: text.substring(0, 80),
+      section_type: sectionType 
+    });
     
     return { text: emotionalText, speed };
   }
