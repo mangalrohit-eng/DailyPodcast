@@ -109,6 +109,7 @@ You must respond with valid JSON only.`,
     }>;
   }> {
     const sectionsText = sections
+      .filter(section => section && section.text) // Filter out sections without text
       .map((section, idx) => {
         // Skip intro/outro sections
         if (section.type === 'cold-open' || section.type === 'sign-off') {

@@ -115,9 +115,11 @@ You must respond with valid JSON only.`,
     });
     
     // Build full script text with section labels
-    const fullScriptText = sections.map((section, idx) => {
-      return `[SECTION ${idx + 1}: ${section.type.toUpperCase()}]\n${section.text}\n`;
-    }).join('\n');
+    const fullScriptText = sections
+      .filter(section => section && section.text) // Filter out invalid sections
+      .map((section, idx) => {
+        return `[SECTION ${idx + 1}: ${section.type.toUpperCase()}]\n${section.text}\n`;
+      }).join('\n');
     
     Logger.info('Script complete', {
       word_count: wordCount,

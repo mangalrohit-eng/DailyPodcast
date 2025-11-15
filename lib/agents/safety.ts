@@ -111,6 +111,7 @@ You must respond with valid JSON only.`,
     }>;
   }> {
     const sectionsText = sections
+      .filter(section => section && section.text) // Filter out sections without text
       .map((section, idx) => `SECTION ${idx + 1} (${section.type}):\n${section.text}`)
       .join('\n\n---\n\n');
 
