@@ -479,6 +479,8 @@ export class Orchestrator {
         script: safetyResult.output!.script,
       });
       agentTimes['tts_director'] = Date.now() - ttsDirectorStart;
+      agentResults.tts_director = ttsDirectorResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       // 8. AUDIO ENGINEER
       Logger.info('Phase 8: Audio Synthesis');
@@ -492,6 +494,8 @@ export class Orchestrator {
         synthesis_plan: ttsDirectorResult.output!.synthesis_plan,
       });
       agentTimes['audio_engineer'] = Date.now() - audioStart;
+      agentResults.audio_engineer = audioResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       // Build pipeline report from all agent outputs
       const ingestionReport = ingestionResult.output!.detailed_report || {
@@ -598,6 +602,8 @@ export class Orchestrator {
         podcast_config: Config.getPodcastConfig(),
       });
       agentTimes['publisher'] = Date.now() - publishStart;
+      agentResults.publisher = publishResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       Logger.info('Publishing complete', {
         episode_url: publishResult.output!.episode_url,
@@ -609,10 +615,12 @@ export class Orchestrator {
       // 10. MEMORY UPDATE
       Logger.info('Phase 10: Memory Update');
       const memoryStart = Date.now();
-      await this.memoryAgent.execute(runId, {
+      const memoryResult = await this.memoryAgent.execute(runId, {
         manifest,
       });
       agentTimes['memory'] = Date.now() - memoryStart;
+      agentResults.memory = memoryResult; // Save for partial manifest
+      await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       const totalTime = Date.now() - startTime;
       
@@ -1002,6 +1010,40 @@ export class Orchestrator {
     // Add safety data if available
     if (agentResults.safety?.output?.report) {
       partial.pipeline_report.safety = agentResults.safety.output.report;
+    }
+
+    // Add TTS Director data if available
+    if (agentResults.tts_director?.output) {
+      partial.pipeline_report.tts_director = {
+        segments_planned: agentResults.tts_director.output.synthesis_plan?.length || 0,
+        estimated_duration_sec: agentResults.tts_director.output.estimated_duration_sec || 0,
+        synthesis_plan: agentResults.tts_director.output.synthesis_plan || [],
+      };
+    }
+
+    // Add Audio Engineer data if available
+    if (agentResults.audio_engineer?.output) {
+      partial.pipeline_report.audio_engineer = {
+        actual_duration_sec: agentResults.audio_engineer.output.actual_duration_sec || 0,
+        audio_size_bytes: agentResults.audio_engineer.output.audio_buffer?.length || 0,
+      };
+    }
+
+    // Add Publisher data if available
+    if (agentResults.publisher?.output) {
+      partial.pipeline_report.publisher = {
+        episode_url: agentResults.publisher.output.episode_url || '',
+        file_size: agentResults.publisher.output.file_size || 0,
+        published_at: agentResults.publisher.output.published_at || new Date().toISOString(),
+      };
+    }
+
+    // Add Memory data if available
+    if (agentResults.memory?.output) {
+      partial.pipeline_report.memory = {
+        insights_learned: agentResults.memory.output.insights_learned || 0,
+        trends_identified: agentResults.memory.output.trends_identified || 0,
+      };
     }
 
     return partial;
