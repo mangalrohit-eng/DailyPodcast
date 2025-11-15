@@ -10,8 +10,8 @@
 import { BaseAgent } from './base';
 import { Story, Pick } from '../types';
 import { Logger } from '../utils';
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 // Node 18+ has fetch built-in globally (no import needed)
 
@@ -47,30 +47,21 @@ export class ScraperAgent extends BaseAgent<ScraperInput, ScraperOutput> {
       systemPrompt: `You are a web scraping agent that enriches stories with full article content.`,
       retries: 1, // Don't retry too much - some sites will always block
     });
-    
-    // Add stealth plugin to avoid detection
-    puppeteer.use(StealthPlugin());
   }
   
   /**
    * Launch Puppeteer browser instance (reused across all scrapes)
+   * Uses serverless-compatible Chrome binary for Vercel
    */
   private async launchBrowser(): Promise<any> {
     if (!this.browser) {
-      Logger.info('Launching Puppeteer browser with stealth mode for URL resolution');
+      Logger.info('Launching Puppeteer browser (serverless Chrome) for URL resolution');
       
       this.browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-blink-features=AutomationControlled',
-          '--disable-dev-shm-usage', // Overcome limited resource problems
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-        ],
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
       });
     }
     return this.browser;
