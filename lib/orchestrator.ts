@@ -246,20 +246,6 @@ export class Orchestrator {
         },
       });
       
-      // ===================================================================
-      // 🛑 ALL DOWNSTREAM AGENTS DISABLED TO FOCUS ON INGESTION TESTING
-      // Only ingestion runs, then we save the manifest with the report
-      // To re-enable: uncomment phases 2-6 below
-      // ===================================================================
-      
-      Logger.info('⏸️  DOWNSTREAM AGENTS DISABLED - Stopping at ingestion to test URL extraction');
-      
-      progressTracker.addUpdate(runId, {
-        phase: 'Ingestion Complete',
-        status: 'completed',
-        message: '✅ Ingestion complete! Check the details tab for Google News extraction results.',
-      });
-      
       // 2. RANKING
       checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 2: Ranking');
