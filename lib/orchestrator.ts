@@ -402,15 +402,19 @@ export class Orchestrator {
       });
       const outlineStart = Date.now();
       
-      Logger.info('🎯 PASSING TO OUTLINE AGENT', {
-        target_duration_sec: runConfig.target_duration_sec,
+      // TEMPORARY HARDCODE: Force 5 minutes (300 seconds) for debugging
+      const hardcodedDuration = 300;
+      
+      Logger.info('🎯 PASSING TO OUTLINE AGENT (HARDCODED)', {
+        target_duration_sec_from_config: runConfig.target_duration_sec,
+        hardcoded_duration: hardcodedDuration,
         type_of_target: typeof runConfig.target_duration_sec,
       });
       
       const outlineResult = await this.outlineAgent.execute(runId, {
         picks: successfullyScrapedPicks, // Use ONLY successfully scraped picks with full content!
         date: runConfig.date,
-        target_duration_sec: runConfig.target_duration_sec,
+        target_duration_sec: hardcodedDuration, // HARDCODED: Use 300 seconds (5 min)
         topic_weights: runConfig.weights, // Pass weights to order stories by priority
         podcast_production: (runConfig as any).podcast_production,
       });
@@ -445,7 +449,7 @@ export class Orchestrator {
         picks: scraperResult.output.enriched_picks, // Use enriched picks with scraped content!
         date: runConfig.date,
         listener_name: '', // Generic audience - no personalized name
-        target_duration_sec: runConfig.target_duration_sec,
+        target_duration_sec: 300, // HARDCODED: 5 minutes for debugging
         podcast_production: (runConfig as any).podcast_production,
       });
       agentTimes['scriptwriter'] = Date.now() - scriptStart;
@@ -613,7 +617,7 @@ export class Orchestrator {
             target_words: s.target_words || 0,
             story_count: (s.refs || []).length,
           })),
-          total_duration_target: runConfig.target_duration_sec,
+          total_duration_target: 300, // HARDCODED: 5 minutes for debugging
         },
         scriptwriting: scriptResult.output!.detailed_report || {
           sections_generated: 0,
@@ -1134,7 +1138,7 @@ export class Orchestrator {
           refs: s.refs,
         })),
         total_sections: agentResults.outline.output.outline.sections.length,
-        total_duration_target: runConfig.target_duration_sec, // FIX: Include target duration for dashboard display
+        total_duration_target: 300, // HARDCODED: 5 minutes for debugging (partial manifest)
       };
     }
 
