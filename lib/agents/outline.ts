@@ -155,7 +155,10 @@ CRITICAL REQUIREMENTS:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - **TOTAL TARGET WORD COUNT: ${totalTargetWords} words** (at 150 words/minute speaking pace)
 - **MUST USE ALL ${sortedPicks.length} STORIES** - every story must appear in at least one segment's refs array
-- Stories are PRE-SORTED by topic priority - maintain this general flow but group intelligently
+- Stories are PRE-SORTED by topic priority - **USE THEM IN ORDER, NO JUMPING BACK**
+- **ONCE YOU FINISH WITH A TOPIC, MOVE ON** - don't return to earlier topics
+- Group consecutive stories from the same topic into segments
+- Only mix topics if they're naturally adjacent in the sorted list
 
 STRUCTURE GUIDELINES:
 1. **Intro**: ~${introOutroWords} words
@@ -170,14 +173,15 @@ STRUCTURE GUIDELINES:
    ✅ GOOD: "OpenAI raised $6B at $157B valuation - up 75% in six months"
 
 2. **Thematic Segments** (2-4 segments totaling ~${mainContentWords} words):
-   - Group related stories that naturally connect (use your connection analysis)
+   - **USE STORIES SEQUENTIALLY** - refs should be consecutive: [0,1,2] then [3,4] NOT [0,2] then [1,3]
+   - Group consecutive stories from the same topic into segments
    - Give each segment a compelling THEMATIC title (e.g., "AI's Enterprise Moment", "The Regulatory Response")
    - Each segment MUST include:
-     * refs: [0, 1, 3] - story indices to include
+     * refs: [0, 1, 2] - **CONSECUTIVE** story indices only
      * connection_type: "cause-effect" | "common-theme" | "contrast" | "timeline" | "industry-impact"
      * bridge: Brief description of HOW these stories connect (used by scriptwriter)
    - Allocate word counts based on story importance and complexity
-   - Segments should flow naturally from high-priority topics to lower-priority ones
+   - Move forward through the story list - **NEVER go backwards**
 
 3. **Outro**: ~${introOutroWords} words - Key strategic takeaways + forward-looking insights
 
@@ -229,6 +233,9 @@ EXAMPLE FORMAT (adapt to your actual stories):
     }
   ]
 }
+
+NOTE: The refs arrays [0,1,2] then [3,4] are SEQUENTIAL - they move forward through the list. 
+NEVER jump around like [0,2] then [1,3] - this creates confusing topic switching.
 
 **CRITICAL**: 
 - MUST include "opening_hook" field with your most compelling hook
