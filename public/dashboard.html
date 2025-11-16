@@ -2398,57 +2398,68 @@ Full data in console (F12).`;
         }
 
         function populateSettings(config) {
+            // Helper function to safely set value
+            const setValue = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = value;
+                    } else {
+                        el.value = value;
+                    }
+                }
+            };
+
             // Topics
             renderTopics(config.topics);
 
             // Schedule & Duration
             const durationMinutes = Math.round((config.target_duration_sec || 900) / 60);
-            document.getElementById('targetDuration').value = durationMinutes;
-            document.getElementById('timezone').value = config.timezone || 'America/New_York';
-            document.getElementById('cronSchedule').value = config.cron_schedule || '0 12 * * *';
+            setValue('targetDuration', durationMinutes);
+            setValue('timezone', config.timezone || 'America/New_York');
+            setValue('cronSchedule', config.cron_schedule || '0 12 * * *');
             
             // Frequency settings
-            document.getElementById('frequency').value = config.frequency || 'daily';
-            document.getElementById('weeklyDay').value = config.weekly_day || '1';
-            document.getElementById('monthlyDay').value = config.monthly_day || '1';
+            setValue('frequency', config.frequency || 'daily');
+            setValue('weeklyDay', config.weekly_day || '1');
+            setValue('monthlyDay', config.monthly_day || '1');
             updateFrequencyFields(); // Show/hide appropriate fields
 
             // Filters
-            document.getElementById('rumorFilter').checked = config.rumor_filter !== false;
-            document.getElementById('bannedDomains').value = (config.banned_domains || []).join('\n');
-            document.getElementById('windowHours').value = config.window_hours || 36;
+            setValue('rumorFilter', config.rumor_filter !== false);
+            setValue('bannedDomains', (config.banned_domains || []).join('\n'));
+            setValue('windowHours', config.window_hours || 36);
 
             // Pronunciation (voices are auto-selected based on content)
             const glossary = config.pronunciation_glossary || {};
-            document.getElementById('pronunciationGlossary').value = 
-                Object.entries(glossary).map(([k, v]) => `${k}=${v}`).join('\n');
+            setValue('pronunciationGlossary', Object.entries(glossary).map(([k, v]) => `${k}=${v}`).join('\n'));
             
             // Podcast Metadata
-            document.getElementById('podcastTitle').value = config.podcast_title || "Rohit's Daily AI & Corporate News Brief";
-            document.getElementById('podcastDescription').value = config.podcast_description || 'Your personalized daily news brief.';
-            document.getElementById('podcastAuthor').value = config.podcast_author || 'Rohit';
-            document.getElementById('podcastEmail').value = config.podcast_email || 'podcast@example.com';
-            document.getElementById('podcastLanguage').value = config.podcast_language || 'en-us';
-            document.getElementById('podcastCategory').value = config.podcast_category || 'News';
-            document.getElementById('podcastImageUrl').value = config.podcast_image_url || '';
-            document.getElementById('podcastBaseUrl').value = config.podcast_base_url || window.location.origin;
+            setValue('podcastTitle', config.podcast_title || "Rohit's Daily AI & Corporate News Brief");
+            setValue('podcastDescription', config.podcast_description || 'Your personalized daily news brief.');
+            setValue('podcastAuthor', config.podcast_author || 'Rohit');
+            setValue('podcastEmail', config.podcast_email || 'podcast@example.com');
+            setValue('podcastLanguage', config.podcast_language || 'en-us');
+            setValue('podcastCategory', config.podcast_category || 'News');
+            setValue('podcastImageUrl', config.podcast_image_url || '');
+            setValue('podcastBaseUrl', config.podcast_base_url || window.location.origin);
             
             // Podcast Production
             const prod = config.podcast_production || {};
-            document.getElementById('podcastStyle').value = prod.style || 'executive';
-            document.getElementById('numStoriesMin').value = prod.num_stories_min || 3;
-            document.getElementById('numStoriesMax').value = prod.num_stories_max || 5;
-            document.getElementById('introText').value = prod.intro_text || 'This is your daily podcast to recap recent news. Today we\'ll cover:';
-            document.getElementById('outroText').value = prod.outro_text || 'That\'s your executive brief. Stay informed, stay ahead.';
-            document.getElementById('enableIntroMusic').checked = config.use_intro_music !== false;
-            document.getElementById('introMusicFile').value = config.intro_music_file || 'music/intro.mp3';
-            document.getElementById('introMusicDuration').value = (prod.intro_music_duration_ms || 3000) / 1000;
-            document.getElementById('enableOutroMusic').checked = config.use_outro_music !== false;
-            document.getElementById('outroMusicFile').value = config.outro_music_file || 'music/outro.mp3';
-            document.getElementById('outroMusicDuration').value = (prod.outro_music_duration_ms || 2000) / 1000;
-            document.getElementById('pauseAfterIntro').value = prod.pause_after_intro_ms || 800;
-            document.getElementById('pauseBetweenStories').value = prod.pause_between_stories_ms || 1200;
-            document.getElementById('pauseBeforeOutro').value = prod.pause_before_outro_ms || 500;
+            setValue('podcastStyle', prod.style || 'executive');
+            setValue('numStoriesMin', prod.num_stories_min || 3);
+            setValue('numStoriesMax', prod.num_stories_max || 5);
+            setValue('introText', prod.intro_text || 'This is your daily podcast to recap recent news. Today we\'ll cover:');
+            setValue('outroText', prod.outro_text || 'That\'s your executive brief. Stay informed, stay ahead.');
+            setValue('enableIntroMusic', config.use_intro_music !== false);
+            setValue('introMusicFile', config.intro_music_file || 'music/intro.mp3');
+            setValue('introMusicDuration', (prod.intro_music_duration_ms || 3000) / 1000);
+            setValue('enableOutroMusic', config.use_outro_music !== false);
+            setValue('outroMusicFile', config.outro_music_file || 'music/outro.mp3');
+            setValue('outroMusicDuration', (prod.outro_music_duration_ms || 2000) / 1000);
+            setValue('pauseAfterIntro', prod.pause_after_intro_ms || 800);
+            setValue('pauseBetweenStories', prod.pause_between_stories_ms || 1200);
+            setValue('pauseBeforeOutro', prod.pause_before_outro_ms || 500);
             
             // Toggle music settings visibility
             toggleMusicSettings();
