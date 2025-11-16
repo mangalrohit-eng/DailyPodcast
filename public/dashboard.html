@@ -1683,6 +1683,14 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <div class="form-group-compact">
+                        <label>Cron Schedule (Read-only)</label>
+                        <input type="text" id="cronSchedule" readonly value="0 12 * * *">
+                        <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                            Auto-generated from frequency and timezone
+                        </small>
+                    </div>
                 </div>
             </div>
 
@@ -1782,6 +1790,14 @@
                                 Min 1400x1400px for Apple Podcasts
                             </small>
                         </div>
+                    </div>
+                    
+                    <div class="form-group-compact">
+                        <label>Podcast Base URL (Read-only)</label>
+                        <input type="text" id="podcastBaseUrl" readonly>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                            Auto-set from deployment URL
+                        </small>
                     </div>
 
                     <!-- Voice Settings -->
