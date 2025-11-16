@@ -149,7 +149,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 status: 'rejected', 
                 reason 
               });
-              Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()}, ${hoursOld}hrs old)`);
+              // Logger.debug(`Story too old: ${story.title.substring(0, 50)}... (${story.published_at.toISOString()}, ${hoursOld}hrs old)`); // DISABLED: Too verbose
               continue;
             }
             
@@ -170,7 +170,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 status: 'rejected', 
                 reason 
               });
-              Logger.debug(`Story failed quality filter: ${story.title.substring(0, 50)}...`);
+              // Logger.debug(`Story failed quality filter: ${story.title.substring(0, 50)}...`); // DISABLED: Too verbose
               continue;
             }
             
@@ -189,7 +189,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 status: 'rejected', 
                 reason 
               });
-              Logger.debug(`Story filtered by tier: ${story.title.substring(0, 50)}... (${tierName}: ${story.domain})`);
+              // Logger.debug(`Story filtered by tier: ${story.title.substring(0, 50)}... (${tierName}: ${story.domain})`); // DISABLED: Too verbose
               continue;
             }
             
@@ -207,9 +207,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
                 status: 'rejected', 
                 reason 
               });
-              Logger.debug(`Story doesn't match topic keywords: ${story.title.substring(0, 50)}...`, {
-                keywords: topic.keywords.slice(0, 3),
-              });
+              // Logger.debug(`Story doesn't match topic keywords: ${story.title.substring(0, 50)}...`, { keywords: topic.keywords.slice(0, 3) }); // DISABLED: Too verbose
               continue;
             }
             
@@ -225,7 +223,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
               published_at: story.published_at.toISOString(),
               status: 'accepted'
             });
-            Logger.debug(`✓ Story accepted for ${topic.name}: ${story.title.substring(0, 60)}...`);
+            // Logger.debug(`✓ Story accepted for ${topic.name}: ${story.title.substring(0, 60)}...`); // DISABLED: Too verbose
           }
           
           // Update global redirect tracking
@@ -381,10 +379,7 @@ export class IngestionAgent extends BaseAgent<IngestionInput, IngestionOutput> {
         if (tracking) {
           tracking.successful++;
         }
-        Logger.debug(`✅ Extracted source from title`, { 
-          title: item.title.substring(0, 60),
-          domain: domain
-        });
+        // Logger.debug(`✅ Extracted source from title`, { title: item.title.substring(0, 60), domain: domain }); // DISABLED: Too verbose
       } else {
         // Fallback to news.google.com if title extraction fails
         storyUrl = item.link;
