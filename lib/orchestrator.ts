@@ -442,7 +442,7 @@ export class Orchestrator {
       const scriptStart = Date.now();
       const scriptResult = await this.scriptwriterAgent.execute(runId, {
         outline: outlineResult.output!.outline,
-        picks: scraperResult.output.enriched_picks, // Use enriched picks with scraped content!
+        picks: successfullyScrapedPicks, // FIX: Use ONLY successfully scraped picks (same as outline agent)
         date: runConfig.date,
         listener_name: '', // Generic audience - no personalized name
         target_duration_sec: runConfig.target_duration_sec, // Use configured duration from dashboard
