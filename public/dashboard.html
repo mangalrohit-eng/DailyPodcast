@@ -2631,13 +2631,17 @@ Full data in console (F12).`;
                 } else {
                     const errorText = await response.text();
                     console.error('API error:', errorText);
-                    showToast('❌ Failed to start. Check console for details.', 'error');
+                    console.error('Response status:', response.status);
+                    alert(`Failed to start run!\n\nStatus: ${response.status}\nError: ${errorText}\n\nCheck browser console for more details.`);
+                    showToast(`❌ Failed to start (${response.status}). Check console.`, 'error');
                     currentRunId = null;
                     loadRuns(); // Refresh to remove the placeholder
                 }
 
             } catch (error) {
                 console.error('Error:', error);
+                console.error('Error stack:', error.stack);
+                alert(`Exception starting run!\n\nError: ${error.message}\n\nCheck browser console for full stack trace.`);
                 showToast('Failed to start run: ' + error.message, 'error');
                 currentRunId = null;
                 loadRuns(); // Refresh to remove the placeholder
