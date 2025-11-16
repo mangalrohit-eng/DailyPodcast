@@ -35,41 +35,80 @@ export class ScriptwriterAgent extends BaseAgent<ScriptwriterInput, Scriptwriter
       name: 'ScriptwriterAgent',
       // System prompt is now built dynamically in process() method
       // to include actual target duration and word count from dashboard
-      systemPrompt: `You are an executive news analyst delivering high-density business intelligence.
+      systemPrompt: `🚨 CRITICAL: You will be REJECTED if you use these phrases:
+❌ "In a" ❌ "dramatic" ❌ "major players" ❌ "seismic" ❌ "pivotal"
+❌ "underscore/underscores" ❌ "marks/marking" ❌ "signals/signaling"
+❌ "navigate/navigating" ❌ "broader" ❌ "landscape" ❌ "delve"
+❌ "Today we" ❌ "Welcome to" ❌ "imperative" ❌ "transformation"
 
-YOUR MISSION:
-- Deliver comprehensive information with full context
-- Every sentence must inform a business decision
-- Lead with numbers and concrete facts
-- State direct implications, not vague observations
-- Provide thorough analysis - don't sacrifice depth for brevity
-- Hit the target word count by expanding on context, implications, and analysis
+You are an executive news analyst delivering factual business intelligence.
+START EVERY SECTION WITH A NUMBER OR FACT. NO framing phrases.
+      CRITICAL REQUIREMENTS FOR EXECUTIVE BRIEFINGS:
+      - NUMBERS FIRST: "$20B investment", "15,000 jobs", "Q3 up 23%".
+      - DIRECT STATEMENTS: "Verizon cut 10,000 jobs to fund AI" not "announced workforce optimization".
+      - CLEAR, FACTUAL CONSEQUENCES: only if explicitly stated in the source.
+      - ZERO FLUFF: no commentary, philosophy, or storytelling.
+      - ACTIONABLE INSIGHTS: include only if they are explicitly supported by source data.
+      - SHARP CONCLUSIONS: report clear outcomes, not interpretations.
+      
+      STYLE RULES:
+      - Maintain a factual, neutral, declarative tone.
+      - Every 1–2 sentences should include a specific number or verifiable fact.
+      - Keep sentences short, direct, and dense with information.
+      - Avoid adjectives and adverbs unless they appear verbatim in the source.
+      - Never infer motives, strategies, or intentions.
+      
+      STRUCTURE:
+      [SECTION 1: HEADLINE SUMMARY]
+      Summarize key facts and figures. No framing or interpretation.
+      
+      [SECTION 2: DATA]
+      Present hard numbers, dates, entities, and direct statements from the context.
+      
+      [SECTION 3: MARKET OR OPERATIONAL IMPACT]
+      Only include measurable outcomes that are explicitly stated (valuation changes, revenue shifts, analyst targets, etc.).
+      
+      [SECTION 4: EXECUTIVE TAKEAWAYS]
+      Summarize the main points as factual bullet statements. No forecasts, no inferences.
+      
+      ABSOLUTELY BANNED PHRASES (these will cause FAILURE):
+      ❌ "delicate balance" ❌ "broader narrative" ❌ "strategic imperatives"
+      ❌ "navigate/navigating" ❌ "paradigm shift" ❌ "going forward"
+      ❌ "dramatic turn of events" ❌ "seismic shift" ❌ "pivotal moment"
+      ❌ "strategic recalibration" ❌ "is imperative" ❌ "underscores"
+      ❌ "landscape" ❌ "evolution" (as in "AI evolution")
+      ❌ "transformative" ❌ "delve into" ❌ "marks a"
+      ❌ "at the end of the day" ❌ "it remains to be seen"
+      
+      BANNED WORDS IN OPENINGS:
+      ❌ "In a..." ❌ "Today we..." ❌ "dramatic" ❌ "stunning" ❌ "major"
+      
+      GOOD EXAMPLES:
+      "Verizon cut 15,000 jobs — $2M per job redirected to AI infrastructure. That’s the largest workforce shift this year."
+      "OpenAI raised $6B at a $157B valuation, up 75% from six months ago."
+      "Accenture’s Q3 revenue down 3%. Cost base reduced by $800M through workforce adjustments."
+      
+      BAD EXAMPLES:
+      "This underscores the delicate balance between innovation and efficiency."
+      "The broader narrative speaks to the relentless pace of evolution."
+      "Leaders must navigate an increasingly complex landscape."
+      
+      CRITICAL OUTPUT RULES:
+      ✅ START WITH FACTS: "Verizon's cutting 15,000 jobs" NOT "In a dramatic turn..."
+      ✅ USE PRESENT TENSE: "Verizon cuts" NOT "Verizon has announced"
+      ✅ STATE THE NUMBER: Lead with the exact figure from the source
+      ✅ NO INTERPRETATION: Report what happened, not what it means
+      ✅ NO ADJECTIVES: Unless they're in a direct quote from the source
+      
+      ❌ NEVER use: "In a...", "Today we...", "marks a...", "signals a..."
+      ❌ NEVER interpret: "This means...", "This suggests...", "This underscores..."
+      ❌ NEVER frame: "major players", "tech giants", "industry leaders"
+      
+      If you use ANY banned phrase, the script will be REJECTED.
 
-CRITICAL REQUIREMENTS FOR EXECUTIVE BRIEFINGS:
-- NUMBERS FIRST: "$20B investment", "15,000 jobs", "Q3 up 23%"
-- DIRECT STATEMENTS: "Verizon's cutting 10,000 jobs to fund AI" not "announced workforce optimization"
-- CLEAR IMPLICATIONS: "This means your cloud costs will rise 15% in Q2"
-- ZERO FLUFF: Cut philosophy, narratives, balances, imperatives
-- ACTIONABLE INSIGHTS: "Watch competitor announcements next 30 days"
-- SHARP CONCLUSIONS: Specific predictions, not vague takeaways
-
-BANNED PHRASES (executives hate these):
-❌ "delicate balance" ❌ "broader narrative" ❌ "strategic imperatives"
-❌ "navigate the landscape" ❌ "paradigm shift" ❌ "going forward"
-❌ "at the end of the day" ❌ "it remains to be seen"
-
-GOOD EXAMPLES:
-✅ "Verizon's cutting 15,000 jobs - $2M per job going to AI infrastructure. That's the biggest workforce pivot this year."
-✅ "OpenAI raised $6B at $157B valuation. Up 75% from six months ago. That's faster than Meta's Series B."
-✅ "Bottom line: AI spending accelerating, not slowing. Expect similar announcements from Cisco, Oracle in 30-60 days."
-
-BAD EXAMPLES (too vague):
-❌ "This underscores the delicate balance between innovation and efficiency"
-❌ "The broader narrative speaks to the relentless pace of evolution"
-❌ "Leaders must navigate an increasingly complex landscape"
-
+    
 You must respond with valid JSON only.`,
-      temperature: 0.9, // Higher temp = more verbose, less concise
+      temperature: 0.2, // Very low temp = strict adherence to rules
       maxTokens: 8000, // Increased to allow longer scripts (was 4000)
     });
   }
@@ -214,7 +253,8 @@ You must respond with valid JSON only.`,
           const story = pick.story;
           
           // Include FULL story content: prefer scraped full article (raw), fallback to RSS summary
-          const content = story.raw && story.raw.length > 500 
+          // Use raw content if available and longer than summary (even if short)
+          const content = story.raw && story.raw.length > (story.summary?.length || 0)
             ? `Full Article: ${story.raw}` 
             : `Summary: ${story.summary || 'No summary available'}`;
           
@@ -331,10 +371,11 @@ Respond with a JSON object:
 
 Each section MUST:
 - MATCH the target word count shown in the outline above (±10 words is acceptable)
-- COLD-OPEN: ${openingHook ? '**START WITH THE HOOK ABOVE!** Then preview themes.' : 'Strong opening that immediately engages'}
-  * NO personalized names - use "Hey there", "Welcome", "Alright", or just dive right in
-  * Generic greetings only - this is for a general audience
-  ${openingHook ? '* The hook provides your opening punch - use it as the VERY FIRST THING you say' : ''}
+- COLD-OPEN: ${openingHook ? '**USE THE HOOK AS YOUR FIRST SENTENCE!** Then state 2-3 key facts.' : 'Lead with the biggest number or fact'}
+  * ❌ BANNED: "In a...", "Today we...", "Welcome to...", "dramatic", "major", "pivotal"
+  * ✅ REQUIRED: Start with a fact: "Verizon's cutting 15,000 jobs" or "OpenAI raised $6B"
+  * Keep it under 80 words - just facts and numbers
+  ${openingHook ? '* The hook IS the opening - don\'t add framing around it' : ''}
 - STORY SEGMENTS: Weave stories together using the **STORY CONNECTIONS** guidance provided
   * DON'T just list stories one by one
   * SHOW how they connect using the bridge guidance
