@@ -2951,6 +2951,10 @@ Full data in console (F12).`;
                 if (response.ok) {
                     showToast('✅ Run cancelled successfully', 'success');
                     currentRunId = null;
+                    
+                    // Wait a moment for orchestrator to finish updating the run status
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
                     loadRuns(); // Refresh the list
                 } else {
                     const error = await response.json();
@@ -2987,7 +2991,13 @@ Full data in console (F12).`;
                 if (response.ok) {
                     showToast('✅ Run stopped successfully', 'success');
                     document.getElementById('stopRunBtn').style.display = 'none';
-                    // Refresh details
+                    
+                    // Wait a moment for orchestrator to finish updating the run status
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Refresh the runs list to show cancelled status
+                    await loadRuns();
+                    // Refresh details modal
                     viewRunDetails(currentDetailsRunId);
                 } else {
                     const error = await response.json();

@@ -18,6 +18,7 @@ export interface RunSummary {
   stories_count?: number;
   episode_url?: string;
   error?: string;
+  cancel_requested?: boolean; // Flag for cross-instance cancellation
   file_size?: number;
   scraping_stats?: {
     total_attempts: number;
@@ -128,7 +129,36 @@ export class RunsStorage {
   }
   
   /**
-   * Cancel a run
+   * Request cancellation of a run (sets flag that orchestrator will check)
+   */
+  async requestCancelRun(runId: string): Promise<boolean> {
+    const index = await this.loadIndex();
+    const run = index.runs.find(r => r.run_id === runId);
+    
+    if (!run || run.status !== 'running') {
+      Logger.warn('Cannot cancel run - not found or not running', { runId, status: run?.status });
+      return false;
+    }
+    
+    // Set the cancellation flag (orchestrator will check this)
+    run.cancel_requested = true;
+    await this.saveIndex(index);
+    
+    Logger.info('Cancellation requested', { runId });
+    return true;
+  }
+  
+  /**
+   * Check if cancellation was requested for a run
+   */
+  async isCancelRequested(runId: string): Promise<boolean> {
+    const index = await this.loadIndex();
+    const run = index.runs.find(r => r.run_id === runId);
+    return run?.cancel_requested || false;
+  }
+  
+  /**
+   * Mark run as cancelled (final status update)
    */
   async cancelRun(runId: string, reason: string = 'Cancelled by user'): Promise<void> {
     const summary: RunSummary = {
@@ -138,6 +168,7 @@ export class RunsStorage {
       started_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
       error: reason,
+      cancel_requested: true,
     };
     
     await this.updateRun(summary);

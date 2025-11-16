@@ -147,8 +147,16 @@ export class Orchestrator {
       });
       
       // Helper function to check for cancellation
-      const checkCancellation = () => {
+      // CRITICAL: Check S3 storage, not just in-memory tracker (for cross-instance cancellation)
+      const checkCancellation = async () => {
+        // Check in-memory first (fast)
         if (progressTracker.isCancelRequested(runId)) {
+          throw new Error('Run cancelled by user');
+        }
+        
+        // Check S3 storage (slower but works across serverless instances)
+        if (runsStorage && await runsStorage.isCancelRequested(runId)) {
+          Logger.warn('Cancellation detected from S3 storage', { runId });
           throw new Error('Run cancelled by user');
         }
       };
@@ -165,7 +173,7 @@ export class Orchestrator {
       });
       
       // 1. INGESTION
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 1: Ingestion');
       
       // Build TopicConfig array from dashboard settings
@@ -247,7 +255,7 @@ export class Orchestrator {
       });
       
       // 2. RANKING
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 2: Ranking');
       progressTracker.addUpdate(runId, {
         phase: 'Ranking',
@@ -337,7 +345,7 @@ export class Orchestrator {
       });
       
       // 3. SCRAPER (NEW!)
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 3: Scraper - Fetching full article content');
       progressTracker.addUpdate(runId, {
         phase: 'Scraper',
@@ -393,7 +401,7 @@ export class Orchestrator {
       }
       
       // 4. OUTLINE
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 4: Outline');
       progressTracker.addUpdate(runId, {
         phase: 'Outline',
@@ -432,7 +440,7 @@ export class Orchestrator {
       });
       
       // 5. SCRIPTWRITING
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 5: Scriptwriting');
       progressTracker.addUpdate(runId, {
         phase: 'Scriptwriting',
@@ -465,7 +473,7 @@ export class Orchestrator {
       });
       
       // 5. FACT-CHECK
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 5: Fact-Check');
       progressTracker.addUpdate(runId, {
         phase: 'Fact Checking',
@@ -486,7 +494,7 @@ export class Orchestrator {
       });
       
       // 6. SAFETY
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 6: Safety Check');
       progressTracker.addUpdate(runId, {
         phase: 'Safety Review',
@@ -515,7 +523,7 @@ export class Orchestrator {
       // ===================================================================
       
       // 7. TTS DIRECTOR
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 7: TTS Planning');
       
       // CRITICAL: Validate all sections have text before TTS
@@ -551,7 +559,7 @@ export class Orchestrator {
       await this.savePartialManifest(runId, runConfig, agentResults, agentTimes); // Real-time streaming
       
       // 8. AUDIO ENGINEER
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 8: Audio Synthesis');
       progressTracker.addUpdate(runId, {
         phase: 'Audio Generation',
@@ -689,7 +697,7 @@ export class Orchestrator {
       };
       
       // 9. PUBLISHER
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 9: Publishing');
       progressTracker.addUpdate(runId, {
         phase: 'Publishing',
@@ -724,7 +732,7 @@ export class Orchestrator {
       manifest.pipeline_report = pipeline_report;
       
       // 10. MEMORY UPDATE
-      checkCancellation(); // Check for cancellation before each phase
+      await checkCancellation(); // Check for cancellation before each phase
       Logger.info('Phase 10: Memory Update');
       const memoryStart = Date.now();
       const memoryResult = await this.memoryAgent.execute(runId, {

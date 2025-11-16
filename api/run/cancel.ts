@@ -35,8 +35,12 @@ export default async function handler(
     
     Logger.info('🛑 Cancel requested', { runId });
     
-    // Request cancellation in progress tracker
-    const cancelled = progressTracker.requestCancel(runId);
+    // Request cancellation in progress tracker (for current instance only)
+    progressTracker.requestCancel(runId);
+    
+    // CRITICAL: Set cancellation flag in S3 so orchestrator can see it across instances
+    const runsStorage = new RunsStorage();
+    const cancelled = await runsStorage.requestCancelRun(runId);
     
     if (!cancelled) {
       return res.status(404).json({ 
@@ -45,11 +49,7 @@ export default async function handler(
       });
     }
     
-    // Mark as cancelled in runs storage
-    const runsStorage = new RunsStorage();
-    await runsStorage.cancelRun(runId, 'Cancelled by user');
-    
-    Logger.info('✅ Run cancelled', { runId });
+    Logger.info('✅ Cancellation flag set in S3', { runId });
     
     return res.status(200).json({
       success: true,
