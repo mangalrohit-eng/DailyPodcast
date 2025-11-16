@@ -45,9 +45,9 @@ export default async function handler(
       });
     }
     
-    // Mark as failed in runs storage
+    // Mark as cancelled in runs storage
     const runsStorage = new RunsStorage();
-    await runsStorage.failRun(runId, 'Cancelled by user');
+    await runsStorage.cancelRun(runId, 'Cancelled by user');
     
     Logger.info('✅ Run cancelled', { runId });
     
