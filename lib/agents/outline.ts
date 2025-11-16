@@ -131,6 +131,8 @@ ${JSON.stringify(storySummaries, null, 2)}
 
 YOUR MISSION: Create 2-4 THEMATIC SEGMENTS that naturally blend related stories together into cohesive narratives.
 
+🚨 CRITICAL: Group ALL related stories into ONE segment. If stories 0, 2, and 4 are all about layoffs, they MUST be in the SAME segment with refs: [0, 2, 4]. Do NOT create separate segments for each story.
+
 STEP 1: ANALYZE FOR COMPELLING HOOK
 Find the biggest NUMBER or FACT from the stories:
 - Largest dollar amount: "$6B raised", "$2B savings"
@@ -155,10 +157,9 @@ CRITICAL REQUIREMENTS:
 - Total target duration: ${target_duration_sec} seconds (~${Math.round(target_duration_sec / 60)} minutes)
 - **TOTAL TARGET WORD COUNT: ${totalTargetWords} words** (at 150 words/minute speaking pace)
 - **MUST USE ALL ${sortedPicks.length} STORIES** - every story must appear in at least one segment's refs array
-- Stories are PRE-SORTED by topic priority - **USE THEM IN ORDER, NO JUMPING BACK**
-- **ONCE YOU FINISH WITH A TOPIC, MOVE ON** - don't return to earlier topics
-- Group consecutive stories from the same topic into segments
-- Only mix topics if they're naturally adjacent in the sorted list
+- **GROUP BY THEME** - Find common threads across stories and group them together
+- A segment about "layoffs" should include ALL layoff stories, even if they're stories 0, 3, and 5
+- Create 2-3 meaty thematic segments, NOT 5+ single-story segments
 
 STRUCTURE GUIDELINES:
 1. **Intro**: ~${introOutroWords} words
@@ -173,15 +174,16 @@ STRUCTURE GUIDELINES:
    ✅ GOOD: "OpenAI raised $6B at $157B valuation - up 75% in six months"
 
 2. **Thematic Segments** (2-4 segments totaling ~${mainContentWords} words):
-   - **USE STORIES SEQUENTIALLY** - refs should be consecutive: [0,1,2] then [3,4] NOT [0,2] then [1,3]
-   - Group consecutive stories from the same topic into segments
-   - Give each segment a compelling THEMATIC title (e.g., "AI's Enterprise Moment", "The Regulatory Response")
+   - **GROUP ALL RELATED STORIES TOGETHER** - If stories 0, 2, 4 are all about layoffs, refs: [0, 2, 4] in ONE segment
+   - **DO NOT CREATE ONE SECTION PER STORY** - That's a story-by-story list, not thematic segments
+   - Find the common thread across multiple stories and group them
+   - Give each segment a compelling THEMATIC title that covers ALL stories in it (e.g., "Corporate Restructuring Wave", "AI Investment Surge")
    - Each segment MUST include:
-     * refs: [0, 1, 2] - **CONSECUTIVE** story indices only
+     * refs: Array of ALL related story indices (can be non-consecutive if stories share theme)
      * connection_type: "cause-effect" | "common-theme" | "contrast" | "timeline" | "industry-impact"
      * bridge: Brief description of HOW these stories connect (used by scriptwriter)
+   - Aim for 2-3 meaty segments with multiple stories each, NOT 5+ single-story segments
    - Allocate word counts based on story importance and complexity
-   - Move forward through the story list - **NEVER go backwards**
 
 3. **Outro**: ~${introOutroWords} words - Key strategic takeaways + forward-looking insights
 
@@ -208,21 +210,21 @@ EXAMPLE FORMAT (adapt to your actual stories):
     },
     {
       "type": "segment",
-      "title": "The AI Investment Wave",
-      "target_words": 300,
-      "refs": [0, 1, 2],
-      "connection_type": "cause-effect",
-      "bridge": "Verizon's layoffs are directly funding their AI pivot. OpenAI's $6B raise shows why - and Accenture is betting on this shift too.",
-      "guidance": "Weave these 3 stories together - show how they're all part of the same AI transformation trend"
+      "title": "Corporate Restructuring for AI",
+      "target_words": 400,
+      "refs": [0, 2, 4],
+      "connection_type": "common-theme",
+      "bridge": "Verizon cut 15,000 jobs, Accenture laid off thousands, and IBM restructured divisions - all to fund AI pivots.",
+      "guidance": "Weave ALL THREE layoff stories together - show this is an industry-wide trend, not isolated incidents"
     },
     {
       "type": "segment",
-      "title": "The Regulatory Response",
-      "target_words": 250,
-      "refs": [3, 4],
-      "connection_type": "common-theme",
-      "bridge": "As AI accelerates, regulators are scrambling to catch up. Here are two very different approaches.",
-      "guidance": "Contrast the two regulatory approaches - show what this means for companies"
+      "title": "AI Investment Surge",
+      "target_words": 200,
+      "refs": [1, 3],
+      "connection_type": "cause-effect",
+      "bridge": "OpenAI raised $6B while SentinelOne announced AI-powered security - showing where the restructuring money is going.",
+      "guidance": "Connect investment to the layoffs above - this is the reallocation in action"
     },
     {
       "type": "outro",
@@ -234,12 +236,15 @@ EXAMPLE FORMAT (adapt to your actual stories):
   ]
 }
 
-NOTE: The refs arrays [0,1,2] then [3,4] are SEQUENTIAL - they move forward through the list. 
-NEVER jump around like [0,2] then [1,3] - this creates confusing topic switching.
+NOTE: The example shows refs: [0,2,4] then [1,3] - this groups ALL layoff stories together, then ALL investment stories together. 
+This creates clear themes instead of jumping: layoff → investment → layoff → investment.
+
+**GROUP BY THEME, NOT BY POSITION IN LIST**
 
 **CRITICAL**: 
 - MUST include "opening_hook" field with your most compelling hook
 - MUST include "connection_type" and "bridge" for each segment
+- Each segment should have MULTIPLE stories (2-4 refs per segment is ideal)
 - Total word count = ${totalTargetWords}
 - All ${sortedPicks.length} stories referenced
 
