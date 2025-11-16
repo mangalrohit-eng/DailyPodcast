@@ -201,6 +201,105 @@
             }
         }
 
+        /* Settings Sub-Tabs */
+        .settings-header {
+            position: sticky;
+            top: 70px;
+            background: #f5f5f7;
+            z-index: 100;
+            padding: 16px 0;
+            margin: -32px -24px 24px -24px;
+            padding-left: 24px;
+            padding-right: 24px;
+            border-bottom: 1px solid #e5e5e7;
+        }
+
+        .settings-sub-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .settings-sub-tab {
+            padding: 10px 20px;
+            background: #ffffff;
+            border: 1px solid #e5e5e7;
+            color: #6e6e73;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-sub-tab:hover {
+            background: #f5f5f7;
+            color: #1d1d1f;
+            border-color: #d1d1d6;
+        }
+
+        .settings-sub-tab.active {
+            background: #1DB954;
+            color: #ffffff;
+            border-color: #1DB954;
+        }
+
+        .settings-section {
+            display: none;
+        }
+
+        .settings-section.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .save-settings-btn {
+            position: sticky;
+            top: 140px;
+            z-index: 99;
+            margin-bottom: 24px;
+            padding: 16px 32px;
+            font-size: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .save-settings-btn.has-changes {
+            background: #ff9500 !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            50% { transform: scale(1.02); box-shadow: 0 4px 16px rgba(255,149,0,0.4); }
+        }
+
+        /* Compact form groups */
+        .form-group-compact {
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row, .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .card h2 {
             font-size: 24px;
             margin-bottom: 20px;
@@ -323,6 +422,12 @@
             padding: 12px;
             background: #f8f9fa;
             border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .topic-item:hover {
+            background: #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .topic-item input {
@@ -330,7 +435,16 @@
         }
 
         .topic-item button {
-            padding: 8px 12px;
+            padding: 8px 16px;
+            border-radius: 50px;
+        }
+        
+        .topic-item small {
+            font-size: 11px;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .runs-table {
@@ -1418,382 +1532,376 @@
 
         <!-- Podcast Settings Tab -->
         <div id="podcast-settings" class="tab-content">
-            <!-- Preset Configurations - Full Width -->
-            <div class="card full-width" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-                <h2 style="color: white; margin-bottom: 10px;"><i class="fas fa-magic"></i> Quick Presets</h2>
-                <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">Choose a preset configuration to instantly set up your podcast schedule and duration.</p>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                    <button class="preset-btn" onclick="applyPreset('morning_brief')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">☕</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Morning Brief</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Daily • 5 minutes • 24h window</div>
-                    </button>
-                    
-                    <button class="preset-btn" onclick="applyPreset('daily_digest')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📰</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Daily Digest</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Daily • 15 minutes • 24h window</div>
-                    </button>
-                    
-                    <button class="preset-btn" onclick="applyPreset('weekly_roundup')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📅</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Roundup</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 10 minutes • 7 day window</div>
-                    </button>
-                    
-                    <button class="preset-btn" onclick="applyPreset('weekly_deep_dive')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Deep Dive</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 20 minutes • 7 day window</div>
-                    </button>
-                    
-                    <button class="preset-btn" onclick="applyPreset('weekly_analysis')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Weekly Analysis</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Weekly • 30 minutes • 7 day window</div>
-                    </button>
-                    
-                    <button class="preset-btn" onclick="applyPreset('monthly_review')" style="background: white; color: #667eea; border: none; padding: 20px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🗓️</div>
-                        <div style="font-size: 16px; margin-bottom: 4px;">Monthly Review</div>
-                        <div style="font-size: 12px; color: #666; font-weight: normal;">Monthly • 30 minutes • 30 day window</div>
+            <!-- Settings Header with Sub-tabs and Save Button -->
+            <div class="settings-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div class="settings-sub-tabs">
+                        <button class="settings-sub-tab active" onclick="switchSettingsTab('general')">
+                            <i class="fas fa-sliders-h"></i> General
+                        </button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('content')">
+                            <i class="fas fa-filter"></i> Content
+                        </button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('podcast')">
+                            <i class="fas fa-podcast"></i> Podcast Info
+                        </button>
+                        <button class="settings-sub-tab" onclick="switchSettingsTab('production')">
+                            <i class="fas fa-microphone-alt"></i> Production
+                        </button>
+                    </div>
+                    <button class="btn btn-primary save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">
+                        <i class="fas fa-save"></i> Save Settings
                     </button>
                 </div>
-                
-                <style>
-                    .preset-btn:hover {
-                        transform: translateY(-4px);
-                        box-shadow: 0 8px 20px rgba(0,0,0,0.25) !important;
-                    }
-                    .preset-btn:active {
-                        transform: translateY(-2px);
-                    }
-                </style>
             </div>
 
-            <!-- Topics & Weights - Full Width -->
-            <div class="card full-width">
-                <h2>Topics & Weights</h2>
-                <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
-                <div id="topicsList" class="topics-list"></div>
-                <button class="btn btn-secondary" onclick="addTopic()">+ Add Topic</button>
-                <button class="btn btn-secondary" onclick="normalizeWeights()">⚖️ Auto-Balance</button>
-                <div id="weightWarning" style="color: #dc3545; margin-top: 10px; display: none;"></div>
-            </div>
+            <!-- General Settings Section -->
+            <div id="settings-general" class="settings-section active">
+                <!-- Quick Presets -->
+                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                    <h2 style="color: white; margin-bottom: 10px;"><i class="fas fa-magic"></i> Quick Presets</h2>
+                    <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px; font-size: 14px;">Choose a preset to instantly configure your podcast.</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <button class="preset-btn" onclick="applyPreset('morning_brief')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">☕</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Morning Brief</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Daily • 5min • 24h</div>
+                        </button>
+                        
+                        <button class="preset-btn" onclick="applyPreset('daily_digest')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">📰</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Daily Digest</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Daily • 15min • 24h</div>
+                        </button>
+                        
+                        <button class="preset-btn" onclick="applyPreset('weekly_roundup')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">📅</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Weekly Roundup</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Weekly • 10min • 7d</div>
+                        </button>
+                        
+                        <button class="preset-btn" onclick="applyPreset('weekly_deep_dive')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">🔍</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Deep Dive</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Weekly • 20min • 7d</div>
+                        </button>
+                        
+                        <button class="preset-btn" onclick="applyPreset('weekly_analysis')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">📊</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Analysis</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Weekly • 30min • 7d</div>
+                        </button>
+                        
+                        <button class="preset-btn" onclick="applyPreset('monthly_review')" style="background: white; color: #667eea; border: none; padding: 16px; border-radius: 12px; cursor: pointer; text-align: left; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size: 20px; margin-bottom: 6px;">🗓️</div>
+                            <div style="font-size: 14px; margin-bottom: 4px;">Monthly</div>
+                            <div style="font-size: 11px; color: #666; font-weight: normal;">Monthly • 30min • 30d</div>
+                        </button>
+                    </div>
+                </div>
 
-            <!-- Grid Layout for Compact Settings -->
-            <div class="settings-grid">
-                <!-- Schedule & Duration -->
+                <!-- Topics & Weights -->
+                <div class="card">
+                    <h2>Topics & Weights</h2>
+                    <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Configure topics and their weights (must total 1.0).</p>
+                    <div id="topicsList" class="topics-list"></div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="addTopic()">
+                            <i class="fas fa-plus"></i> Add Topic
+                        </button>
+                        <button class="btn btn-secondary" onclick="normalizeWeights()">
+                            <i class="fas fa-balance-scale"></i> Auto-Balance
+                        </button>
+                    </div>
+                    <div id="weightWarning" style="color: #dc3545; margin-top: 10px; display: none;"></div>
+                </div>
+
+                <!-- Schedule & Duration - Compact -->
                 <div class="card">
                     <h2>Schedule & Duration</h2>
-                <div class="form-group">
-                    <label>Frequency</label>
-                    <select id="frequency" onchange="updateFrequencyFields()">
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-                
-                <div class="form-group" id="weeklyDayGroup" style="display: none;">
-                    <label>Day of Week</label>
-                    <select id="weeklyDay">
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                        <option value="0">Sunday</option>
-                    </select>
-                </div>
-                
-                <div class="form-group" id="monthlyDayGroup" style="display: none;">
-                    <label>Day of Month</label>
-                    <select id="monthlyDay">
-                        <option value="1">1st</option>
-                        <option value="2">2nd</option>
-                        <option value="3">3rd</option>
-                        <option value="4">4th</option>
-                        <option value="5">5th</option>
-                        <option value="6">6th</option>
-                        <option value="7">7th</option>
-                        <option value="8">8th</option>
-                        <option value="9">9th</option>
-                        <option value="10">10th</option>
-                        <option value="11">11th</option>
-                        <option value="12">12th</option>
-                        <option value="13">13th</option>
-                        <option value="14">14th</option>
-                        <option value="15">15th</option>
-                        <option value="16">16th</option>
-                        <option value="17">17th</option>
-                        <option value="18">18th</option>
-                        <option value="19">19th</option>
-                        <option value="20">20th</option>
-                        <option value="21">21st</option>
-                        <option value="22">22nd</option>
-                        <option value="23">23rd</option>
-                        <option value="24">24th</option>
-                        <option value="25">25th</option>
-                        <option value="26">26th</option>
-                        <option value="27">27th</option>
-                        <option value="28">28th</option>
-                    </select>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        Days 29-31 will run on the last day of months with fewer days.
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Target Episode Duration (minutes)</label>
-                    <input type="number" id="targetDuration" min="5" max="60" value="15" step="1">
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        Recommended: 5-30 minutes. Actual duration may vary based on content.
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Timezone</label>
-                    <select id="timezone">
-                        <option value="America/New_York">America/New_York (EST/EDT)</option>
-                        <option value="America/Chicago">America/Chicago (CST/CDT)</option>
-                        <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
-                        <option value="Europe/London">Europe/London (GMT/BST)</option>
-                        <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Cron Schedule (Read-only)</label>
-                    <input type="text" id="cronSchedule" readonly value="0 12 * * * (Daily at 12:00 UTC)">
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        Automatically generated based on your frequency and timezone settings.
-                    </small>
-                </div>
-                </div>
+                    <div class="form-row">
+                        <div class="form-group-compact">
+                            <label>Frequency</label>
+                            <select id="frequency" onchange="updateFrequencyFields(); markChanges();">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group-compact" id="weeklyDayGroup" style="display: none;">
+                            <label>Day of Week</label>
+                            <select id="weeklyDay" onchange="markChanges();">
+                                <option value="1">Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                                <option value="0">Sunday</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group-compact" id="monthlyDayGroup" style="display: none;">
+                            <label>Day of Month</label>
+                            <select id="monthlyDay" onchange="markChanges();">
+                                <option value="1">1st</option>
+                                <option value="2">2nd</option>
+                                <option value="3">3rd</option>
+                                <option value="4">4th</option>
+                                <option value="5">5th</option>
+                                <option value="10">10th</option>
+                                <option value="15">15th</option>
+                                <option value="20">20th</option>
+                                <option value="25">25th</option>
+                                <option value="28">28th</option>
+                            </select>
+                            <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                                Days 29-31 run on last day of short months
+                            </small>
+                        </div>
+                    </div>
 
-                <!-- Content Filters -->
+                    <div class="form-row">
+                        <div class="form-group-compact">
+                            <label>Duration (minutes)</label>
+                            <input type="number" id="targetDuration" min="5" max="60" value="15" step="1" onchange="markChanges();">
+                            <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                                5-30 minutes recommended
+                            </small>
+                        </div>
+                        
+                        <div class="form-group-compact">
+                            <label>Timezone</label>
+                            <select id="timezone" onchange="markChanges();">
+                                <option value="America/New_York">EST/EDT</option>
+                                <option value="America/Chicago">CST/CDT</option>
+                                <option value="America/Los_Angeles">PST/PDT</option>
+                                <option value="Europe/London">GMT/BST</option>
+                                <option value="Asia/Tokyo">JST</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Settings Section -->
+            <div id="settings-content" class="settings-section">
                 <div class="card">
                     <h2>Content Filters</h2>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="rumorFilter"> Enable Rumor Filter
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label>Banned Domains (one per line)</label>
-                    <textarea id="bannedDomains" placeholder="example.com&#10;spam-site.com"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Window Hours</label>
-                    <input type="number" id="windowHours" min="1" max="168" value="36">
-                </div>
-                </div>
-            </div>
-
-            <!-- Second Grid: Metadata & Voice -->
-            <div class="settings-grid">
-                <!-- Podcast Metadata -->
-                <div class="card">
-                    <h2>📻 Podcast Metadata</h2>
-                <p style="color: #666; margin-bottom: 20px;">This information appears in podcast directories like Spotify, Apple Podcasts, etc.</p>
-                
-                <div class="form-group">
-                    <label>Podcast Title</label>
-                    <input type="text" id="podcastTitle" placeholder="My Awesome Podcast">
-                </div>
-                
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="podcastDescription" rows="3" placeholder="A brief description of what your podcast is about"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Author Name</label>
-                    <input type="text" id="podcastAuthor" placeholder="Your Name">
-                </div>
-                
-                <div class="form-group">
-                    <label>Contact Email ⚠️</label>
-                    <input type="email" id="podcastEmail" placeholder="your.email@example.com">
-                    <small style="color: #dc3545; display: block; margin-top: 5px;">
-                        <strong>Important for Spotify!</strong> Use a real email address. Spotify sends verification emails here.
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Language</label>
-                    <select id="podcastLanguage">
-                        <option value="en-us">English (US)</option>
-                        <option value="en-gb">English (UK)</option>
-                        <option value="es">Spanish</option>
-                        <option value="fr">French</option>
-                        <option value="de">German</option>
-                        <option value="ja">Japanese</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="podcastCategory">
-                        <option value="News">News</option>
-                        <option value="Technology">Technology</option>
-                        <option value="Business">Business</option>
-                        <option value="Education">Education</option>
-                        <option value="Science">Science</option>
-                        <option value="Arts">Arts</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Podcast Cover Image URL</label>
-                    <input type="url" id="podcastImageUrl" placeholder="https://example.com/podcast-artwork.jpg">
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        Direct URL to your podcast cover art (minimum 1400x1400px for Apple Podcasts). Leave empty to use default.
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Podcast Base URL (Read-only)</label>
-                    <input type="text" id="podcastBaseUrl" readonly>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        Automatically set from your deployment URL.
-                    </small>
-                </div>
-                </div>
-
-                <!-- Voice & Pronunciation -->
-                <div class="card">
-                    <h2>Voice & Pronunciation</h2>
-                <div style="color: #666; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 6px;">
-                    <i class="fas fa-info-circle" style="color: #0ea5e9;"></i> <strong>Intelligent Voice Selection</strong>
-                    <p style="margin: 10px 0 0 0; line-height: 1.6;">
-                        Voices are automatically selected based on content type for a more natural, dynamic podcast experience:
-                    </p>
-                    <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
-                        <li><strong>Shimmer</strong> - Warm host voice for openings, closings, and general content</li>
-                        <li><strong>Echo</strong> - Professional analyst voice for business and financial analysis</li>
-                        <li><strong>Nova</strong> - Energetic tech voice for AI and technology stories</li>
-                        <li><strong>Onyx</strong> - Authoritative voice for breaking news and urgent updates</li>
-                        <li><strong>Fable</strong> - Expressive voice for dramatic or surprising stories</li>
-                    </ul>
-                </div>
-                <div class="form-group">
-                    <label>Pronunciation Glossary</label>
-                    <small style="color: #666; display: block; margin-bottom: 8px;">
-                        Define custom pronunciations (key=value, one per line). Example: AI=A I
-                    </small>
-                    <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;CEO=C E O&#10;GPT=G P T"></textarea>
-                </div>
-                </div>
-            </div>
-
-            <!-- Podcast Production - Full Width -->
-            <div class="card full-width">
-                <h2>🎙️ Podcast Production</h2>
-                <p style="color: #666; margin-bottom: 20px;">Customize intro, outro, music, and pacing for your podcast.</p>
-                
-                <div class="form-group">
-                    <label>Podcast Style/Tone</label>
-                    <select id="podcastStyle">
-                        <option value="executive">Executive Brief (direct, no small talk)</option>
-                        <option value="casual">Casual Conversation (friendly, relaxed)</option>
-                        <option value="technical">Technical Deep-Dive (detailed, analytical)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Number of Stories</label>
-                    <div style="display: flex; gap: 10px;">
-                        <div style="flex: 1;">
-                            <label style="font-size: 12px; color: #666;">Min</label>
-                            <input type="number" id="numStoriesMin" min="1" max="10" value="3">
-                        </div>
-                        <div style="flex: 1;">
-                            <label style="font-size: 12px; color: #666;">Max</label>
-                            <input type="number" id="numStoriesMax" min="1" max="10" value="5">
+                    <div class="form-group-compact">
+                        <label>
+                            <input type="checkbox" id="rumorFilter" onchange="markChanges();"> Enable Rumor Filter
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                            Filters out unverified or speculative content
+                        </small>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group-compact">
+                            <label>Window Hours</label>
+                            <input type="number" id="windowHours" min="1" max="168" value="36" onchange="markChanges();">
+                            <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                                How far back to look for news (1-168 hours)
+                            </small>
                         </div>
                     </div>
+                    
+                    <div class="form-group-compact">
+                        <label>Banned Domains</label>
+                        <textarea id="bannedDomains" placeholder="example.com&#10;spam-site.com" rows="4" onchange="markChanges();"></textarea>
+                        <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                            One domain per line - these sources will be excluded
+                        </small>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>Intro Text Template</label>
-                    <textarea id="introText" rows="3" placeholder="Opening line for every episode"></textarea>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        This text will be spoken at the start of every episode, followed by a topic list.
-                    </small>
-                </div>
-                
-                <div class="form-group">
-                    <label>Outro Text Template</label>
-                    <textarea id="outroText" rows="2" placeholder="Closing line for every episode"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="enableIntroMusic"> Enable Intro Music
-                    </label>
-                </div>
-                
-                <div class="form-group" id="introMusicSettings" style="margin-left: 25px;">
-                    <label>Intro Music File Path (S3)</label>
-                    <input type="text" id="introMusicFile" placeholder="music/intro.mp3" value="music/intro.mp3">
-                    <small style="color: #666; display: block; margin-top: 4px;">S3 path to intro music file</small>
-                </div>
-                
-                <div class="form-group" style="margin-left: 25px;">
-                    <label>Intro Music Duration (seconds)</label>
-                    <input type="number" id="introMusicDuration" min="0" max="10" step="0.5" value="3">
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="enableOutroMusic"> Enable Outro Music
-                    </label>
-                </div>
-                
-                <div class="form-group" id="outroMusicSettings" style="margin-left: 25px;">
-                    <label>Outro Music File Path (S3)</label>
-                    <input type="text" id="outroMusicFile" placeholder="music/outro.mp3" value="music/outro.mp3">
-                    <small style="color: #666; display: block; margin-top: 4px;">S3 path to outro music file</small>
-                </div>
-                
-                <div class="form-group" style="margin-left: 25px;">
-                    <label>Outro Music Duration (seconds)</label>
-                    <input type="number" id="outroMusicDuration" min="0" max="10" step="0.5" value="2">
-                </div>
-                
-                <div class="form-group">
-                    <label>Podcast Timing (milliseconds)</label>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                        <div>
-                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">After Intro</label>
-                            <input type="number" id="pauseAfterIntro" min="0" max="3000" step="100" value="800">
+            </div>
+
+            <!-- Podcast Info Section -->
+            <div id="settings-podcast" class="settings-section">
+                <div class="settings-grid">
+                    <!-- Metadata -->
+                    <div class="card">
+                        <h2><i class="fas fa-broadcast-tower"></i> Podcast Metadata</h2>
+                        <p style="color: #666; margin-bottom: 16px; font-size: 13px;">Shown in directories like Spotify & Apple Podcasts</p>
+                        
+                        <div class="form-group-compact">
+                            <label>Podcast Title</label>
+                            <input type="text" id="podcastTitle" placeholder="My Awesome Podcast" onchange="markChanges();">
                         </div>
-                        <div>
-                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">Between Stories</label>
-                            <input type="number" id="pauseBetweenStories" min="0" max="3000" step="100" value="1200">
+                        
+                        <div class="form-group-compact">
+                            <label>Description</label>
+                            <textarea id="podcastDescription" rows="2" placeholder="Brief description" onchange="markChanges();"></textarea>
                         </div>
-                        <div>
-                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">Before Outro</label>
-                            <input type="number" id="pauseBeforeOutro" min="0" max="3000" step="100" value="500">
+                        
+                        <div class="form-row">
+                            <div class="form-group-compact">
+                                <label>Author</label>
+                                <input type="text" id="podcastAuthor" placeholder="Your Name" onchange="markChanges();">
+                            </div>
+                            
+                            <div class="form-group-compact">
+                                <label>Email <i class="fas fa-exclamation-triangle" style="color: #dc3545;" title="Required for Spotify verification"></i></label>
+                                <input type="email" id="podcastEmail" placeholder="your@email.com" onchange="markChanges();">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group-compact">
+                                <label>Language</label>
+                                <select id="podcastLanguage" onchange="markChanges();">
+                                    <option value="en-us">English (US)</option>
+                                    <option value="en-gb">English (UK)</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="ja">Japanese</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group-compact">
+                                <label>Category</label>
+                                <select id="podcastCategory" onchange="markChanges();">
+                                    <option value="News">News</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="Business">Business</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Science">Science</option>
+                                    <option value="Arts">Arts</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group-compact">
+                            <label>Cover Image URL</label>
+                            <input type="url" id="podcastImageUrl" placeholder="https://example.com/cover.jpg" onchange="markChanges();">
+                            <small style="color: #666; display: block; margin-top: 4px; font-size: 12px;">
+                                Min 1400x1400px for Apple Podcasts
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Voice Settings -->
+                    <div class="card">
+                        <h2><i class="fas fa-microphone"></i> Voice & Pronunciation</h2>
+                        <div style="padding: 12px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 6px; margin-bottom: 16px;">
+                            <div style="font-size: 13px; line-height: 1.6; color: #666;">
+                                <strong style="color: #0ea5e9;">Auto Voice Selection</strong><br>
+                                Voices adapt to content type for natural delivery
+                            </div>
+                        </div>
+                        
+                        <div class="form-group-compact">
+                            <label>Pronunciation Glossary</label>
+                            <small style="color: #666; display: block; margin-bottom: 6px; font-size: 12px;">
+                                Format: WORD=Pronunciation (one per line)
+                            </small>
+                            <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;CEO=C E O&#10;GPT=G P T" rows="5" onchange="markChanges();"></textarea>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Upload Music - Full Width -->
-            <div class="card full-width">
-                <h2>🎵 Upload Music</h2>
-                <p style="color: #666; margin-bottom: 15px;">Add custom intro and outro music to your podcast episodes.</p>
-                <a href="/upload-music.html" target="_blank" class="btn btn-primary">
-                    🎵 Upload Intro/Outro Music
-                </a>
-            </div>
+            <!-- Production Settings Section -->
+            <div id="settings-production" class="settings-section">
+                <div class="card">
+                    <h2><i class="fas fa-sliders-h"></i> Production Settings</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group-compact">
+                            <label>Podcast Style/Tone</label>
+                            <select id="podcastStyle" onchange="markChanges();">
+                                <option value="executive">Executive Brief (direct)</option>
+                                <option value="casual">Casual Conversation (friendly)</option>
+                                <option value="technical">Technical Deep-Dive (detailed)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group-compact">
+                            <label>Number of Stories</label>
+                            <div style="display: flex; gap: 10px;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 11px; color: #666;">Min</label>
+                                    <input type="number" id="numStoriesMin" min="1" max="10" value="3" onchange="markChanges();">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label style="font-size: 11px; color: #666;">Max</label>
+                                    <input type="number" id="numStoriesMax" min="1" max="10" value="5" onchange="markChanges();">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-compact">
+                        <label>Intro Text Template</label>
+                        <textarea id="introText" rows="2" placeholder="Opening line for every episode" onchange="markChanges();"></textarea>
+                    </div>
+                    
+                    <div class="form-group-compact">
+                        <label>Outro Text Template</label>
+                        <textarea id="outroText" rows="2" placeholder="Closing line for every episode" onchange="markChanges();"></textarea>
+                    </div>
+                </div>
 
-            <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+                <!-- Music Settings -->
+                <div class="card">
+                    <h2><i class="fas fa-music"></i> Music & Audio</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group-compact">
+                            <label>
+                                <input type="checkbox" id="enableIntroMusic" onchange="markChanges();"> Enable Intro Music
+                            </label>
+                            <div id="introMusicSettings" style="margin-top: 12px; padding-left: 24px;">
+                                <input type="text" id="introMusicFile" placeholder="music/intro.mp3" value="music/intro.mp3" style="margin-bottom: 8px;" onchange="markChanges();">
+                                <label style="font-size: 12px;">Duration (seconds)</label>
+                                <input type="number" id="introMusicDuration" min="0" max="10" step="0.5" value="3" onchange="markChanges();">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group-compact">
+                            <label>
+                                <input type="checkbox" id="enableOutroMusic" onchange="markChanges();"> Enable Outro Music
+                            </label>
+                            <div id="outroMusicSettings" style="margin-top: 12px; padding-left: 24px;">
+                                <input type="text" id="outroMusicFile" placeholder="music/outro.mp3" value="music/outro.mp3" style="margin-bottom: 8px;" onchange="markChanges();">
+                                <label style="font-size: 12px;">Duration (seconds)</label>
+                                <input type="number" id="outroMusicDuration" min="0" max="10" step="0.5" value="2" onchange="markChanges();">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px;">
+                        <a href="/upload-music.html" target="_blank" class="btn btn-secondary" style="width: 100%; justify-content: center;">
+                            <i class="fas fa-upload"></i> Upload Music Files
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Timing Settings -->
+                <div class="card">
+                    <h2><i class="fas fa-clock"></i> Timing & Pacing</h2>
+                    <p style="color: #666; margin-bottom: 16px; font-size: 13px;">Fine-tune pauses (in milliseconds)</p>
+                    
+                    <div class="form-row-3">
+                        <div class="form-group-compact">
+                            <label style="font-size: 12px;">After Intro</label>
+                            <input type="number" id="pauseAfterIntro" min="0" max="3000" step="100" value="800" onchange="markChanges();">
+                        </div>
+                        <div class="form-group-compact">
+                            <label style="font-size: 12px;">Between Stories</label>
+                            <input type="number" id="pauseBetweenStories" min="0" max="3000" step="100" value="1200" onchange="markChanges();">
+                        </div>
+                        <div class="form-group-compact">
+                            <label style="font-size: 12px;">Before Outro</label>
+                            <input type="number" id="pauseBeforeOutro" min="0" max="3000" step="100" value="500" onchange="markChanges();">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Health & Maintenance Tab -->
@@ -2233,10 +2341,13 @@ Full data in console (F12).`;
             // Update frequency fields visibility
             updateFrequencyFields();
             
+            // Mark changes
+            markChanges();
+            
             // Scroll to Schedule & Duration section
             document.querySelector('.card h2:contains("Schedule & Duration")');
             
-            showToast(`Applied "${preset.name}" preset! Review settings below and click "Save All Settings".`, 'success');
+            showToast(`Applied "${preset.name}" preset! Review and save to apply changes.`, 'success');
         }
         
         // Update frequency-specific fields
@@ -2339,7 +2450,7 @@ Full data in console (F12).`;
                 div.style.gap = '10px';
                 div.style.alignItems = 'start';
                 div.innerHTML = `
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
                         <input type="text" placeholder="Topic name (e.g., Verizon)" value="${topic.label}" 
                                onchange="updateTopic(${index}, 'label', this.value)"
                                style="width: 100%;">
@@ -2347,11 +2458,12 @@ Full data in console (F12).`;
                                value="${topic.custom_sources || ''}" 
                                onchange="updateTopic(${index}, 'custom_sources', this.value)"
                                style="width: 100%; font-size: 12px; color: #666;">
-                        <small style="color: #888; font-size: 11px;">📰 Google News is always included. Add custom RSS feeds above if needed.</small>
+                        <small style="color: #888; font-size: 11px;"><i class="fas fa-info-circle"></i> Google News is always included</small>
                     </div>
                     <input type="number" step="0.01" min="0" max="1" placeholder="Weight" value="${topic.weight}" 
-                           onchange="updateTopic(${index}, 'weight', parseFloat(this.value))">
-                    <button class="btn btn-danger" onclick="removeTopic(${index})">✕</button>
+                           onchange="updateTopic(${index}, 'weight', parseFloat(this.value))"
+                           style="width: 120px;">
+                    <button class="btn btn-danger" onclick="removeTopic(${index})"><i class="fas fa-times"></i></button>
                 `;
                 container.appendChild(div);
             });
@@ -2363,18 +2475,56 @@ Full data in console (F12).`;
             if (!currentConfig.topics[index]) return;
             currentConfig.topics[index][field] = value;
             validateWeights();
+            markChanges();
+        }
+
+        // Settings sub-tab switching
+        function switchSettingsTab(tabName) {
+            // Update sub-tab buttons
+            document.querySelectorAll('.settings-sub-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.settings-sub-tab').classList.add('active');
+
+            // Update section content
+            document.querySelectorAll('.settings-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(`settings-${tabName}`).classList.add('active');
+        }
+
+        // Mark that settings have changed
+        let hasUnsavedChanges = false;
+        function markChanges() {
+            hasUnsavedChanges = true;
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            if (saveBtn) {
+                saveBtn.classList.add('has-changes');
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+            }
+        }
+
+        function clearChanges() {
+            hasUnsavedChanges = false;
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            if (saveBtn) {
+                saveBtn.classList.remove('has-changes');
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Settings';
+            }
         }
 
         function addTopic() {
             if (!currentConfig) return;
             currentConfig.topics.push({ label: 'New Topic', weight: 0.1, custom_sources: '' });
             renderTopics(currentConfig.topics);
+            markChanges();
         }
 
         function removeTopic(index) {
             if (!currentConfig) return;
             currentConfig.topics.splice(index, 1);
             renderTopics(currentConfig.topics);
+            markChanges();
         }
 
         function validateWeights() {
@@ -2403,6 +2553,7 @@ Full data in console (F12).`;
                 currentConfig.topics.forEach(t => t.weight = t.weight / total);
             }
             renderTopics(currentConfig.topics);
+            markChanges();
             showToast('Weights normalized', 'success');
         }
 
@@ -2479,6 +2630,7 @@ Full data in console (F12).`;
                 if (response.ok) {
                     currentConfig = await response.json();
                     showToast('Settings saved successfully', 'success');
+                    clearChanges();
                 } else {
                     const error = await response.json();
                     showToast(error.message || 'Failed to save settings', 'error');
