@@ -9,7 +9,8 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "type-check": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "eslint . --ext .ts,.tsx",
+    "test-scriptwriter": "tsx scripts/test-scriptwriter.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.679.0",
