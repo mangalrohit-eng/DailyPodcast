@@ -614,7 +614,6 @@ export class Orchestrator {
             story_count: (s.refs || []).length,
           })),
           total_duration_target: runConfig.target_duration_sec,
-          _debug_duration: (runConfig as any)._debug_duration, // DEBUG: Duration resolution details
         },
         scriptwriting: scriptResult.output!.detailed_report || {
           sections_generated: 0,
@@ -1010,7 +1009,6 @@ export class Orchestrator {
       rumor_filter: input.rumor_filter !== undefined ? input.rumor_filter : (dashboardConfig?.rumor_filter ?? Config.RUMOR_FILTER),
       target_duration_sec: resolvedDuration,
       dashboardConfig, // Pass dashboard config to run() so it can build TopicConfig array
-      _debug_duration: durationDebug, // DEBUG: Include in runConfig for manifest
       podcast_production: dashboardConfig?.podcast_production || {
         intro_text: 'This is your daily podcast to recap recent news. Today we\'ll cover:',
         outro_text: 'That\'s your executive brief. Stay informed, stay ahead.',
