@@ -2952,9 +2952,7 @@ Full data in console (F12).`;
                     showToast('✅ Run cancelled successfully', 'success');
                     currentRunId = null;
                     
-                    // Wait a moment for orchestrator to finish updating the run status
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
+                    // Immediate refresh since cancel API updates status right away
                     loadRuns(); // Refresh the list
                 } else {
                     const error = await response.json();
@@ -2992,10 +2990,7 @@ Full data in console (F12).`;
                     showToast('✅ Run stopped successfully', 'success');
                     document.getElementById('stopRunBtn').style.display = 'none';
                     
-                    // Wait a moment for orchestrator to finish updating the run status
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    // Refresh the runs list to show cancelled status
+                    // Immediate refresh since cancel API updates status right away
                     await loadRuns();
                     // Refresh details modal
                     viewRunDetails(currentDetailsRunId);
@@ -3439,16 +3434,17 @@ Full data in console (F12).`;
         function getAgentFileLinks(runId, agentName) {
             const inputFile = `episodes/${runId}_${agentName}_input.json`;
             const outputFile = `episodes/${runId}_${agentName}_output.json`;
-            const baseUrl = `${API_BASE}/files`;
+            // Direct S3 URLs instead of going through Vercel
+            const s3BaseUrl = 'https://podcast098478926952.s3.us-east-1.amazonaws.com';
             
             return `
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
                     <span style="color: #666; font-size: 13px;"><i class="fas fa-file-code"></i> Agent Files:</span>
-                    <a href="${baseUrl}/${inputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
+                    <a href="${s3BaseUrl}/${inputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
                         <i class="fas fa-download"></i> Input JSON
                     </a>
                     <span style="color: #ccc;">|</span>
-                    <a href="${baseUrl}/${outputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
+                    <a href="${s3BaseUrl}/${outputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
                         <i class="fas fa-download"></i> Output JSON
                     </a>
                 </div>

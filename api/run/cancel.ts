@@ -49,7 +49,11 @@ export default async function handler(
       });
     }
     
-    Logger.info('✅ Cancellation flag set in S3', { runId });
+    // Immediately update status to 'cancelled' so UI shows it right away
+    // (Orchestrator will also update it when it detects the cancellation, but this is faster)
+    await runsStorage.cancelRun(runId, 'Cancelled by user');
+    
+    Logger.info('✅ Cancellation flag set and status updated to cancelled', { runId });
     
     return res.status(200).json({
       success: true,
