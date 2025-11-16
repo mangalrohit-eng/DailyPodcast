@@ -1134,6 +1134,7 @@ export class Orchestrator {
           refs: s.refs,
         })),
         total_sections: agentResults.outline.output.outline.sections.length,
+        total_duration_target: runConfig.target_duration_sec, // FIX: Include target duration for dashboard display
       };
     }
 
