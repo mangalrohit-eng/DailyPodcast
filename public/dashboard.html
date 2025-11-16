@@ -2778,6 +2778,43 @@ Full data in console (F12).`;
             }
         }
 
+        async function stopCurrentRun() {
+            if (!currentDetailsRunId) {
+                showToast('❌ No run ID found', 'error');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to stop this run?\n\nThis will stop the episode generation immediately.')) {
+                return;
+            }
+            
+            try {
+                showToast('🛑 Stopping run...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/run/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ runId: currentDetailsRunId }),
+                });
+                
+                if (response.ok) {
+                    showToast('✅ Run stopped successfully', 'success');
+                    document.getElementById('stopRunBtn').style.display = 'none';
+                    // Refresh details
+                    viewRunDetails(currentDetailsRunId);
+                } else {
+                    const error = await response.json();
+                    showToast(`❌ Failed to stop: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error stopping run:', error);
+                showToast('❌ Error stopping run', 'error');
+            }
+        }
+
         let detailsPollingInterval = null;
         let currentDetailsRunId = null;
 
@@ -2904,11 +2941,22 @@ Full data in console (F12).`;
         function showPipelineReport(runId, data) {
             const modal = document.getElementById('pipelineReportModal');
             const title = document.getElementById('reportTitle');
+            const stopBtn = document.getElementById('stopRunBtn');
+            
+            // Track current run for stop button
+            currentDetailsRunId = runId;
             
             const statusEmoji = data.summary?.status === 'running' ? '🔄' : 
                                 data.summary?.status === 'success' ? '✅' : 
                                 data.summary?.status === 'failed' ? '❌' : '📊';
             title.textContent = `${statusEmoji} Episode Report - ${runId}`;
+            
+            // Show/hide stop button based on status
+            if (data.summary?.status === 'running') {
+                stopBtn.style.display = 'block';
+            } else {
+                stopBtn.style.display = 'none';
+            }
             
             console.log('🎨 showPipelineReport called with:', {
                 runId,
@@ -3191,6 +3239,26 @@ Full data in console (F12).`;
             document.getElementById('tab-summary').innerHTML = html;
         }
 
+        // Helper function to generate agent file links
+        function getAgentFileLinks(runId, agentName) {
+            const inputFile = `episodes/${runId}_${agentName}_input.json`;
+            const outputFile = `episodes/${runId}_${agentName}_output.json`;
+            const baseUrl = `${API_BASE}/files`;
+            
+            return `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <span style="color: #666; font-size: 13px;"><i class="fas fa-file-code"></i> Agent Files:</span>
+                    <a href="${baseUrl}/${inputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
+                        <i class="fas fa-download"></i> Input JSON
+                    </a>
+                    <span style="color: #ccc;">|</span>
+                    <a href="${baseUrl}/${outputFile}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px;">
+                        <i class="fas fa-download"></i> Output JSON
+                    </a>
+                </div>
+            `;
+        }
+
         function renderIngestionTab(ingestion) {
             if (!ingestion) {
                 document.getElementById('tab-ingestion').innerHTML = '<div class="no-data">No ingestion data available</div>';
@@ -3202,6 +3270,7 @@ Full data in console (F12).`;
             const allStories = ingestion.all_stories_detailed || [];
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'ingestion')}
                 <div class="report-section">
                     <h3>📊 Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3411,6 +3480,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'ranking')}
                 ${ranking.dynamic_selection ? `
                 <div class="report-section" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 8px; border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
                     <h3 style="margin-top: 0; color: #0369a1;">📊 Dynamic Story Selection</h3>
@@ -3507,6 +3577,7 @@ Full data in console (F12).`;
                 : 0;
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'scraper')}
                 <div class="report-section">
                     <h3>📊 Scraping Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3640,6 +3711,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'outline')}
                 <div class="report-section">
                     <h3>📋 Podcast Structure</h3>
                     <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -3672,6 +3744,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'scriptwriter')}
                 <div class="report-section">
                     <h3>📊 Stats</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3706,6 +3779,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'factcheck')}
                 <div class="report-section">
                     <h3>✏️ Changes Made</h3>
                     ${(factcheck.changes_made || []).length === 0 
@@ -3748,6 +3822,7 @@ Full data in console (F12).`;
             };
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'safety')}
                 <div class="report-section">
                     <h3>🛡️ Risk Assessment</h3>
                     <div style="padding: 20px; background: white; border-radius: 8px; border: 3px solid ${getRiskColor(safety.risk_level)};">
@@ -3780,6 +3855,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'tts-director')}
                 <div class="report-section">
                     <h3><i class="fas fa-microphone"></i> TTS Planning Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3821,8 +3897,9 @@ Full data in console (F12).`;
                 document.getElementById('tab-audio').innerHTML = '<div class="no-data">No Audio Engineer data available</div>';
                 return;
             }
-            
+
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'audio-engineer')}
                 <div class="report-section">
                     <h3><i class="fas fa-music"></i> Audio Engineering Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3871,6 +3948,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'publisher')}
                 <div class="report-section">
                     <h3><i class="fas fa-cloud-upload-alt"></i> Publishing Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -3920,6 +3998,7 @@ Full data in console (F12).`;
             }
             
             const html = `
+                ${getAgentFileLinks(currentDetailsRunId, 'memory')}
                 <div class="report-section">
                     <h3><i class="fas fa-database"></i> Memory System Summary</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
@@ -4347,7 +4426,12 @@ Full data in console (F12).`;
     <div id="pipelineReportModal" class="report-modal">
         <div class="report-content">
             <div class="report-header">
-                <h2 id="reportTitle">📊 Episode Generation Report</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <h2 id="reportTitle">📊 Episode Generation Report</h2>
+                    <button id="stopRunBtn" class="btn" style="display: none; padding: 8px 16px; font-size: 14px; background: #dc3545; color: white; border: none;" onclick="stopCurrentRun()">
+                        <i class="fas fa-stop"></i> Stop Run
+                    </button>
+                </div>
                 <button class="report-close" onclick="hidePipelineReport()">×</button>
             </div>
             
