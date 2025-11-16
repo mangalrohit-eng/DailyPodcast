@@ -986,19 +986,24 @@ export class Orchestrator {
     }
     
     // EXPLICIT DEBUG: Log target duration resolution
-    const resolvedDuration = (dashboardConfig?.target_duration_sec && dashboardConfig.target_duration_sec > 0) 
-      ? dashboardConfig.target_duration_sec 
-      : Config.TARGET_DURATION_SECONDS;
+    let resolvedDuration = dashboardConfig?.target_duration_sec || 0;
     
-    const durationDebug = {
+    // FORCE to default if invalid
+    if (!resolvedDuration || resolvedDuration <= 0) {
+      Logger.warn('⚠️ Invalid target_duration_sec from dashboard, using default', {
+        dashboard_value: dashboardConfig?.target_duration_sec,
+        type: typeof dashboardConfig?.target_duration_sec,
+        using_default: Config.TARGET_DURATION_SECONDS,
+      });
+      resolvedDuration = Config.TARGET_DURATION_SECONDS;
+    }
+    
+    Logger.info('🎯 TARGET DURATION RESOLUTION', {
       from_dashboard: dashboardConfig?.target_duration_sec,
       from_config_default: Config.TARGET_DURATION_SECONDS,
       resolved_value: resolvedDuration,
       dashboard_exists: !!dashboardConfig,
-      type_from_dashboard: typeof dashboardConfig?.target_duration_sec,
-    };
-    
-    Logger.info('🎯 TARGET DURATION RESOLUTION', durationDebug);
+    });
     
     return {
       date,
