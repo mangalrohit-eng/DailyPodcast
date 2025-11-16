@@ -28,14 +28,25 @@ export class OutlineAgent extends BaseAgent<OutlineInput, OutlineOutput> {
   constructor() {
     super({
       name: 'OutlineAgent',
-      systemPrompt: `You are an expert radio producer creating an executive news brief outline for C-suite leaders.
+      systemPrompt: `🚨 BANNED PHRASES - DO NOT USE in hooks, guidance, or bridges:
+❌ "In a" ❌ "dramatic" ❌ "seismic" ❌ "pivotal" ❌ "major players"
+❌ "underscore/underscores" ❌ "marks/marking" ❌ "signals/signaling"
+❌ "navigate/navigating" ❌ "broader" ❌ "landscape" ❌ "evolution"
+❌ "strategic recalibration" ❌ "imperative" ❌ "delve"
 
-Your goal is to create COHESIVE THEMATIC SEGMENTS that naturally blend related stories together, not a choppy story-by-story list.
+You are an expert radio producer creating factual executive news briefs for C-suite leaders.
 
-Think like NPR's The Daily or Morning Brew - weave narratives that connect related developments, show cause and effect, and synthesize insights across stories.
+HOOKS MUST START WITH FACTS/NUMBERS:
+✅ "Verizon's cutting 15,000 jobs - $2B going to AI"
+✅ "OpenAI raised $6B at $157B valuation, up 75% in 6 months"
+❌ "In a dramatic turn of events" ❌ "major players" ❌ "seismic shift"
 
-Structure for maximum impact with dense, actionable information. You must respond with valid JSON only.`,
-      temperature: 0.7,
+GUIDANCE MUST BE DIRECT:
+✅ "State the layoff numbers and where the savings are going"
+❌ "Explore the strategic recalibrations amid technological evolution"
+
+You must respond with valid JSON only.`,
+      temperature: 0.3, // Lower temp for factual, rule-following output
       maxTokens: 2000,
     });
   }
@@ -121,13 +132,16 @@ ${JSON.stringify(storySummaries, null, 2)}
 YOUR MISSION: Create 2-4 THEMATIC SEGMENTS that naturally blend related stories together into cohesive narratives.
 
 STEP 1: ANALYZE FOR COMPELLING HOOK
-Review all stories and identify the MOST compelling angle for the opening:
-- Most surprising development (unexpected layoffs, major pivots, shocking numbers)
-- Biggest impact story (affects millions of people, billions of dollars)
-- Most urgent/breaking news (just announced, happening now)
-- Controversial or dramatic (major conflicts, failures, breakthroughs)
+Find the biggest NUMBER or FACT from the stories:
+- Largest dollar amount: "$6B raised", "$2B savings"
+- Most people affected: "15,000 jobs", "affects 2M customers"
+- Biggest percentage: "up 75%", "down 23%"
+- Most recent/urgent: "announced today", "takes effect Monday"
 
-This will be your HOOK - the first thing listeners hear to grab their attention.
+HOOK REQUIREMENTS:
+✅ START WITH THE NUMBER/FACT directly
+✅ Keep under 20 words
+❌ NO framing: "In a...", "Today we...", "dramatic", "major"
 
 STEP 2: IDENTIFY STORY CONNECTIONS
 For each potential segment, identify how stories connect:
@@ -150,9 +164,10 @@ STRUCTURE GUIDELINES:
    - Make listeners want to keep listening!
    
    EXAMPLE HOOKS:
-   ❌ BAD: "Welcome to today's briefing. Let's dive into the key stories..."
-   ✅ GOOD: "15,000 jobs just disappeared at Verizon. But here's the twist - it's not because business is bad..."
-   ✅ GOOD: "AI just got a $6 billion reality check. Here's what it means for every tech company..."
+   ❌ BAD: "Welcome to today's briefing. Let's dive in..."
+   ❌ BAD: "In a dramatic turn of events, major players announced layoffs..."
+   ✅ GOOD: "Verizon's cutting 15,000 jobs - $2B savings going straight to AI infrastructure"
+   ✅ GOOD: "OpenAI raised $6B at $157B valuation - up 75% in six months"
 
 2. **Thematic Segments** (2-4 segments totaling ~${mainContentWords} words):
    - Group related stories that naturally connect (use your connection analysis)
@@ -166,11 +181,12 @@ STRUCTURE GUIDELINES:
 
 3. **Outro**: ~${introOutroWords} words - Key strategic takeaways + forward-looking insights
 
-STYLE:
-- Executive audience: Dense, actionable, strategic thinking
-- NO story-by-story lists - blend narratives like NPR or Morning Brew
-- Show how stories connect and what they mean together
-- Prioritize business implications and strategic context
+STYLE RULES:
+- Executive audience: FACTUAL, DIRECT, NUMBERS-FIRST
+- NO corporate jargon in hooks, guidance, or bridges
+- Guidance should be instructions: "State X, explain Y, cite Z"
+- Bridges should be facts: "Both companies cut jobs to fund AI" NOT "broader trend of evolution"
+- ❌ NEVER use banned phrases listed at top of prompt
 
 Topic distribution (for reference):
 ${JSON.stringify(topicCounts, null, 2)}
