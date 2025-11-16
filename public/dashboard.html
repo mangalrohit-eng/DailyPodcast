@@ -166,6 +166,41 @@
             border: 1px solid #e5e5e7;
         }
 
+        /* Settings Grid Layout */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .settings-grid .card {
+            margin-bottom: 0;
+        }
+
+        .settings-grid .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Compact field groups */
+        .field-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 1024px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .field-grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .card h2 {
             font-size: 24px;
             margin-bottom: 20px;
@@ -1383,8 +1418,8 @@
 
         <!-- Podcast Settings Tab -->
         <div id="podcast-settings" class="tab-content">
-            <!-- Preset Configurations -->
-            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <!-- Preset Configurations - Full Width -->
+            <div class="card full-width" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                 <h2 style="color: white; margin-bottom: 10px;"><i class="fas fa-magic"></i> Quick Presets</h2>
                 <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">Choose a preset configuration to instantly set up your podcast schedule and duration.</p>
                 
@@ -1437,7 +1472,8 @@
                 </style>
             </div>
 
-            <div class="card">
+            <!-- Topics & Weights - Full Width -->
+            <div class="card full-width">
                 <h2>Topics & Weights</h2>
                 <p style="color: #666; margin-bottom: 20px;">Configure topics and their relative weights. Total must equal 1.0.</p>
                 <div id="topicsList" class="topics-list"></div>
@@ -1446,8 +1482,11 @@
                 <div id="weightWarning" style="color: #dc3545; margin-top: 10px; display: none;"></div>
             </div>
 
-            <div class="card">
-                <h2>Schedule & Duration</h2>
+            <!-- Grid Layout for Compact Settings -->
+            <div class="settings-grid">
+                <!-- Schedule & Duration -->
+                <div class="card">
+                    <h2>Schedule & Duration</h2>
                 <div class="form-group">
                     <label>Frequency</label>
                     <select id="frequency" onchange="updateFrequencyFields()">
@@ -1533,10 +1572,11 @@
                         Automatically generated based on your frequency and timezone settings.
                     </small>
                 </div>
-            </div>
+                </div>
 
-            <div class="card">
-                <h2>Content Filters</h2>
+                <!-- Content Filters -->
+                <div class="card">
+                    <h2>Content Filters</h2>
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="rumorFilter"> Enable Rumor Filter
@@ -1550,10 +1590,14 @@
                     <label>Window Hours</label>
                     <input type="number" id="windowHours" min="1" max="168" value="36">
                 </div>
+                </div>
             </div>
 
-            <div class="card">
-                <h2>📻 Podcast Metadata</h2>
+            <!-- Second Grid: Metadata & Voice -->
+            <div class="settings-grid">
+                <!-- Podcast Metadata -->
+                <div class="card">
+                    <h2>📻 Podcast Metadata</h2>
                 <p style="color: #666; margin-bottom: 20px;">This information appears in podcast directories like Spotify, Apple Podcasts, etc.</p>
                 
                 <div class="form-group">
@@ -1618,10 +1662,11 @@
                         Automatically set from your deployment URL.
                     </small>
                 </div>
-            </div>
+                </div>
 
-            <div class="card">
-                <h2>Voice & Pronunciation</h2>
+                <!-- Voice & Pronunciation -->
+                <div class="card">
+                    <h2>Voice & Pronunciation</h2>
                 <div style="color: #666; margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #0ea5e9; border-radius: 6px;">
                     <i class="fas fa-info-circle" style="color: #0ea5e9;"></i> <strong>Intelligent Voice Selection</strong>
                     <p style="margin: 10px 0 0 0; line-height: 1.6;">
@@ -1642,9 +1687,11 @@
                     </small>
                     <textarea id="pronunciationGlossary" placeholder="AI=A I&#10;CEO=C E O&#10;GPT=G P T"></textarea>
                 </div>
+                </div>
             </div>
 
-            <div class="card">
+            <!-- Podcast Production - Full Width -->
+            <div class="card full-width">
                 <h2>🎙️ Podcast Production</h2>
                 <p style="color: #666; margin-bottom: 20px;">Customize intro, outro, music, and pacing for your podcast.</p>
                 
@@ -1719,22 +1766,26 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Pause After Intro (milliseconds)</label>
-                    <input type="number" id="pauseAfterIntro" min="0" max="3000" step="100" value="800">
-                </div>
-                
-                <div class="form-group">
-                    <label>Pause Between Stories (milliseconds)</label>
-                    <input type="number" id="pauseBetweenStories" min="0" max="3000" step="100" value="1200">
-                </div>
-                
-                <div class="form-group">
-                    <label>Pause Before Outro (milliseconds)</label>
-                    <input type="number" id="pauseBeforeOutro" min="0" max="3000" step="100" value="500">
+                    <label>Podcast Timing (milliseconds)</label>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div>
+                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">After Intro</label>
+                            <input type="number" id="pauseAfterIntro" min="0" max="3000" step="100" value="800">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">Between Stories</label>
+                            <input type="number" id="pauseBetweenStories" min="0" max="3000" step="100" value="1200">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666; margin-bottom: 6px;">Before Outro</label>
+                            <input type="number" id="pauseBeforeOutro" min="0" max="3000" step="100" value="500">
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- Upload Music - Full Width -->
+            <div class="card full-width">
                 <h2>🎵 Upload Music</h2>
                 <p style="color: #666; margin-bottom: 15px;">Add custom intro and outro music to your podcast episodes.</p>
                 <a href="/upload-music.html" target="_blank" class="btn btn-primary">
