@@ -122,6 +122,7 @@ You must respond with valid JSON only.`,
       date,
       listener_name,
       wordCountRange,
+      targetWordCount, // FIX: Pass targetWordCount so it's available in the method
       style,
       outline.opening_hook // Pass the compelling hook from outline
     );
@@ -196,6 +197,7 @@ You must respond with valid JSON only.`,
     date: string,
     listenerName: string,
     wordCountRange?: string,
+    targetWordCount?: number, // FIX: Add targetWordCount parameter to fix ReferenceError
     style?: string,
     openingHook?: string // Compelling hook from outline agent
   ): Promise<ScriptSection[]> {
@@ -288,7 +290,7 @@ THIS IS NON-NEGOTIABLE. The script MUST hit this word count:
 - DO NOT write a shorter script "to be concise" - that will FAIL
 - DO NOT summarize - EXPAND with details, context, implications
 - Each section has a target word count - HIT THOSE TARGETS
-- If you write fewer than ${Math.floor(targetWordCount * 0.9)} words, you have FAILED
+- If you write fewer than ${Math.floor((targetWordCount || 750) * 0.9)} words, you have FAILED
 - Add more context, more details, more implications to reach the target
 - Being thorough is MORE important than being brief
 
