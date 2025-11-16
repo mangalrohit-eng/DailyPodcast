@@ -808,19 +808,22 @@ export class Orchestrator {
       };
     } catch (error) {
       const totalTime = Date.now() - startTime;
+      const errorMessage = (error as Error).message;
+      const isCancellation = errorMessage.includes('cancelled by user') || errorMessage.includes('Run cancelled');
       
-      Logger.error('Orchestrator failed', {
-        error: (error as Error).message,
+      Logger.error(isCancellation ? 'Run cancelled' : 'Orchestrator failed', {
+        error: errorMessage,
         stack: (error as Error).stack,
         total_time_ms: totalTime,
+        is_cancellation: isCancellation,
       });
       
       progressTracker.addUpdate(runId, {
-        phase: 'Failed',
-        status: 'failed',
-        message: (error as Error).message,
+        phase: isCancellation ? 'Cancelled' : 'Failed',
+        status: isCancellation ? 'cancelled' : 'failed',
+        message: errorMessage,
         details: { 
-          error: (error as Error).message,
+          error: errorMessage,
           stack: (error as Error).stack,
           completed_agents: Object.keys(agentResults),
         },
@@ -841,9 +844,9 @@ export class Orchestrator {
         }
         
         if (existingManifest) {
-          // Update existing manifest with failure status and error message
-          existingManifest.status = 'failed';
-          existingManifest.error = (error as Error).message;
+          // Update existing manifest with failure/cancellation status and error message
+          existingManifest.status = isCancellation ? 'cancelled' : 'failed';
+          existingManifest.error = errorMessage;
           existingManifest.completed_at = new Date().toISOString();
           
           await this.storage.put(
@@ -878,9 +881,13 @@ export class Orchestrator {
         });
       }
       
-      // Fail the run
+      // Update run status (cancelled or failed)
       if (runsStorage) {
-        await runsStorage.failRun(runId, (error as Error).message);
+        if (isCancellation) {
+          await runsStorage.cancelRun(runId, errorMessage);
+        } else {
+          await runsStorage.failRun(runId, errorMessage);
+        }
       }
       
       // Build partial manifest for the error response

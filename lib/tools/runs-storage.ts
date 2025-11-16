@@ -11,7 +11,7 @@ export interface RunSummary {
   date: string;
   title?: string;
   description?: string;
-  status: 'running' | 'success' | 'failed';
+  status: 'running' | 'success' | 'failed' | 'cancelled';
   started_at: string;
   completed_at?: string;
   duration_ms?: number;
@@ -125,6 +125,29 @@ export class RunsStorage {
     }
     
     Logger.info('Run failed', { runId, error });
+  }
+  
+  /**
+   * Cancel a run
+   */
+  async cancelRun(runId: string, reason: string = 'Cancelled by user'): Promise<void> {
+    const summary: RunSummary = {
+      run_id: runId,
+      date: runId,
+      status: 'cancelled',
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      error: reason,
+    };
+    
+    await this.updateRun(summary);
+    
+    // Release concurrency guard
+    if (RunsStorage.activeRun === runId) {
+      RunsStorage.activeRun = null;
+    }
+    
+    Logger.info('Run cancelled', { runId, reason });
   }
   
   /**

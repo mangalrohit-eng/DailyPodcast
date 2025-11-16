@@ -3065,7 +3065,8 @@ Full data in console (F12).`;
             const title = document.getElementById('reportTitle');
             const statusEmoji = data.summary?.status === 'running' ? '🔄' : 
                                 data.summary?.status === 'success' ? '✅' : 
-                                data.summary?.status === 'failed' ? '❌' : '📊';
+                                data.summary?.status === 'failed' ? '❌' : 
+                                data.summary?.status === 'cancelled' ? '🛑' : '📊';
             title.textContent = `${statusEmoji} Episode Report - ${runId}`;
             
             // Re-render tabs with new data
@@ -3100,7 +3101,8 @@ Full data in console (F12).`;
             
             const statusEmoji = data.summary?.status === 'running' ? '🔄' : 
                                 data.summary?.status === 'success' ? '✅' : 
-                                data.summary?.status === 'failed' ? '❌' : '📊';
+                                data.summary?.status === 'failed' ? '❌' : 
+                                data.summary?.status === 'cancelled' ? '🛑' : '📊';
             title.textContent = `${statusEmoji} Episode Report - ${runId}`;
             
             // Show/hide stop button based on status
@@ -4378,10 +4380,17 @@ Full data in console (F12).`;
                                 // Failed
                                 document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
                                 document.getElementById('currentPhase').textContent = '❌ Failed';
+                                document.getElementById('currentMessage').innerHTML =
+                                    `<span style="color: #dc3545;">${thisRun.error || 'Episode generation failed'}</span>`;
+                                return false; // Stop polling
+                            } else if (thisRun.status === 'cancelled') {
+                                // Cancelled
+                                document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+                                document.getElementById('currentPhase').textContent = '🛑 Cancelled';
                                 document.getElementById('currentMessage').innerHTML = 
-                                    `Episode generation failed: ${thisRun.error || 'Unknown error'}<br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
-                                showToast('❌ Episode generation failed', 'error');
-                                return false;
+                                    `<span style="color: #f59e0b;">${thisRun.error || 'Episode generation cancelled by user'}</span><br><button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>`;
+                                showToast('🛑 Episode generation cancelled', 'warning');
+                                return false; // Stop polling
                             }
                         }
                     }
@@ -4532,6 +4541,13 @@ Full data in console (F12).`;
                     document.getElementById('currentPhase').textContent = '❌ Failed';
                     document.getElementById('currentMessage').innerHTML = 
                         'Episode generation failed. <button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>';
+                    return false;
+                } else if (progress.status === 'cancelled') {
+                    showToast('🛑 Episode generation cancelled', 'warning');
+                    document.getElementById('progressBar').style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+                    document.getElementById('currentPhase').textContent = '🛑 Cancelled';
+                    document.getElementById('currentMessage').innerHTML = 
+                        'Episode generation cancelled. <button class="btn btn-secondary" onclick="hideProgressModal()" style="margin-left: 10px;">Close</button>';
                     return false;
                 }
 
